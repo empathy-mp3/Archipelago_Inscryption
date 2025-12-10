@@ -55,7 +55,7 @@ namespace Archipelago_Inscryption.Components
             playerCountText.text = "MultiWorld player count: " + (playerCount == 0 ? "?" : playerCount.ToString());
             locationsText.text = "Locations: " + locationsCount.ToString() + "/" + (maxLocationsCount == 0 ? "?" : maxLocationsCount.ToString());
             itemsText.text = "Items: " + itemsCount.ToString() + "/" + (maxItemsCount == 0 ? "?" : maxItemsCount.ToString());
-            goalText.text = "Goal Progress: " + goalCount.ToString() + "/" + (goalType == Goal.COUNT ? "?" : ((enableAct1 ? 1: 0) + (enableAct2 ? 1 : 0) + (enableAct3 ? 1 : 0) + (skipEpilogue ? 1 : 0)).ToString());
+            goalText.text = "Goal Progress: " + goalCount.ToString() + "/" + (goalType == Goal.COUNT ? "?" : ((enableAct1 ? 1 : 0) + (enableAct2 ? 1 : 0) + (enableAct3 ? 1 : 0) + (skipEpilogue ? 0 : 1)).ToString());
         }
     }
 }
