@@ -147,6 +147,7 @@
         Ourobot,
         HoloPelt,
         Quill,
+        Hammer,
         Currency,
         CardPack,
         COUNT

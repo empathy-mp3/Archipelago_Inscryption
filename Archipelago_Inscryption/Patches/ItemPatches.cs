@@ -148,6 +148,24 @@ namespace Archipelago_Inscryption.Patches
         {
             RandomizerHelper.DestroyPackPile();
         }
+
+        [HarmonyPatch(typeof(HammerButton), "Start")]
+        [HarmonyPostfix]
+        static void DisableHammerButton(HammerButton __instance)
+        {
+            if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
+                if (!ArchipelagoManager.HasItem(APItem.Hammer))
+                    __instance.button.gameObject.SetActive(false);
+        }
+
+        [HarmonyPatch(typeof(HammerItemSlot), "InitializeHammer")]
+        [HarmonyPostfix]
+        static void DisablePart3Hammer(HammerItemSlot __instance)
+        {
+            if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
+                if (!ArchipelagoManager.HasItem(APItem.Hammer))
+                    __instance.SetEnabled(false);
+        }
     }
     
     [HarmonyPatch]
@@ -179,6 +197,6 @@ namespace Archipelago_Inscryption.Patches
 
             return codes.AsEnumerable();
         }
-    }
+    }    
 }
 

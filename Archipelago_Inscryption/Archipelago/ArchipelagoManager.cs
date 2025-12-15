@@ -368,6 +368,8 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeDeck = (RandomizeDeck)Convert.ToInt32(randomizeDeck);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_sigils", out var randomizeSigils))
                 ArchipelagoOptions.randomizeSigils = (RandomizeSigils)Convert.ToInt32(randomizeSigils);
+            if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
+                ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("skip_tutorial", out var skipTutorial))
                 ArchipelagoOptions.skipTutorial = Convert.ToInt32(skipTutorial) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("skip_epilogue", out var skipEpilogue))

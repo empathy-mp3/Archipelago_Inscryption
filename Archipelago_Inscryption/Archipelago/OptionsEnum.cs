@@ -21,6 +21,14 @@ namespace Archipelago_Inscryption.Archipelago
         COUNT
     }
 
+    internal enum RandomizeHammer
+    {
+        Vanilla,
+        Randomize,
+        Remove,
+        COUNT
+    }
+
     internal enum OptionalDeathCard
     {
         Disable,
