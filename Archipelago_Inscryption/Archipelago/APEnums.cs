@@ -147,6 +147,8 @@
         Ourobot,
         HoloPelt,
         Quill,
+        FilthyCorpseWorldShortcut,
+        GaudyGemLandShortcut,
         Hammer,
         Currency,
         CardPack,
