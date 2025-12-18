@@ -160,12 +160,10 @@ namespace Archipelago_Inscryption.Patches
 
         [HarmonyPatch(typeof(HammerItemSlot), "InitializeHammer")]
         [HarmonyPrefix]
-        static bool DisablePart3Hammer(out bool __state)
+        static bool DisablePart3Hammer(HammerItemSlot __instance)
         {
-            __state = true;
             if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
                 if (!ArchipelagoManager.HasItem(APItem.Hammer)) {
-                    __state = false;
                     return false;
                 }
             return true;
@@ -173,9 +171,9 @@ namespace Archipelago_Inscryption.Patches
 
         [HarmonyPatch(typeof(HammerItemSlot), "CleanupHammer")]
         [HarmonyPrefix]
-        static bool FixPart3Cleanup(bool __state)
+        static bool FixPart3Cleanup(HammerItemSlot __instance)
         {
-            if (!__state)
+            if (!__instance.enabled)
                 return false;
             return true;
         }

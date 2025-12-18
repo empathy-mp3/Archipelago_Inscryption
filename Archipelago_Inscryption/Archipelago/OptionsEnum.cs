@@ -29,6 +29,13 @@ namespace Archipelago_Inscryption.Archipelago
         COUNT
     }
 
+        internal enum RandomizeShortcuts
+    {
+        Vanilla,
+        Randomize,
+        Open,
+        COUNT
+    }
     internal enum OptionalDeathCard
     {
         Disable,

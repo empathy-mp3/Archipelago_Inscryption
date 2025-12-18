@@ -102,6 +102,9 @@
         FactoryGemsDrone,
         FactoryGreatTranscendence,
         FactoryWell,
+        FactoryFoulBackwaterShortcut,
+        FactoryFilthyCorpseWorldShortcut,
+        FactoryGaudyGemLandShortcut,
         COUNT
     }
 
@@ -130,8 +133,6 @@
         Monocle,
         BoneLordFemur,
         BoneLordHorn,
-        BoneLordHoloKey,
-        MycologistsHoloKey,
         AncientObol,
         GreatKrakenCard,
         DrownedSoulCard,
@@ -147,6 +148,9 @@
         Ourobot,
         HoloPelt,
         Quill,
+        BoneLordHoloKey,
+        MycologistsHoloKey,
+        FoulBackwaterShortcut,
         FilthyCorpseWorldShortcut,
         GaudyGemLandShortcut,
         Hammer,

@@ -654,6 +654,19 @@ namespace Archipelago_Inscryption.Patches
                     Transform clue = __instance.transform.Find("Splatter/clue");
                     clue.GetComponent<MeshRenderer>().material.mainTexture = AssetsManager.factoryClockClueTexs[ArchipelagoData.Data.factoryClockCode[2]];
                     break;
+                case "HoloMapArea_UndeadMainPath2(Clone)":
+                    if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
+                        RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/DialogueNode3D").gameObject, APCheck.FactoryFilthyCorpseWorldShortcut);
+                    break;
+                case "HoloMapArea_NatureMainPath_4(Clone)":
+                    if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
+                        RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/DialogueNode3D").gameObject, APCheck.FactoryFoulBackwaterShortcut);
+                    break;
+                case "HoloMapArea_WizardMainPath_5(Clone)":
+                    if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
+                        RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/DialogueNode3D").gameObject, APCheck.FactoryGaudyGemLandShortcut);
+                    break;
+
             }
         }
 
