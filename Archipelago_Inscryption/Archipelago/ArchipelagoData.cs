@@ -73,6 +73,15 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("availableCardPacks")]
         internal int availableCardPacks = 0;
 
+        [JsonProperty("hasHammer")]
+        internal bool hasHammer = false;
+
+        [JsonProperty("validVesselUpgrades")]
+        internal List<Ability> validVesselUpgrades = [Ability.WhackAMole, Ability.Sharp, Ability.GuardDog, 
+        Ability.Reach, Ability.RandomAbility, Ability.GainBattery, Ability.ExplodeOnDeath, Ability.DeathShield, 
+        Ability.LatchExplodeOnDeath, Ability.LatchDeathShield, Ability.LatchBrittle, Ability.Sentry, 
+        Ability.DrawVesselOnHit, Ability.DebuffEnemy, Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath];
+
         [JsonProperty("cabinSafeCode")]
         internal List<int> cabinSafeCode = new List<int>();
         [JsonProperty("cabinClockCode")]

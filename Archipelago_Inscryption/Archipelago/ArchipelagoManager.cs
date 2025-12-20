@@ -295,6 +295,17 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 Part3SaveData.Data.foundUndeadTempleQuill = true;
             }
+            else if (receivedItem == APItem.VesselUpgrade)
+            {
+                int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
+                Ability randomSigil = ArchipelagoData.Data.validVesselUpgrades[SeededRandom.Range(0, ArchipelagoData.Data.validVesselUpgrades.Count, seed++)];
+                Part3SaveData.Data.sideDeckAbilities.Add(randomSigil);
+                ArchipelagoData.Data.validVesselUpgrades.Remove(randomSigil);
+            }
+            else if (receivedItem == APItem.ConduitUpgrade)
+            {
+                Part3SaveData.Data.sideDeckAbilities.Add(Ability.ConduitNull);
+            }
 
             if (Singleton<GameFlowManager>.Instance != null && SaveManager.SaveFile.IsPart1)
             {
@@ -372,6 +383,8 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))
                 ArchipelagoOptions.randomizeShortcuts = (RandomizeShortcuts)Convert.ToInt32(randomizeShortcuts);
+            if (ArchipelagoClient.slotData.TryGetValue("randomize_vessel_upgrades", out var randomizeVesselUpgrades))
+                ArchipelagoOptions.randomizeVesselUpgrades = (RandomizeVesselUpgrades)Convert.ToInt32(randomizeVesselUpgrades);
             if (ArchipelagoClient.slotData.TryGetValue("skip_tutorial", out var skipTutorial))
                 ArchipelagoOptions.skipTutorial = Convert.ToInt32(skipTutorial) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("skip_epilogue", out var skipEpilogue))

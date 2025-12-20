@@ -105,6 +105,10 @@
         FactoryFoulBackwaterShortcut,
         FactoryFilthyCorpseWorldShortcut,
         FactoryGaudyGemLandShortcut,
+        FactoryVesselUpgrade1,
+        FactoryVesselUpgrade2,
+        FactoryVesselUpgrade3,
+        FactoryConduitUpgrade,
         COUNT
     }
 
@@ -153,6 +157,8 @@
         FoulBackwaterShortcut,
         FilthyCorpseWorldShortcut,
         GaudyGemLandShortcut,
+        VesselUpgrade,
+        ConduitUpgrade,
         Hammer,
         Currency,
         CardPack,

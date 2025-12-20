@@ -662,12 +662,67 @@ namespace Archipelago_Inscryption.Patches
                     if (ArchipelagoOptions.randomizeShortcuts != RandomizeShortcuts.Vanilla)
                         RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/DialogueNode3D").gameObject, APCheck.FactoryFoulBackwaterShortcut);
                     break;
-                case"HoloMapArea_WizardMainPath_5(Clone)":
+                case "HoloMapArea_WizardMainPath_5(Clone)":
                     if (ArchipelagoOptions.randomizeShortcuts != RandomizeShortcuts.Vanilla)
                         RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/DialogueNode3D").gameObject, APCheck.FactoryGaudyGemLandShortcut);
                     break;
+                case "HoloMapArea_TempleNatureBoss(Clone)":
+                    if (ArchipelagoOptions.randomizeVesselUpgrades != RandomizeVesselUpgrades.Vanilla) {
+                        if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade1))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade1);
+                        else if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade2))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade2);
+                        else
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade3);
+                    }
+                    break;
+                case "HoloMapArea_TempleUndeadBoss(Clone)":
+                    if (ArchipelagoOptions.randomizeVesselUpgrades != RandomizeVesselUpgrades.Vanilla)
+                        if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade1))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade1);
+                        else if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade2))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade2);
+                        else
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade3);
+                    break;
+                case "HoloMapArea_TempleWizardBoss(Clone)":
+                    if (ArchipelagoOptions.randomizeVesselUpgrades != RandomizeVesselUpgrades.Vanilla)
+                        if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade1))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade1);
+                        else if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade2))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade2);
+                        else
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade3);
+                    break;
+                case "HoloMapArea_TempleTech_1(Clone)":
+                    if (ArchipelagoOptions.randomizeVesselUpgrades != RandomizeVesselUpgrades.Vanilla)
+                        if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade1))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade1);
+                        else if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryVesselUpgrade2))
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade2);
+                        else
+                            RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryVesselUpgrade3);
+                    break;
+                case "HoloMapArea_TechEntrance(Clone)":
+                    if (ArchipelagoOptions.randomizeVesselUpgrades != RandomizeVesselUpgrades.Vanilla)
+                        RandomizerHelper.CreateHoloMapNodeCheck(__instance.transform.Find("Nodes/ModifySideDeckNode3D").gameObject, APCheck.FactoryConduitUpgrade);
+                    break;
             }
         }
+
+
+        [HarmonyPatch(typeof(HoloMapBossNode), "SpewLoot")]
+        [HarmonyPrefix]
+        static void FixBossSpewVesselUpgrades(HoloMapBossNode __instance)
+        {
+            if (ArchipelagoOptions.randomizeVesselUpgrades != RandomizeVesselUpgrades.Vanilla)
+            {
+                __instance.lootNodes.RemoveAll(entry => entry.nodeType == HoloMapNode.NodeDataType.ModifySideDeck);
+                HoloMapArea Area = __instance.GetComponentInParent<HoloMapArea>();
+                Area.transform.Find("Nodes/CardChoiceNode3D(Clone)").gameObject.SetActive(true);
+            }
+        }
+        
 
         [HarmonyPatch(typeof(HoloMapDialogueNode), "DialogueSequence")]
         [HarmonyPrefix]

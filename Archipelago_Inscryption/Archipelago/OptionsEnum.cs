@@ -36,6 +36,13 @@ namespace Archipelago_Inscryption.Archipelago
         Open,
         COUNT
     }
+        internal enum RandomizeVesselUpgrades
+    {
+        Vanilla,
+        Randomize,
+        RemoveOne,
+        COUNT
+    }
     internal enum OptionalDeathCard
     {
         Disable,
