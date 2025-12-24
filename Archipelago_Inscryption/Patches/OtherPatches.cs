@@ -12,6 +12,7 @@ using TMPro;
 using UnityEngine;
 using System.IO;
 using BepInEx;
+using UnityEngine.Rendering;
 
 namespace Archipelago_Inscryption.Patches
 {
@@ -501,6 +502,50 @@ namespace Archipelago_Inscryption.Patches
             codes.InsertRange(index, newCodes);
 
             return codes.AsEnumerable();
+        }
+    }
+
+    [HarmonyPatch]
+    class ExtraAbilitiesPatch
+    {
+        [HarmonyPatch(typeof(AbilitiesUtil), "GetInfo")]
+        [HarmonyPostfix]
+        static AbilityInfo AddExtraAbilities(AbilityInfo __result, Ability ability)
+        {
+            AbilityInfo info = ScriptableObjectLoader<AbilityInfo>.AllData.Find((AbilityInfo x) => x.ability == ability);
+            if (ArchipelagoOptions.extraSigils)
+            {
+                List<Ability> extraList;
+                if (SaveManager.SaveFile.IsPart1) 
+                {
+                    extraList = [Ability.Brittle, Ability.ExplodeOnDeath, Ability.Sniper, Ability.DeathShield, 
+                    Ability.LatchExplodeOnDeath, Ability.LatchBrittle, Ability.LatchDeathShield, Ability.Transformer, 
+                    Ability.Sentry, Ability.SwapStats, Ability.BuffEnemy, Ability.MoveBeside, Ability.StrafeSwap, 
+                    Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Morsel, Ability.BoneDigger, Ability.OpponentBones];
+                    if (extraList.Contains(ability))
+                    {
+                        if (!info.metaCategories.Contains(AbilityMetaCategory.Part1Rulebook)) info.metaCategories.Add(AbilityMetaCategory.Part1Rulebook);
+                        if (!info.metaCategories.Contains(AbilityMetaCategory.Part1Modular)) info.metaCategories.Add(AbilityMetaCategory.Part1Modular);
+                        if (info.metaCategories.Contains(AbilityMetaCategory.AscensionUnlocked)) info.metaCategories.Remove(AbilityMetaCategory.AscensionUnlocked);
+                        if (!ProgressionData.LearnedAbility(info.ability)) ProgressionData.SetAbilityLearned(info.ability);
+                    }
+                }
+                else if (SaveManager.SaveFile.IsPart3)
+                {
+                    extraList = [Ability.CorpseEater, Ability.Submerge, Ability.IceCube, 
+                    Ability.BuffNeighbours, Ability.CreateBells, Ability.BuffGems, Ability.GemsDraw, Ability.GemDependant, 
+                    Ability.StrafeSwap, Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Evolve, Ability.MoveBeside, 
+                    Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath, Ability.CellTriStrike];
+                    if (extraList.Contains(ability))
+                    {
+                        if (!info.metaCategories.Contains(AbilityMetaCategory.Part3Rulebook)) info.metaCategories.Add(AbilityMetaCategory.Part3Rulebook);
+                        if (!info.metaCategories.Contains(AbilityMetaCategory.Part3Modular)) info.metaCategories.Add(AbilityMetaCategory.Part3Modular);
+                        if (info.metaCategories.Contains(AbilityMetaCategory.AscensionUnlocked)) info.metaCategories.Remove(AbilityMetaCategory.AscensionUnlocked);
+                        if (!ProgressionData.LearnedAbility(info.ability)) ProgressionData.SetAbilityLearned(info.ability);
+                    }
+                }
+            }
+            return info;
         }
     }
 }

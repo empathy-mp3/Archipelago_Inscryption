@@ -301,6 +301,8 @@ namespace Archipelago_Inscryption.Archipelago
                     Ability.Reach, Ability.RandomAbility, Ability.GainBattery, Ability.ExplodeOnDeath, Ability.DeathShield, 
                     Ability.LatchExplodeOnDeath, Ability.LatchDeathShield, Ability.LatchBrittle, Ability.Sentry, 
                     Ability.DrawVesselOnHit, Ability.DebuffEnemy, Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath];
+                List<Ability> extraVesselUpgrades = [Ability.CreateBells, Ability.DrawRabbits, Ability.BuffNeighbours, Ability.MadeOfStone];
+                if (ArchipelagoOptions.extraSigils) validVesselUpgrades = validVesselUpgrades.Concat(extraVesselUpgrades).ToList();
                 foreach (Ability sigil in Part3SaveData.Data.sideDeckAbilities)
                 {
                     if (validVesselUpgrades.Contains(sigil)) validVesselUpgrades.Remove(sigil);
@@ -386,6 +388,8 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeDeck = (RandomizeDeck)Convert.ToInt32(randomizeDeck);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_sigils", out var randomizeSigils))
                 ArchipelagoOptions.randomizeSigils = (RandomizeSigils)Convert.ToInt32(randomizeSigils);
+            if (ArchipelagoClient.slotData.TryGetValue("extra_sigils", out var extraSigils))
+                ArchipelagoOptions.extraSigils = Convert.ToInt32(extraSigils) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))
