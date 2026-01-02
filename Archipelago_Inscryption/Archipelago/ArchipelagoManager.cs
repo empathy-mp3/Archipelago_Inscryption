@@ -3,6 +3,7 @@ using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
+using Archipelago_Inscryption.Patches;
 using DiskCardGame;
 using GBC;
 using System;
@@ -146,7 +147,9 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 for (int i = 0; i < info.cardsToUnlock.Length; i++)
                 {
-                    (info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck).AddCard(CardLoader.GetCardByName(info.cardsToUnlock[i]));
+                    var card = CardLoader.GetCardByName(info.cardsToUnlock[i]);
+                    CardPatches.RandomizeSigils(card);
+                    (info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck).AddCard(card);
                 }
 
                 for (int i = 0; i < info.rigDraws.Length; i++)

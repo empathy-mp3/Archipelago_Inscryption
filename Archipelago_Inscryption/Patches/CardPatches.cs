@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Archipelago_Inscryption.Archipelago;
 using DiskCardGame;
 using HarmonyLib;
 using UnityEngine;
@@ -12,21 +13,40 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     internal class CardPatches
     {
-        static void RandomizeSigils(CardInfo card)
+        public static void RandomizeSigils(CardInfo card)
         {
             int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
             RandomizeSigils(card, ref seed);
         }
-        static void RandomizeSigils(CardInfo card, ref int seed)
+        public static void RandomizeSigils(CardInfo card, ref int seed)
         {
             ScriptableObjectLoader<AbilityInfo>.LoadData("Abilities");
-            List<AbilityInfo> learnedAbilities = ScriptableObjectLoader<AbilityInfo>.allData.FindAll(
-                x => x.metaCategories.Contains(AbilityMetaCategory.Part1Modular)
-                && x.metaCategories.Contains(AbilityMetaCategory.Part1Rulebook)
-                // && x.ability != Ability.RandomAbility // is there a reason this should be excluded, like in deck randomizer?
-                && x.ability != Ability.CreateEgg
-                && x.ability != Ability.HydraEgg
-            );
+            List<AbilityInfo> learnedAbilities;
+            if (SaveManager.SaveFile.IsPart1)
+            {
+                if (card.name == "!DEATHCARD_BASE")
+                {
+                    return;
+                }
+                learnedAbilities = ScriptableObjectLoader<AbilityInfo>.allData.FindAll(
+                    x => x.metaCategories.Contains(AbilityMetaCategory.Part1Modular)
+                    && x.metaCategories.Contains(AbilityMetaCategory.Part1Rulebook)
+                    // && x.ability != Ability.RandomAbility // is there a reason this should be excluded, like in deck randomizer?
+                    && x.ability != Ability.CreateEgg
+                    && x.ability != Ability.HydraEgg
+                );
+            }
+            else if (SaveManager.SaveFile.IsPart3)
+            {
+                learnedAbilities = ScriptableObjectLoader<AbilityInfo>.allData.FindAll(
+                    x => x.metaCategories.Contains(AbilityMetaCategory.Part3Modular)
+                    && x.metaCategories.Contains(AbilityMetaCategory.Part3Rulebook)
+                );
+            }
+            else
+            {
+                return;
+            }
             var replacement = new SigilReplacementInfo();
             for (int i = 0; i < card.abilities.Count; i++)
             {
@@ -34,10 +54,12 @@ namespace Archipelago_Inscryption.Patches
                 replacement.abilities.Add(newAbility.ability);
                 learnedAbilities.Remove(newAbility);
             }
+            if (replacement.abilities.Count <= 0) return;
             card.mods.Add(replacement);
         }
 
         [HarmonyPatch(typeof(Part1CardChoiceGenerator), "GenerateDirectChoices")]
+        [HarmonyPatch(typeof(Part3CardChoiceGenerator), "GenerateChoices")]
         [HarmonyPatch(typeof(Part1RareChoiceGenerator), "GenerateChoices")]
         [HarmonyPatch(typeof(DuplicateMergeSequencer), "GetDuplicateCardChoices")]
         [HarmonyPostfix]

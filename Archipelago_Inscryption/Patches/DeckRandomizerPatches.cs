@@ -585,31 +585,41 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool RandomizeStarterDeckAct3()
         {
-            if (ArchipelagoOptions.randomizeDeck != RandomizeDeck.StarterOnly || StoryEventsData.EventCompleted(StoryEvent.Part3Intro))
+            if (StoryEventsData.EventCompleted(StoryEvent.Part3Intro))
                 return true;
 
-            Part3SaveData.Data.deck.RemoveCardByName("BatteryBot");
-            Part3SaveData.Data.deck.RemoveCardByName("Shieldbot");
-            Part3SaveData.Data.deck.RemoveCardByName("Sniper");
-            Part3SaveData.Data.deck.RemoveCardByName("CloserBot");
-
-            List<CardInfo> randomCards = new List<CardInfo>();
             int randomSeed = SaveManager.SaveFile.GetCurrentRandomSeed();
-            for (int i = 0; i < 4; i++)
+
+            if (ArchipelagoOptions.randomizeDeck == RandomizeDeck.StarterOnly)
             {
-                CardInfo card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
-                while (randomCards.Exists(x => x.name == card.name))
+                Part3SaveData.Data.deck.RemoveCardByName("BatteryBot");
+                Part3SaveData.Data.deck.RemoveCardByName("Shieldbot");
+                Part3SaveData.Data.deck.RemoveCardByName("Sniper");
+                Part3SaveData.Data.deck.RemoveCardByName("CloserBot");
+
+                List<CardInfo> randomCards = new List<CardInfo>();
+                for (int i = 0; i < 4; i++)
                 {
-                    card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
+                    CardInfo card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
+                    while (randomCards.Exists(x => x.name == card.name))
+                    {
+                        card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
+                    }
+
+                    randomCards.Add(card);
                 }
 
-                randomCards.Add(card);
+                foreach (CardInfo card in randomCards)
+                {
+                    Part3SaveData.Data.deck.AddCard(card);
+                }
             }
 
-            foreach (CardInfo card in randomCards)
+            foreach (CardInfo card in Part3SaveData.Data.deck.Cards)
             {
-                Part3SaveData.Data.deck.AddCard(card);
+                CardPatches.RandomizeSigils(card, ref randomSeed);
             }
+            Part3SaveData.Data.deck.UpdateModDictionary();
 
             return true;
         }
