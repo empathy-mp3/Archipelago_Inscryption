@@ -73,9 +73,6 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("availableCardPacks")]
         internal int availableCardPacks = 0;
 
-        [JsonProperty("hasHammer")]
-        internal bool hasHammer = false;
-
         [JsonProperty("cabinSafeCode")]
         internal List<int> cabinSafeCode = new List<int>();
         [JsonProperty("cabinClockCode")]

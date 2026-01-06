@@ -164,10 +164,8 @@ namespace Archipelago_Inscryption.Patches
         {
             if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
                 if (!ArchipelagoManager.HasItem(APItem.Hammer)) {
-                    ArchipelagoData.Data.hasHammer = false;
                     return false;
                 }
-            ArchipelagoData.Data.hasHammer = true;
             return true;
         }
 
@@ -175,9 +173,9 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool FixPart3Cleanup(HammerItemSlot __instance)
         {
-            if (!ArchipelagoData.Data.hasHammer) {
-                    return false;
-                }
+            if (__instance.Item == null) {
+                return false;
+            }
             return true;
         }
 
