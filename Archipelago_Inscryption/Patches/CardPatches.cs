@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Archipelago_Inscryption.Archipelago;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
@@ -18,6 +19,10 @@ namespace Archipelago_Inscryption.Patches
         static int nodeOffset = 0;
         public static void RandomizeSigils(CardInfo card)
         {
+            if (ArchipelagoOptions.randomizeSigils != Archipelago.RandomizeSigils.RandomizeOnce)
+            {
+                return;
+            }
             ScriptableObjectLoader<AbilityInfo>.LoadData("Abilities");
             List<AbilityInfo> learnedAbilities;
             if (SaveManager.SaveFile.IsPart1)
@@ -68,6 +73,10 @@ namespace Archipelago_Inscryption.Patches
 
         public static void RandomizeSigilsAct2(CardInfo card)
         {
+            if (ArchipelagoOptions.randomizeSigils != Archipelago.RandomizeSigils.RandomizeOnce)
+            {
+                return;
+            }
             List<AbilityInfo> learnedAbilities = ScriptableObjectLoader<AbilityInfo>.allData.FindAll(
                 x => x.pixelIcon != null
                 && x.ability != Ability.ActivatedSacrificeDrawCards

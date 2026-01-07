@@ -18,6 +18,7 @@ namespace Archipelago_Inscryption.Archipelago
         Disable,
         RandomizeAddons,
         RandomizeAll,
+        RandomizeOnce,
         COUNT
     }
 
