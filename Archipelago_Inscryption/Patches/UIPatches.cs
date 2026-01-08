@@ -95,15 +95,146 @@ namespace Archipelago_Inscryption.Patches
 
         [HarmonyPatch(typeof(StartScreenController), "Start")]
         [HarmonyPrefix]
-        static bool CreateStatusAndLogsUI(StartScreenController __instance)
+        static bool CreateStatusAndLogsUIAndChapterMenuCards(StartScreenController __instance)
         {
-            if (ArchipelagoUI.exists) return true;
+            if (!ArchipelagoUI.exists)
+            {
+                GameObject uiObj = Object.Instantiate(AssetsManager.archipelagoUIPrefab);
+                Object.DontDestroyOnLoad(uiObj);
+                __instance.gameObject.SetActive(false);
+                Singleton<ArchipelagoUI>.Instance.startScreen = __instance;
 
-            GameObject uiObj = Object.Instantiate(AssetsManager.archipelagoUIPrefab);
-            Object.DontDestroyOnLoad(uiObj);
-            __instance.gameObject.SetActive(false);
-            Singleton<ArchipelagoUI>.Instance.startScreen = __instance;
+                return false;
+            }
 
+            var menu = MenuController.Instance;
+            menu.cards.RemoveAt(2); // ascension mode (kaycee's mod), gets removed later anyway
+            var index = 0;
+            var inOrder = ArchipelagoData.Data.goalType == Goal.ActsInOrder;
+            var locked = false;
+
+            var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted);
+            var completedAct1 = ArchipelagoData.Data.act1Completed;
+            var act1NewRun = menu.cards[index++];
+            var act1 = menu.cards[index++];
+            act1.titleSprite = null;
+            act1.lockedTitleSprite = null;
+            act1.titleLocId = "";
+
+            if (ArchipelagoData.Data.enableAct1)
+            {
+                act1NewRun.name = "MenuCard_Act1NewRun";
+                act1NewRun.titleText = startedAct1 ? "New Act 1 Run" : "Start Act 1";
+                act1NewRun.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1NewRun;
+
+                if (startedAct1)
+                {
+                    act1.name = "MenuCard_Act1";
+                    act1.titleText = completedAct1 ? "Continue Act 1 (Complete!)" : "Continue Act 1";
+                    act1.GetComponent<SpriteRenderer>().sprite = completedAct1 ? AssetsManager.menuCardAct1Complete : AssetsManager.menuCardAct1Continue;
+                }
+                else
+                {
+                    index--;
+                    act1.SetEnabled(false);
+                    act1.enabled = false;
+                    menu.cards.Remove(act1);
+                }
+
+                if (inOrder && !completedAct1) locked = true;
+            }
+            else
+            {
+                index -= 2;
+                act1NewRun.SetEnabled(false);
+                act1NewRun.enabled = false;
+                menu.cards.Remove(act1NewRun);
+                act1.SetEnabled(false);
+                act1.enabled = false;
+                menu.cards.Remove(act1);
+            }
+
+            if (ArchipelagoData.Data.enableAct2)
+            {
+                var startedAct2 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.GBCIntroCompleted);
+                var completedAct2 = ArchipelagoData.Data.act2Completed;
+                var act2 = Object.Instantiate(act1, act1.transform.parent);
+                menu.cards.Insert(index++, act2);
+                act2.name = "MenuCard_Act2";
+                act2.titleText = startedAct2 ? (completedAct2 ? "Continue Act 2 (Complete!)" : "Continue Act 2") : "Start Act 2";
+                act2.GetComponent<SpriteRenderer>().sprite = startedAct2 ? (completedAct2 ? AssetsManager.menuCardAct2Complete : AssetsManager.menuCardAct2Continue) : AssetsManager.menuCardAct2Start;
+
+                if (locked)
+                {
+                    act2.permanentlyLocked = true;
+                    act2.titleText = "Locked";
+                    act2.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct2Locked;
+                }
+                if (inOrder && !completedAct2) locked = true;
+            }
+
+            if (ArchipelagoData.Data.enableAct2)
+            {
+                var startedAct3 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.Part3Intro);
+                var completedAct3 = ArchipelagoData.Data.act3Completed;
+                var act3 = Object.Instantiate(act1, act1.transform.parent);
+                menu.cards.Insert(index++, act3);
+                act3.name = "MenuCard_Act3";
+                act3.titleText = startedAct3 ? (completedAct3 ? "Continue Act 3 (Complete!)" : "Continue Act 3") : "Start Act 3";
+                act3.GetComponent<SpriteRenderer>().sprite = startedAct3 ? (completedAct3 ? AssetsManager.menuCardAct3Complete : AssetsManager.menuCardAct3Continue) : AssetsManager.menuCardAct3Start;
+
+                if (locked)
+                {
+                    act3.permanentlyLocked = true;
+                    act3.titleText = "Locked";
+                    act3.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct3Locked;
+                }
+            }
+
+            if (!ArchipelagoData.Data.skipEpilogue
+            && (!ArchipelagoData.Data.enableAct1 || ArchipelagoData.Data.act1Completed)
+            && (!ArchipelagoData.Data.enableAct2 || ArchipelagoData.Data.act2Completed)
+            && (!ArchipelagoData.Data.enableAct3 || ArchipelagoData.Data.act3Completed))
+            {
+                var act4 = Object.Instantiate(act1, act1.transform.parent);
+                menu.cards.Insert(index++, act4);
+                act4.name = "MenuCard_Act4";
+                act4.titleText = "Play Epilogue";
+                act4.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct4;
+            }
+
+            var cardSpacingX = 0.458f;
+            var leftAnchorX = -cardSpacingX * (menu.cards.Count - 1) / 2f; // -1 because it's from the centers
+            for (int i = 0; i < menu.cards.Count; i++)
+            {
+                menu.cards[i].transform.localPosition = new Vector2(leftAnchorX + (float)i * cardSpacingX, menu.cards[i].transform.localPosition.y);
+                menu.cards[i].ReInitPosition(menu.cards[i].transform.localPosition);
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(MenuController), "LoadGameFromMenu")]
+        [HarmonyPrefix]
+        public static bool LoadSelectedActFromMenu()
+        {
+            switch (Singleton<MenuController>.Instance.slottedCard.name)
+            {
+                case "MenuCard_Act1NewRun":
+                    UIHelper.LoadSelectedChapter(1, true);
+                    break;
+                case "MenuCard_Act1":
+                    UIHelper.LoadSelectedChapter(1, false);
+                    break;
+                case "MenuCard_Act2":
+                    UIHelper.LoadSelectedChapter(2);
+                    break;
+                case "MenuCard_Act3":
+                    UIHelper.LoadSelectedChapter(3);
+                    break;
+                case "MenuCard_Act4":
+                    UIHelper.LoadSelectedChapter(4);
+                    break;
+            }
             return false;
         }
 
@@ -147,55 +278,17 @@ namespace Archipelago_Inscryption.Patches
             RandomizerHelper.UpdatePackButtonEnabled();
         }
 
-        [HarmonyPatch(typeof(ChapterSelectMenu), "OnChapterConfirmed")]
-        [HarmonyPrefix]
-        static bool ChooseChapterWithSameSaveFile(ChapterSelectMenu __instance)
-        {
-            UIHelper.LoadSelectedChapter(__instance.currentSelectedChapter);
-
-            return false;
-        }
-
-        [HarmonyPatch(typeof(ChapterSelectMenu), "OnChapterSelected")]
-        [HarmonyPrefix]
-        static bool ReplaceChapterSelectPromptText(ChapterSelectMenu __instance, int chapter)
-        {
-            if (chapter == 1)
-                __instance.confirmPromptText.text = "Start a new act 1 run?";
-            else if (chapter == 2)
-                __instance.confirmPromptText.text = StoryEventsData.EventCompleted(StoryEvent.StartScreenNewGameUsed) ? "Continue act 2?" : "Start act 2?";
-            else if (chapter == 3)
-                __instance.confirmPromptText.text = StoryEventsData.EventCompleted(StoryEvent.Part3Intro) ? "Continue act 3?" : "Start act 3?";
-
-            return true;
-        }
-
-        [HarmonyPatch(typeof(ChapterSelectMenu), "Start")]
-        [HarmonyPostfix]
-        static void DisableCertainButtonsFromChapterSelect(ChapterSelectMenu __instance)
-        {
-            __instance.transform.Find("Clips_Row").gameObject.SetActive(false);
-            __instance.transform.Find("Chapter_Row/ChapterSelectItemUI").gameObject.SetActive(false);
-            UIHelper.UpdateChapterButtons();
-        }
-
         [HarmonyPatch(typeof(MenuController), "OnCardReachedSlot")]
         [HarmonyTranspiler]
-        static IEnumerable<CodeInstruction> ReplaceNewGameWithChapterSelect(IEnumerable<CodeInstruction> instructions)
+        static IEnumerable<CodeInstruction> ReplaceAct1NewRunPrompt(IEnumerable<CodeInstruction> instructions)
         {
             var codes = new List<CodeInstruction>(instructions);
 
             int index = codes.FindIndex(x => x.Calls(AccessTools.Method(typeof(StoryEventsData), "EventCompleted")));
+            codes[index - 1].operand = (int)StoryEvent.BasicTutorialCompleted;
 
-            codes.RemoveRange(index, 49);
-
-            var newCodes = new List<CodeInstruction>()
-            {
-                new CodeInstruction(OpCodes.Pop),
-                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UIHelper), "GoToChapterSelect"))
-            };
-
-            codes.InsertRange(index, newCodes);
+            index = codes.FindIndex(x => x.Is(OpCodes.Ldstr, "Erase save data and start New Game?"));
+            codes[index].operand = "Start new Act 1 run?";
 
             return codes.AsEnumerable();
         }

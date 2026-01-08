@@ -26,7 +26,7 @@ namespace Archipelago_Inscryption.Helpers
             return inputField;
         }
 
-        internal static void LoadSelectedChapter(int chapter)
+        internal static void LoadSelectedChapter(int chapter, bool act1NewRun = true)
         {
             SaveManager.LoadFromFile();
 
@@ -44,7 +44,10 @@ namespace Archipelago_Inscryption.Helpers
                 case 1:
                     ScriptableObjectLoader<CardInfo>.AllData.Find(x => x.name == "Hrokkall").temple = CardTemple.Tech;
                     SaveManager.SaveFile.currentScene = "Part1_Cabin";
-                    SaveManager.SaveFile.NewPart1Run();
+                    if (act1NewRun)
+                    {
+                        SaveManager.SaveFile.NewPart1Run();
+                    }
                     break;
                 case 2:
                     ScriptableObjectLoader<CardInfo>.AllData.Find(x => x.name == "Hrokkall").temple = CardTemple.Nature;
