@@ -518,8 +518,7 @@ namespace Archipelago_Inscryption.Patches
                 List<Ability> extraList;
                 if (SaveManager.SaveFile.IsPart1) 
                 {
-                    extraList = [Ability.Brittle, Ability.ExplodeOnDeath, Ability.Sniper, Ability.DeathShield, 
-                    Ability.LatchExplodeOnDeath, Ability.LatchBrittle, Ability.LatchDeathShield, Ability.Transformer, 
+                    extraList = [Ability.Brittle, Ability.ExplodeOnDeath, Ability.Sniper, Ability.DeathShield,
                     Ability.Sentry, Ability.SwapStats, Ability.BuffEnemy, Ability.MoveBeside, Ability.StrafeSwap, 
                     Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Morsel, Ability.BoneDigger, Ability.OpponentBones];
                     if (extraList.Contains(ability))
@@ -532,9 +531,9 @@ namespace Archipelago_Inscryption.Patches
                 }
                 else if (SaveManager.SaveFile.IsPart3)
                 {
-                    extraList = [Ability.CorpseEater, Ability.Submerge, Ability.IceCube, 
-                    Ability.BuffNeighbours, Ability.CreateBells, Ability.BuffGems, Ability.GemsDraw, Ability.GemDependant, 
-                    Ability.StrafeSwap, Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Evolve, Ability.MoveBeside, 
+                    extraList = [Ability.CorpseEater, Ability.Submerge, Ability.IceCube, Ability.BuffNeighbours, 
+                    Ability.CreateBells, Ability.BuffGems, Ability.GemDependant, Ability.StrafeSwap, 
+                    Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Evolve, Ability.MoveBeside, 
                     Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath, Ability.CellTriStrike];
                     if (extraList.Contains(ability))
                     {
@@ -546,6 +545,14 @@ namespace Archipelago_Inscryption.Patches
                 }
             }
             return info;
+        }
+
+        [HarmonyPatch(typeof(CreateCardsAdjacent), "ModifySpawnedCard")]
+        [HarmonyPostfix]
+        static void DisplaySpawnedCardSigilsAct3(CardInfo card)
+        {
+            if (SaveManager.SaveFile.IsPart3)
+                card.Mods.Last().fromCardMerge = false;
         }
     }
 }
