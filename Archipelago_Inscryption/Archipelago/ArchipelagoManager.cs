@@ -304,7 +304,7 @@ namespace Archipelago_Inscryption.Archipelago
                     Ability.Reach, Ability.RandomAbility, Ability.GainBattery, Ability.ExplodeOnDeath, Ability.DeathShield, 
                     Ability.LatchExplodeOnDeath, Ability.LatchDeathShield, Ability.LatchBrittle, Ability.Sentry, 
                     Ability.DrawVesselOnHit, Ability.DebuffEnemy, Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath];
-                List<Ability> extraVesselUpgrades = [Ability.CreateBells, Ability.DrawRabbits, Ability.BuffNeighbours, Ability.MadeOfStone];
+                List<Ability> extraVesselUpgrades = [Ability.CreateBells, Ability.DrawRabbits, Ability.MadeOfStone];
                 if (ArchipelagoOptions.extraSigils) validVesselUpgrades = validVesselUpgrades.Concat(extraVesselUpgrades).ToList();
                 foreach (Ability sigil in Part3SaveData.Data.sideDeckAbilities)
                 {

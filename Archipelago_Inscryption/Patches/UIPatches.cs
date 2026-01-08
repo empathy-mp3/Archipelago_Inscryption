@@ -217,5 +217,37 @@ namespace Archipelago_Inscryption.Patches
 
             return true;
         }
+
+        [HarmonyPatch(typeof(StartScreenThemeSetter), "Start")]
+        [HarmonyPostfix]
+        static void ChangeActThemeOnStart(StartScreenThemeSetter __instance)
+        {
+            if (SaveManager.SaveFile.currentScene.Contains("Part1"))
+            {
+                __instance.SetTheme(__instance.themes[0]);
+            }
+            else if (SaveManager.SaveFile.currentScene.Contains("GBC"))
+            {
+                __instance.SetTheme(__instance.themes[1]);
+            }
+            else if (SaveManager.SaveFile.currentScene.Contains("Part3"))
+            {
+                __instance.SetTheme(__instance.themes[2]);
+            }
+        }
+
+        [HarmonyPatch(typeof(StartScreenController), "Start")]
+        [HarmonyPrefix]
+        static void ChangeActOnInitialize(StartScreenController __instance)
+        {   
+            if (!ArchipelagoOptions.enableAct1 && SaveManager.SaveFile.currentScene.Contains("Part1") && 
+                !StoryEventsData.EventCompleted(StoryEvent.FinaleCryptCompleted))
+            {
+                if (ArchipelagoOptions.enableAct2)
+                    SaveManager.SaveFile.currentScene = "GBC_Intro";
+                else if (ArchipelagoOptions.enableAct3)
+                    SaveManager.SaveFile.currentScene = "Part3_Cabin";
+            }
+        }   
     }
 }
