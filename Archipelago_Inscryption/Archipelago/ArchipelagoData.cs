@@ -102,6 +102,24 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonIgnore]
         internal uint index = 0;
 
+        [JsonProperty("itemLogMode")]
+        internal static ItemLogMode itemLogMode = ItemLogMode.AllItems;
+        [JsonProperty("deathLinkOverride")]
+        internal static DeathLinkOverride deathLinkOverride = DeathLinkOverride.Default;
+        public static bool DeathLink => deathLinkOverride switch
+        {
+            DeathLinkOverride.Disabled => false,
+            DeathLinkOverride.OneCandle => true,
+            DeathLinkOverride.EndRun => true,
+            _ => ArchipelagoOptions.deathlink,
+        };
+        public static Act1DeathLink Act1DeathLinkBehaviour => deathLinkOverride switch
+        {
+            DeathLinkOverride.OneCandle => Act1DeathLink.CandleExtinguished,
+            DeathLinkOverride.EndRun => Act1DeathLink.Sacrificed,
+            _ => ArchipelagoOptions.act1DeathLinkBehaviour,
+        };
+
         internal static void SaveToFile()
         {
             string json = JsonConvert.SerializeObject(Data);

@@ -19,7 +19,7 @@ namespace Archipelago_Inscryption.Archipelago
         {
             ArchipelagoModPlugin.Log.LogInfo($"DeathLink is set to {ArchipelagoOptions.deathlink}");
             DeathLinkService.OnDeathLinkReceived += ReceiveDeathLink;
-            if (ArchipelagoOptions.deathlink)
+            if (ArchipelagoData.DeathLink)
                 DeathLinkService.EnableDeathLink();
             else
                 DeathLinkService.DisableDeathLink();
@@ -49,7 +49,7 @@ namespace Archipelago_Inscryption.Archipelago
 
             if (Singleton<FirstPersonController>.Instance != null && 
                 Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.FirstPerson3D &&
-                (SaveManager.SaveFile.IsPart3 || ArchipelagoOptions.act1DeathLinkBehaviour == Act1DeathLink.Sacrificed || RunState.Run.playerLives <= 1))
+                (SaveManager.SaveFile.IsPart3 || ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed || RunState.Run.playerLives <= 1))
                 yield return Singleton<GameFlowManager>.Instance.DoTransitionSequence(GameState.Map, null);
 
             if (PauseMenu.instance && PauseMenu.instance.Paused)
@@ -67,14 +67,14 @@ namespace Archipelago_Inscryption.Archipelago
                     yield return new WaitUntil(() => Singleton<TurnManager>.Instance.IsPlayerTurn || Singleton<TurnManager>.Instance.GameIsOver());
                     Singleton<TurnManager>.Instance.PlayerSurrendered = true;
 
-                    if (ArchipelagoOptions.act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
+                    if (ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
                         yield return new WaitUntil(() => RunState.Run.playerLives == 0);
                     else
                         yield return new WaitUntil(() => RunState.Run.playerLives == prevLives - 1);
                 }
                 else
                 {
-                    if (ArchipelagoOptions.act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
+                    if (ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
                     {
                         Singleton<GameFlowManager>.Instance.CurrentGameState = GameState.CardBattle;
                         while (RunState.Run.playerLives > 0)
@@ -173,7 +173,7 @@ namespace Archipelago_Inscryption.Archipelago
 
         static public void SendDeathLink()
         {
-            if (!ArchipelagoOptions.deathlink || receivedDeath)
+            if (!ArchipelagoData.DeathLink || receivedDeath)
                 return;
             ArchipelagoModPlugin.Log.LogMessage("Sharing death with your friends...");
             var alias = ArchipelagoClient.session.Players.GetPlayerAliasAndName(ArchipelagoClient.session.ConnectionInfo.Slot);
@@ -181,7 +181,7 @@ namespace Archipelago_Inscryption.Archipelago
             string cause;
             if (i == 0)
                 cause = " skill issue";
-            if (i == 1)
+            else if (i == 1)
                 cause = " lack of skill";
             else
                 cause = " ineptitude";

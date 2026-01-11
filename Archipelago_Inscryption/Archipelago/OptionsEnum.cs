@@ -73,4 +73,21 @@ namespace Archipelago_Inscryption.Archipelago
         AsOneItem,
         COUNT
     }
+
+    internal enum ItemLogMode
+    {
+        Disabled,
+        YoursOnly,
+        AllItems,
+        COUNT
+    }
+
+    internal enum DeathLinkOverride
+    {
+        Default,
+        Disabled,
+        OneCandle,
+        EndRun,
+        COUNT
+    }
 }

@@ -433,7 +433,7 @@ namespace Archipelago_Inscryption.Helpers
 
         internal static IEnumerator PrePlayerDeathSequence(Part1GameFlowManager manager)
         {
-            if (!DeathLinkManager.receivedDeath && ArchipelagoOptions.act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
+            if (!DeathLinkManager.receivedDeath && ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
                 DeathLinkManager.SendDeathLink();
             if ((!DeathLinkManager.receivedDeath && ArchipelagoOptions.optionalDeathCard == OptionalDeathCard.EnableOnlyOnDeathLink)
                 || ArchipelagoOptions.optionalDeathCard == OptionalDeathCard.Disable)
@@ -524,7 +524,7 @@ namespace Archipelago_Inscryption.Helpers
 
         internal static IEnumerator BlowOutOneOrAllCandles(bool fromBoss)
         {
-            if (DeathLinkManager.receivedDeath && ArchipelagoOptions.act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
+            if (DeathLinkManager.receivedDeath && ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
             {
                 if (Singleton<GameMap>.Instance.FullyUnrolled)
                     Singleton<GameMap>.Instance.HideMapImmediate();
@@ -535,7 +535,7 @@ namespace Archipelago_Inscryption.Helpers
             }
             else
             {
-                if (ArchipelagoOptions.act1DeathLinkBehaviour == Act1DeathLink.CandleExtinguished)
+                if (ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.CandleExtinguished)
                     DeathLinkManager.SendDeathLink();
 
                 yield return Singleton<CandleHolder>.Instance.BlowOutCandleSequence(fromBoss);

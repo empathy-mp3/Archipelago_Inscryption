@@ -1,23 +1,60 @@
 ﻿using Archipelago_Inscryption.Archipelago;
-using Archipelago_Inscryption.Components;
+using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using GBC;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Archipelago_Inscryption.Helpers
 {
     internal static class UIHelper
     {
-        internal static InputField CreateInputField(GameObject prefab, Transform parent, string name, string label, string defaultContent, float yPosition, int characterLimit, bool censor = false)
+        private static GameObject inputFieldPrefab;
+        private static void CreateInputFieldTemplate(OptionsUI menu)
         {
-            GameObject inputFieldInstance = GameObject.Instantiate(prefab);
+            inputFieldPrefab = new GameObject("InputField_");
+            inputFieldPrefab.transform.ResetTransform();
+
+            BoxCollider2D collider = inputFieldPrefab.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(1.86f, 0.16f);
+
+            GameObject labelPrefab = menu.transform.Find("MainPanel/TabGroup_Gameplay/IncrementalSlider_TextSpeed/Title").gameObject;
+
+            GameObject inputFieldLabel = Object.Instantiate(labelPrefab, inputFieldPrefab.transform);
+            inputFieldLabel.name = "Title";
+            inputFieldLabel.transform.localPosition = labelPrefab.transform.localPosition;
+
+            GameObject fieldContentPrefab = menu.transform.Find("MainPanel/TabGroup_Gameplay/IncrementalField_Language/TextFrame").gameObject;
+
+            GameObject inputFieldContent = Object.Instantiate(fieldContentPrefab, inputFieldPrefab.transform);
+            inputFieldContent.name = "TextFrame";
+            inputFieldContent.transform.localPosition = fieldContentPrefab.transform.localPosition;
+
+            inputFieldContent.GetComponent<SpriteRenderer>().sprite = AssetsManager.inputFieldSprite;
+
+            Text inputFieldText = inputFieldContent.GetComponentInChildren<Text>(true);
+            inputFieldText.rectTransform.offsetMin = new Vector2(-88, -25);
+            inputFieldText.rectTransform.offsetMax = new Vector2(88, 25);
+            inputFieldText.alignment = TextAnchor.MiddleLeft;
+
+            inputFieldPrefab.AddComponent<Components.InputField>();
+            inputFieldPrefab.SetActive(false);
+        }
+        internal static Components.InputField CreateInputField(OptionsUI menu, Transform parent, string name, string label, string defaultContent, float yPosition, int characterLimit, bool censor = false)
+        {
+            if (inputFieldPrefab is null)
+            {
+                CreateInputFieldTemplate(menu);
+            }
+            GameObject inputFieldInstance = Object.Instantiate(inputFieldPrefab);
+            inputFieldInstance.SetActive(true);
             inputFieldInstance.transform.SetParent(parent);
             inputFieldInstance.transform.ResetTransform();
             inputFieldInstance.transform.localPosition = new Vector3(0, yPosition, 0);
             inputFieldInstance.name = name;
-            InputField inputField = inputFieldInstance.GetComponent<InputField>();
+            Components.InputField inputField = inputFieldInstance.GetComponent<Components.InputField>();
             inputField.Label = label;
             inputField.Text = defaultContent;
             inputField.CharacterLimit = characterLimit;

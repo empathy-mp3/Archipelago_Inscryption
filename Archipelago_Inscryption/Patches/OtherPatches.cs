@@ -177,7 +177,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool RemoveGrizzlyScriptedDeath(ref bool __result)
         {
-            if (!ArchipelagoOptions.skipTutorial && !ArchipelagoOptions.deathlink)
+            if (!ArchipelagoOptions.skipTutorial && !ArchipelagoData.DeathLink)
                 return true;
 
             __result = false;
