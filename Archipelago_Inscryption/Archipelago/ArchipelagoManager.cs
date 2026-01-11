@@ -123,8 +123,11 @@ namespace Archipelago_Inscryption.Archipelago
                 else
                     message = "Received " + item.ItemName + " from " + item.PlayerName;
 
-                Singleton<ArchipelagoUI>.Instance.LogImportant(message);
-                ArchipelagoModPlugin.Log.LogMessage(message);
+                if (ArchipelagoData.itemLogMode != ItemLogMode.Disabled)
+                {
+                    Singleton<ArchipelagoUI>.Instance.LogImportant(message);
+                    ArchipelagoModPlugin.Log.LogMessage(message);
+                }
 
                 ApplyItemReceived(item.Item);
 

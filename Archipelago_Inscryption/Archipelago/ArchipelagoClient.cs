@@ -158,8 +158,20 @@ namespace Archipelago_Inscryption.Archipelago
                 Disconnect();
         }
 
+        private static bool ShouldLogMessage(LogMessage message)
+        {
+            if (message is ItemSendLogMessage)
+            {
+                if (ArchipelagoData.itemLogMode == ItemLogMode.Disabled) return false;
+                if (ArchipelagoData.itemLogMode == ItemLogMode.AllItems) return true;
+                if ((message as ItemSendLogMessage).IsReceiverTheActivePlayer) return true;
+                if ((message as ItemSendLogMessage).IsSenderTheActivePlayer) return true;
+            }
+            return true;
+        }
         private static void OnMessageReceived(LogMessage message)
         {
+            if (!ShouldLogMessage(message)) return;
             ArchipelagoModPlugin.Log.LogMessage(message.ToString());
             Singleton<ArchipelagoUI>.Instance.LogMessage(message.ToString());
         }

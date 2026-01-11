@@ -1,4 +1,5 @@
 ﻿using DiskCardGame;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -34,8 +35,37 @@ namespace Archipelago_Inscryption.Components
             set 
             { 
                 realText = value; 
-                text.text = (censor ? new string('*', value.Length) : value); ;
+                DisplayText(realText);
                 keyboardInput.KeyboardInput = value;
+            }
+        }
+        internal void DisplayText(string original, bool withCursor = false)
+        {
+            var str = (censor ? new string('*', original.Length) : original) + (withCursor ? "|" : " ");
+            text.text = str;
+            Canvas.ForceUpdateCanvases(); // update text sizing
+            var maxWidth = withCursor ? 174 : 176;
+            if (text.preferredWidth > maxWidth)
+            {
+                text.alignment = TextAnchor.MiddleRight;
+                if (withCursor)
+                {
+                    text.transform.localPosition = new(-2, 0);
+                }
+                else
+                {
+                    text.transform.localPosition = Vector2.zero;
+                }
+            }
+            else
+            {
+                text.alignment = TextAnchor.MiddleLeft;
+            }
+            while (text.preferredWidth > maxWidth)
+            {
+                str = str.Substring(1);
+                text.text = "..." + str;
+                Canvas.ForceUpdateCanvases(); // update text sizing
             }
         }
 
@@ -64,6 +94,7 @@ namespace Archipelago_Inscryption.Components
         private bool censor;
 
         private bool isPointerInside = false;
+        public Action<string> OnSubmit;
 
         private void Awake()
         {
@@ -97,7 +128,14 @@ namespace Archipelago_Inscryption.Components
 
         private void OnEnterPressed()
         {
-            keyboardInput.enabled = false;
+            if (OnSubmit is not null)
+            {
+                OnSubmit(Text);
+            }
+            else
+            {
+                keyboardInput.enabled = false;
+            }
         }
 
         public override void ManagedUpdate()
@@ -118,15 +156,15 @@ namespace Archipelago_Inscryption.Components
 
             if (!keyboardInput.enabled)
             {
-                text.text = (censor ? new string('*', realText.Length) : realText);
+                DisplayText(realText);
                 return;
             }
 
             realText = keyboardInput.KeyboardInput;
 
-            bool showTextCursor = ((int)(Time.timeSinceLevelLoad * 2)) % 2 == 0;
+            bool showTextCursor = ((int)(Time.timeSinceLevelLoad * 2)) % 2 > 0;
 
-            text.text = (censor ? new string('*', realText.Length) : realText) + (showTextCursor ? "" : "|");
+            DisplayText(realText, showTextCursor);
         }
 
         public override void OnCursorEnter()
