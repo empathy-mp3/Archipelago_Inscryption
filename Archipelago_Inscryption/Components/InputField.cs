@@ -12,9 +12,9 @@ namespace Archipelago_Inscryption.Components
         {
             get
             {
-                foreach (InputField @field in allInputFields)
+                foreach (InputField inputField in allInputFields)
                 {
-                    if (@field.keyboardInput.enabled) return true;
+                    if (inputField.keyboardInput.enabled) return true;
                 }
 
                 return false;

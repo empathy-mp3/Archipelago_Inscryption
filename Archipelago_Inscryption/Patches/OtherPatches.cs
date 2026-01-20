@@ -32,7 +32,7 @@ namespace Archipelago_Inscryption.Patches
         {
             if (ArchipelagoData.saveName == "") return true;
 
-            __result = Path.Combine(Paths.GameRootPath, "ArchipelagoSaveFiles", ArchipelagoData.saveName) + "/";
+            __result = Path.Combine(ArchipelagoModPlugin.SavePath, ArchipelagoData.saveName) + "/";
 
             return false;
         }
@@ -553,6 +553,39 @@ namespace Archipelago_Inscryption.Patches
         {
             if (SaveManager.SaveFile.IsPart3)
                 card.Mods.Last().fromCardMerge = false;
+        }
+    }
+    
+    class ZioPathFixPatch
+    {
+        static bool Prepare()
+        {
+            // Zio only exists on the Game Pass version, so let's make sure to not try to patch on the Steam version
+            System.Type fileSystemType = AccessTools.TypeByName("Zio.FileSystems.FileSystem");
+
+            if (fileSystemType == null)
+            {
+                ArchipelagoModPlugin.Log.LogInfo("Zio file system does not exist. This is likely because this is the Steam version of Inscryption. Skipping patch...");
+                return false;
+            }
+            else
+            {
+                ArchipelagoModPlugin.Log.LogInfo("Zio file system found. This is likely because this is the Game Pass version of Inscryption. Patching...");
+                return true;
+            }
+        }
+
+        static MethodBase TargetMethod()
+        {
+            System.Type fileSystemType = AccessTools.TypeByName("Zio.FileSystems.FileSystem");
+            return AccessTools.Method(fileSystemType, "ValidatePathImpl");
+        }
+
+        [HarmonyPrefix]
+        static bool SkipValidation(object path, ref object __result)
+        {
+            __result = path;
+            return false;
         }
     }
 }

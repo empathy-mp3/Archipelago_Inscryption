@@ -1,7 +1,7 @@
-﻿using DiskCardGame;
+﻿using Archipelago_Inscryption.Utils;
+using DiskCardGame;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.IO;
 
 namespace Archipelago_Inscryption.Archipelago
 {
@@ -130,7 +130,7 @@ namespace Archipelago_Inscryption.Archipelago
         internal static void SaveToFile()
         {
             string json = JsonConvert.SerializeObject(Data);
-            File.WriteAllText(dataFilePath, json);
+            FileSystem.WriteAllText(dataFilePath, json);
         }
     }
 
