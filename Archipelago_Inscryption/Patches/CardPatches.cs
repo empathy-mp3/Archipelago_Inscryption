@@ -113,7 +113,11 @@ namespace Archipelago_Inscryption.Patches
         {
             foreach (var choice in __result)
             {
-                RandomizeSigils(choice.CardInfo);
+                // there is one place in Part1CardChoiceGenerator::GenerateDirectChoices that
+                // doesn't properly clone the card it's getting. so we do that here instead
+                var card = UnityEngine.Object.Instantiate(choice.CardInfo);
+                RandomizeSigils(card);
+                choice.CardInfo = card;
             }
         }
         [HarmonyPatch(typeof(TradePeltsSequencer), "GetTradeCardInfos")]
