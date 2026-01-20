@@ -91,6 +91,7 @@ namespace Archipelago_Inscryption.Patches
             act1NewRun.titleLocId = "";
             act1NewRun.lockBeforeStoryEvent = false;
             act1NewRun.lockAfterStoryEvent = false;
+            act1NewRun.SetGlitchedSpriteShown(false);
             act1NewRun.SetEnabled(false);
             act1NewRun.gameObject.SetActive(false);
             act1.name = "MenuCard_Act1";
@@ -282,24 +283,6 @@ namespace Archipelago_Inscryption.Patches
             codes[index].operand = "Start new Act 1 run?";
 
             return codes.AsEnumerable();
-        }
-
-        [HarmonyPatch(typeof(MenuCard), "Awake")]
-        [HarmonyPrefix]
-        static bool ReplaceNewGameText(MenuCard __instance)
-        {
-            if (__instance.MenuAction == MenuAction.NewGame)
-            {
-                __instance.titleSprite = null;
-                __instance.lockedTitleSprite = null;
-                __instance.titleLocId = "";
-                __instance.titleText = "CHAPTER SELECT";
-                __instance.lockAfterStoryEvent = false;
-                if (ArchipelagoOptions.goal == Goal.ActsAnyOrder || !ArchipelagoOptions.enableAct1)
-                    __instance.lockBeforeStoryEvent = false;
-            }
-
-            return true;
         }
 
         [HarmonyPatch(typeof(StartScreenThemeSetter), "Start")]

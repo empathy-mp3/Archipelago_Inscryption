@@ -452,17 +452,6 @@ namespace Archipelago_Inscryption.Components
                 startScreen.gameObject.SetActive(true);
                 startScreen.Start();
 
-                if (ArchipelagoOptions.goal == Goal.ActsAnyOrder || !ArchipelagoOptions.enableAct1)
-                {
-                    MenuCard chapterSelectCard = startScreen.menu.cards.First(c => c.MenuAction == MenuAction.NewGame);
-
-                    if (chapterSelectCard != null)
-                    {
-                        chapterSelectCard.lockBeforeStoryEvent = false;
-                        chapterSelectCard.SetGlitchedSpriteShown(false);
-                    }
-                }
-
                 SaveManager.SaveToFile(false);
             }
             else

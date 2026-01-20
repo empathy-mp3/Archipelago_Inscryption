@@ -132,43 +132,5 @@ namespace Archipelago_Inscryption.Helpers
 
             LoadingScreenManager.LoadScene(SaveManager.SaveFile.currentScene);
         }
-
-        internal static void GoToChapterSelect()
-        {
-            Singleton<MenuController>.Instance.ResetToDefaultState();
-            Singleton<VideoCameraRig>.Instance.EnterChapterSelect();
-        }
-
-        internal static void UpdateChapterButtons()
-        {
-            ChapterSelectMenu menu = Singleton<VideoCameraRig>.Instance.chapterSelectMenu;
-
-            GameObject act1Button = menu.transform.Find("Chapter_Row/ChapterSelectItemUI (1)").gameObject;
-            GameObject act2Button = menu.transform.Find("Chapter_Row/ChapterSelectItemUI (2)").gameObject;
-            GameObject act3Button = menu.transform.Find("Chapter_Row/ChapterSelectItemUI (3)").gameObject;
-            GameObject epilogueButton = menu.transform.Find("Chapter_Row/ChapterSelectItemUI (4)").gameObject;
-
-            act1Button.GetComponentInChildren<TextMeshProUGUI>().text = ArchipelagoData.Data.act1Completed ? "<color=green>Act 1</color>" : "Act 1";
-            act2Button.GetComponentInChildren<TextMeshProUGUI>().text = ArchipelagoData.Data.act2Completed ? "<color=green>Act 2</color>" : "Act 2";
-            act3Button.GetComponentInChildren<TextMeshProUGUI>().text = ArchipelagoData.Data.act3Completed ? "<color=green>Act 3</color>" : "Act 3";
-            epilogueButton.GetComponentInChildren<TextMeshProUGUI>().text = ArchipelagoData.Data.epilogueCompleted ? "<color=green>Epilogue</color>" : "Epilogue";
-
-            if (ArchipelagoOptions.goal == Goal.ActsInOrder)
-            {
-                act1Button.SetActive(ArchipelagoOptions.enableAct1);
-                act2Button.SetActive(ArchipelagoOptions.enableAct2 && (StoryEventsData.EventCompleted(StoryEvent.StartScreenNewGameUnlocked) || !ArchipelagoOptions.enableAct1));
-                act3Button.SetActive(ArchipelagoOptions.enableAct3 && (StoryEventsData.EventCompleted(StoryEvent.Part2Completed) || !ArchipelagoOptions.enableAct2)
-                 && (StoryEventsData.EventCompleted(StoryEvent.StartScreenNewGameUnlocked) || !ArchipelagoOptions.enableAct1));
-            }
-            else
-            {
-                act1Button.SetActive(ArchipelagoOptions.enableAct1);
-                act2Button.SetActive(ArchipelagoOptions.enableAct2);
-                act3Button.SetActive(ArchipelagoOptions.enableAct3);
-            }
-            epilogueButton.SetActive((!ArchipelagoOptions.enableAct1 || ArchipelagoData.Data.act1Completed) && 
-            (!ArchipelagoOptions.enableAct2 || ArchipelagoData.Data.act2Completed) && 
-            (!ArchipelagoOptions.enableAct3 || ArchipelagoData.Data.act3Completed));
-        }
     }
 }
