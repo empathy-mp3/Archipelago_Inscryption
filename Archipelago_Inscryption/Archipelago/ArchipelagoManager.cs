@@ -591,8 +591,8 @@ namespace Archipelago_Inscryption.Archipelago
             if (ArchipelagoOptions.enableAct3) enabled++;
             int completed = 0;
             if (ArchipelagoData.Data.act1Completed) completed++;
-            if (ArchipelagoData.Data.act1Completed) completed++;
-            if (ArchipelagoData.Data.act1Completed) completed++;
+            if (ArchipelagoData.Data.act2Completed) completed++;
+            if (ArchipelagoData.Data.act3Completed) completed++;
             bool finished = ArchipelagoData.Data.goalType switch {
                 Goal.OneAct => completed >= 1 || completed >= enabled,
                 Goal.TwoActs => completed >= 2 || completed >= enabled,

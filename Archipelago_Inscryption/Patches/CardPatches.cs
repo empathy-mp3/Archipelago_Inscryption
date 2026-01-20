@@ -337,8 +337,9 @@ namespace Archipelago_Inscryption.Patches
         }
 
         [HarmonyPatch(typeof(CardCollectionInfo), "AddCard")]
+        [HarmonyPatch(typeof(DeckInfo), "AddCard")]
         [HarmonyPrefix]
-        static bool Act2AddRandomizedCard(CardInfo card, CardCollectionInfo __instance, CardInfo __result)
+        static bool Act2AddRandomizedCard(CardInfo card, CardCollectionInfo __instance, ref CardInfo __result)
         {
             if (!SaveManager.SaveFile.IsPart2)
             {
@@ -349,6 +350,7 @@ namespace Archipelago_Inscryption.Patches
             __instance.Cards.Add(cardInfo);
             __instance.cardIds.Add(card.name);
             __result = cardInfo;
+            (__instance as DeckInfo)?.UpdateModDictionary();
             return false;
         }
 
