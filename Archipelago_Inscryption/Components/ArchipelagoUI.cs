@@ -1,6 +1,7 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
+using Archipelago_Inscryption.Utils;
 using BepInEx;
 using DiskCardGame;
 using EasyFeedback.APIs;
@@ -18,8 +19,6 @@ namespace Archipelago_Inscryption.Components
     internal class ArchipelagoUI : Singleton<ArchipelagoUI>
     {
         private const float TIME_BETWEEN_MESSAGES = 0.2f;
-
-        private readonly string savesPath = Path.Combine(Paths.GameRootPath, "ArchipelagoSaveFiles");
 
         private readonly char[] illegalCharacters = new char[] { '\\', '/', '*', '?', ':', '\"', '<', '>', '|' };
 
@@ -111,11 +110,11 @@ namespace Archipelago_Inscryption.Components
 
         private void InitializeSaves()
         {
-            if (!Directory.Exists(savesPath))
+            if (!FileSystem.DirectoryExists(ArchipelagoModPlugin.SavePath))
             {
                 try
                 {
-                    Directory.CreateDirectory(savesPath);
+                    FileSystem.CreateDirectory(ArchipelagoModPlugin.SavePath);
                 } 
                 catch (Exception e)
                 {
@@ -124,26 +123,24 @@ namespace Archipelago_Inscryption.Components
                 }
             }
 
-            string[] directories = Directory.GetDirectories(savesPath);
+            string[] directories = FileSystem.GetDirectories(ArchipelagoModPlugin.SavePath);
 
             for (int i = 0; i < directories.Length; i++)
             {
-                DirectoryInfo dirInfo = new DirectoryInfo(directories[i]);
-
                 string savePath = Path.Combine(directories[i], SAVE_FILE_NAME);
                 string dataPath = Path.Combine(directories[i], DATA_FILE_NAME);
 
-                if (!File.Exists(savePath) || !File.Exists(dataPath)) continue;
+                if (!FileSystem.FileExists(savePath) || !FileSystem.FileExists(dataPath)) continue;
 
                 string dataContent = "";
 
                 try 
                 {
-                    dataContent = File.ReadAllText(dataPath);
+                    dataContent = FileSystem.ReadAllText(dataPath);
                 }
                 catch (Exception e)
                 {
-                    ArchipelagoModPlugin.Log.LogError("Failed to load save data from " + dirInfo.Name + ": " + e.Message);
+                    ArchipelagoModPlugin.Log.LogError("Failed to load save data from " + Path.GetFileName(directories[i]) + ": " + e.Message);
                     continue;
                 }
 
@@ -190,17 +187,17 @@ namespace Archipelago_Inscryption.Components
 
                     try
                     {
-                        dataList.Add(File.GetLastWriteTime(dataPath), (dirInfo.Name, loadedData));
+                        dataList.Add(FileSystem.GetLastWriteTime(dataPath), (Path.GetFileName(directories[i]), loadedData));
                     }
                     catch (Exception e)
                     {
-                        ArchipelagoModPlugin.Log.LogError("Failed to add save entry " + dirInfo.Name + ": " + e.Message);
+                        ArchipelagoModPlugin.Log.LogError("Failed to add save entry " + Path.GetFileName(directories[i]) + ": " + e.Message);
                         continue;
                     }
                 }
                 else
                 {
-                    ArchipelagoModPlugin.Log.LogError("Failed to load data from save file \"" + dirInfo.Name + "\". The file might be corrupted or is unsupported by this version of the mod.");
+                    ArchipelagoModPlugin.Log.LogError("Failed to load data from save file \"" + Path.GetFileName(directories[i]) + "\". The file might be corrupted or is unsupported by this version of the mod.");
                 }
             }
 
@@ -321,8 +318,8 @@ namespace Archipelago_Inscryption.Components
             connectScreen.SetActive(true);
 
             ArchipelagoData selectedData = dataList.FirstOrDefault((pair) => pair.Value.Item1 == saveName).Value.Item2;
-            ArchipelagoData.saveFilePath = Path.Combine(savesPath, saveName, SAVE_FILE_NAME);
-            ArchipelagoData.dataFilePath = Path.Combine(savesPath, saveName, DATA_FILE_NAME);
+            ArchipelagoData.saveFilePath = Path.Combine(ArchipelagoModPlugin.SavePath, saveName, SAVE_FILE_NAME);
+            ArchipelagoData.dataFilePath = Path.Combine(ArchipelagoModPlugin.SavePath, saveName, DATA_FILE_NAME);
             ArchipelagoData.saveName = saveName;
 
             UpdateConnectScreenTexts(selectedData);
@@ -345,7 +342,7 @@ namespace Archipelago_Inscryption.Components
 
         private void DeleteSaveFile(string saveName)
         {
-            Directory.Delete(Path.Combine(savesPath, saveName), true);
+            FileSystem.DeleteDirectory(Path.Combine(ArchipelagoModPlugin.SavePath, saveName));
             DateTime keyToDelete = dataList.FirstOrDefault(pair => pair.Value.Item1 == saveName).Key;
             dataList.Remove(keyToDelete);
             if (saveUIEntries.TryGetValue(saveName, out GameObject entry))
@@ -385,10 +382,10 @@ namespace Archipelago_Inscryption.Components
             UpdateConnectScreenTexts(new ArchipelagoData());
 
             string saveName = saveNameInputField.text;
-            string savePath = Path.Combine(savesPath, saveName);
+            string savePath = Path.Combine(ArchipelagoModPlugin.SavePath, saveName);
 
-            if (!Directory.Exists(savePath))
-                Directory.CreateDirectory(savePath);
+            if (!FileSystem.DirectoryExists(savePath))
+                FileSystem.CreateDirectory(savePath);
 
             ArchipelagoData.saveFilePath = Path.Combine(savePath, SAVE_FILE_NAME);
             ArchipelagoData.dataFilePath = Path.Combine(savePath, DATA_FILE_NAME);
