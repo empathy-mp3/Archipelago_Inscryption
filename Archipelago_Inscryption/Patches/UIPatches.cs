@@ -75,67 +75,84 @@ namespace Archipelago_Inscryption.Patches
             }
 
             var menu = MenuController.Instance;
-            menu.cards.RemoveAt(2); // ascension mode (kaycee's mod), gets removed later anyway
-            var index = 0;
-            var inOrder = ArchipelagoData.Data.goalType == Goal.ActsInOrder;
-            var locked = false;
+            var act1NewRun = menu.cards[0];
+            var act1 = menu.cards[1];
+            var ascension = menu.cards[2];
+            var settings = menu.cards[3];
+            var credits = menu.cards[4];
+            var exit = menu.cards[5];
 
-            var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted);
-            var completedAct1 = ArchipelagoData.Data.act1Completed;
-            var act1NewRun = menu.cards[index++];
-            var act1 = menu.cards[index++];
+            ascension.SetEnabled(false);
+            ascension.gameObject.SetActive(false);
+
+            act1NewRun.name = "MenuCard_Act1NewRun";
+            act1NewRun.titleSprite = null;
+            act1NewRun.lockedTitleSprite = null;
+            act1NewRun.titleLocId = "";
+            act1NewRun.lockBeforeStoryEvent = false;
+            act1NewRun.lockAfterStoryEvent = false;
+            act1NewRun.SetEnabled(false);
+            act1NewRun.gameObject.SetActive(false);
+            act1.name = "MenuCard_Act1";
             act1.titleSprite = null;
             act1.lockedTitleSprite = null;
             act1.titleLocId = "";
+            act1.SetEnabled(false);
+            act1.gameObject.SetActive(false);
+
+            var act2 = Object.Instantiate(act1, act1.transform.parent);
+            act2.name = "MenuCard_Act2";
+            var act3 = Object.Instantiate(act1, act1.transform.parent);
+            act3.name = "MenuCard_Act3";
+            var act4 = Object.Instantiate(act1, act1.transform.parent);
+            act4.name = "MenuCard_Act4";
+
+            menu.cards = [];
+
+            var inOrder = ArchipelagoData.Data.goalType == Goal.ActsInOrder;
+            var locked = false;
 
             if (ArchipelagoData.Data.enableAct1)
             {
-                act1NewRun.name = "MenuCard_Act1NewRun";
+                var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted);
+                var completedAct1 = ArchipelagoData.Data.act1Completed;
+
+                act1NewRun.SetEnabled(true);
+                act1NewRun.gameObject.SetActive(true);
+                menu.cards.Add(act1NewRun);
                 act1NewRun.titleText = startedAct1 ? "New Act 1 Run" : "Start Act 1";
                 act1NewRun.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1NewRun;
 
                 if (startedAct1)
                 {
-                    act1.name = "MenuCard_Act1";
+                    act1.SetEnabled(true);
+                    act1.gameObject.SetActive(true);
+                    menu.cards.Add(act1);
                     act1.titleText = completedAct1 ? "Continue Act 1 (Complete!)" : "Continue Act 1";
                     act1.GetComponent<SpriteRenderer>().sprite = completedAct1 ? AssetsManager.menuCardAct1Complete : AssetsManager.menuCardAct1Continue;
                 }
-                else
-                {
-                    index--;
-                    act1.SetEnabled(false);
-                    act1.enabled = false;
-                    menu.cards.Remove(act1);
-                }
 
                 if (inOrder && !completedAct1) locked = true;
-            }
-            else
-            {
-                index -= 2;
-                act1NewRun.SetEnabled(false);
-                act1NewRun.enabled = false;
-                menu.cards.Remove(act1NewRun);
-                act1.SetEnabled(false);
-                act1.enabled = false;
-                menu.cards.Remove(act1);
             }
 
             if (ArchipelagoData.Data.enableAct2)
             {
                 var startedAct2 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.GBCIntroCompleted);
                 var completedAct2 = ArchipelagoData.Data.act2Completed;
-                var act2 = Object.Instantiate(act1, act1.transform.parent);
-                menu.cards.Insert(index++, act2);
-                act2.name = "MenuCard_Act2";
-                act2.titleText = startedAct2 ? (completedAct2 ? "Continue Act 2 (Complete!)" : "Continue Act 2") : "Start Act 2";
-                act2.GetComponent<SpriteRenderer>().sprite = startedAct2 ? (completedAct2 ? AssetsManager.menuCardAct2Complete : AssetsManager.menuCardAct2Continue) : AssetsManager.menuCardAct2Start;
 
+                act2.SetEnabled(true);
+                act2.gameObject.SetActive(true);
+                menu.cards.Add(act2);
                 if (locked)
                 {
                     act2.permanentlyLocked = true;
                     act2.titleText = "Locked";
                     act2.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct2Locked;
+                }
+                else
+                {
+                    act2.titleText = startedAct2 ? (completedAct2 ? "Continue Act 2 (Complete!)" : "Continue Act 2") : "Start Act 2";
+                    act2.GetComponent<SpriteRenderer>().sprite = startedAct2 ? (completedAct2 ? AssetsManager.menuCardAct2Complete : AssetsManager.menuCardAct2Continue) : AssetsManager.menuCardAct2Start;
                 }
                 if (inOrder && !completedAct2) locked = true;
             }
@@ -144,17 +161,20 @@ namespace Archipelago_Inscryption.Patches
             {
                 var startedAct3 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.Part3Intro);
                 var completedAct3 = ArchipelagoData.Data.act3Completed;
-                var act3 = Object.Instantiate(act1, act1.transform.parent);
-                menu.cards.Insert(index++, act3);
-                act3.name = "MenuCard_Act3";
-                act3.titleText = startedAct3 ? (completedAct3 ? "Continue Act 3 (Complete!)" : "Continue Act 3") : "Start Act 3";
-                act3.GetComponent<SpriteRenderer>().sprite = startedAct3 ? (completedAct3 ? AssetsManager.menuCardAct3Complete : AssetsManager.menuCardAct3Continue) : AssetsManager.menuCardAct3Start;
 
+                act3.SetEnabled(true);
+                act3.gameObject.SetActive(true);
+                menu.cards.Add(act3);
                 if (locked)
                 {
                     act3.permanentlyLocked = true;
                     act3.titleText = "Locked";
                     act3.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct3Locked;
+                }
+                else
+                {
+                    act3.titleText = startedAct3 ? (completedAct3 ? "Continue Act 3 (Complete!)" : "Continue Act 3") : "Start Act 3";
+                    act3.GetComponent<SpriteRenderer>().sprite = startedAct3 ? (completedAct3 ? AssetsManager.menuCardAct3Complete : AssetsManager.menuCardAct3Continue) : AssetsManager.menuCardAct3Start;
                 }
             }
 
@@ -163,12 +183,16 @@ namespace Archipelago_Inscryption.Patches
             && (!ArchipelagoData.Data.enableAct2 || ArchipelagoData.Data.act2Completed)
             && (!ArchipelagoData.Data.enableAct3 || ArchipelagoData.Data.act3Completed))
             {
-                var act4 = Object.Instantiate(act1, act1.transform.parent);
-                menu.cards.Insert(index++, act4);
-                act4.name = "MenuCard_Act4";
+                act4.SetEnabled(true);
+                act4.gameObject.SetActive(true);
+                menu.cards.Add(act4);
                 act4.titleText = "Play Epilogue";
                 act4.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct4;
             }
+
+            menu.cards.Add(settings);
+            menu.cards.Add(credits);
+            menu.cards.Add(exit);
 
             var cardSpacingX = 0.458f;
             var leftAnchorX = -cardSpacingX * (menu.cards.Count - 1) / 2f; // -1 because it's from the centers
