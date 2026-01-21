@@ -43,6 +43,12 @@ namespace Archipelago_Inscryption.Patches
                 ArchipelagoUI.Instance.LogImportant("Act 3 completed!");
                 ArchipelagoData.Data.act3Completed = true;
             }
+            else if (storyEvent == StoryEvent.FigurineFetched && !ProgressionData.LearnedMechanic(MechanicsConcept.FirstPersonNavigation))
+            {
+                // backup in case you missed these during the first tutorial run
+                ProgressionData.SetMechanicLearned(MechanicsConcept.FirstPersonNavigation);
+                ProgressionData.SetMechanicLearned(MechanicsConcept.LosingLife);
+            }
 
             ArchipelagoManager.VerifyGoalCompletion();
 
