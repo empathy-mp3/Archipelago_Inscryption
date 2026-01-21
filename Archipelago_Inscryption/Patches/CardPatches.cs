@@ -242,6 +242,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static void DontModifyItemTemplates(ref ItemData data)
         {
+            if (!data.name.Contains("Bottle")) return;
             var name = data.name;
             data = UnityEngine.Object.Instantiate(data);
             data.name = name;
