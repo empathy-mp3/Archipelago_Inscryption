@@ -116,6 +116,8 @@ namespace Archipelago_Inscryption.Patches
                 // there is one place in Part1CardChoiceGenerator::GenerateDirectChoices that
                 // doesn't properly clone the card it's getting. so we do that here instead
                 var card = UnityEngine.Object.Instantiate(choice.CardInfo);
+                card.mods = new List<CardModificationInfo>(choice.CardInfo.mods);
+                card.name = choice.CardInfo.name;
                 RandomizeSigils(card);
                 choice.CardInfo = card;
             }
