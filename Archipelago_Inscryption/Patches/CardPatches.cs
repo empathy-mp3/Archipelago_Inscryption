@@ -338,25 +338,21 @@ namespace Archipelago_Inscryption.Patches
             {
                 return;
             }
+            (__instance as DeckInfo)?.cardIdModInfos.Clear(); // just in case there's any left over data
             foreach (var card in __instance.CardInfos)
             {
                 RandomizeSigilsAct2(card);
             }
         }
 
-        [HarmonyReversePatch]
-        [HarmonyPatch(typeof(CardCollectionInfo), "LoadCards")]
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        static void BaseLoadCards(CardCollectionInfo instance) {}
-        [HarmonyPatch(typeof(DeckInfo), "LoadCards")]
+        [HarmonyPatch(typeof(DeckInfo), "UpdateModDictionary")]
         [HarmonyPrefix]
-        static bool Act2DontLoadOldRandomizedSigils(DeckInfo __instance)
+        static bool Act2DontSaveCardMods()
         {
             if (ArchipelagoManager.CurrentAct != 2)
             {
                 return true;
             }
-            BaseLoadCards(__instance);
             return false;
         }
 
