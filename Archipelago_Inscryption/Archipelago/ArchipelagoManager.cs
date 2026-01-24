@@ -94,6 +94,17 @@ namespace Archipelago_Inscryption.Archipelago
         private static Queue<InscryptionItemInfo> itemQueue = new Queue<InscryptionItemInfo>();
 
         private static Queue<InscryptionItemInfo> itemsToVerifyQueue = new Queue<InscryptionItemInfo>();
+        
+        private static int receivingCardForAct = 0;
+        internal static int CurrentAct {
+            get {
+                if (receivingCardForAct > 0) return receivingCardForAct;
+                if (SaveManager.SaveFile.IsPart1) return 1;
+                if (SaveManager.SaveFile.IsPart2) return 2;
+                if (SaveManager.SaveFile.IsPart3) return 3;
+                return 0;
+            }
+        }
 
         internal static void Init()
         {
@@ -154,8 +165,10 @@ namespace Archipelago_Inscryption.Archipelago
                 for (int i = 0; i < info.cardsToUnlock.Length; i++)
                 {
                     var card = CardLoader.GetCardByName(info.cardsToUnlock[i]);
+                    receivingCardForAct = info.isPart3 ? 3 : 1;
                     CardPatches.RandomizeSigils(card);
                     (info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck).AddCard(card);
+                    receivingCardForAct = 0;
                 }
 
                 for (int i = 0; i < info.rigDraws.Length; i++)
@@ -166,7 +179,9 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (itemPixelCardPair.TryGetValue(receivedItem, out string cardName))
             {
+                receivingCardForAct = 2;
                 SaveManager.SaveFile.CollectGBCCard(CardLoader.GetCardByName(cardName));
+                receivingCardForAct = 0;
             }
 
             if (receivedItem == APItem.Currency)

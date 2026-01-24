@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using Archipelago_Inscryption.Archipelago;
 using DiskCardGame;
 using GBC;
@@ -25,7 +26,7 @@ namespace Archipelago_Inscryption.Patches
             }
             ScriptableObjectLoader<AbilityInfo>.LoadData("Abilities");
             List<AbilityInfo> learnedAbilities;
-            if (SaveManager.SaveFile.IsPart1)
+            if (ArchipelagoManager.CurrentAct == 1)
             {
                 if (card.name == "!DEATHCARD_BASE")
                 {
@@ -39,7 +40,7 @@ namespace Archipelago_Inscryption.Patches
                     && x.ability != Ability.HydraEgg
                 );
             }
-            else if (SaveManager.SaveFile.IsPart3)
+            else if (ArchipelagoManager.CurrentAct == 3)
             {
                 learnedAbilities = ScriptableObjectLoader<AbilityInfo>.allData.FindAll(
                     x => x.metaCategories.Contains(AbilityMetaCategory.Part3Modular)
@@ -333,7 +334,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void Act2RandomizeSigilsOnLoad(CardCollectionInfo __instance)
         {
-            if (!SaveManager.SaveFile.IsPart2)
+            if (ArchipelagoManager.CurrentAct != 2)
             {
                 return;
             }
@@ -343,12 +344,28 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        [HarmonyReversePatch]
+        [HarmonyPatch(typeof(CardCollectionInfo), "LoadCards")]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static void BaseLoadCards(CardCollectionInfo instance) {}
+        [HarmonyPatch(typeof(DeckInfo), "LoadCards")]
+        [HarmonyPrefix]
+        static bool Act2DontLoadOldRandomizedSigils(DeckInfo __instance)
+        {
+            if (ArchipelagoManager.CurrentAct != 2)
+            {
+                return true;
+            }
+            BaseLoadCards(__instance);
+            return false;
+        }
+
         [HarmonyPatch(typeof(CardCollectionInfo), "AddCard")]
         [HarmonyPatch(typeof(DeckInfo), "AddCard")]
         [HarmonyPrefix]
         static bool Act2AddRandomizedCard(CardInfo card, CardCollectionInfo __instance, ref CardInfo __result)
         {
-            if (!SaveManager.SaveFile.IsPart2)
+            if (ArchipelagoManager.CurrentAct != 2)
             {
                 return true;
             }
