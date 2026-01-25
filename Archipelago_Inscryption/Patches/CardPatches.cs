@@ -409,5 +409,21 @@ namespace Archipelago_Inscryption.Patches
             RandomizeSigilsAct2(info);
             card = info;
         }
+
+        [HarmonyPatch(typeof(MagnificusBattleSequencer), "RemoveCardAbilities")]
+        [HarmonyPrefix]
+        static void Act2MagnificusUnrandomizeSigils(PlayableCard card)
+        {
+            var info = UnityEngine.Object.Instantiate(card.Info);
+            info.name = card.Info.name;
+            for (int i = 0; i < info.mods.Count; i++)
+            {
+                if (info.mods[i] is SigilReplacementInfo)
+                {
+                    info.mods.RemoveAt(i--);
+                }
+            }
+            card.SetInfo(info);
+        }
     }
 }
