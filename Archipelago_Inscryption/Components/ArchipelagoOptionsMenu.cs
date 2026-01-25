@@ -46,6 +46,7 @@ namespace Archipelago_Inscryption.Components
 
             commandField = UIHelper.CreateInputField(menu, transform, "InputField_Command", "Send Command...", "", menu.applyGraphicsButton.transform.localPosition.y, 100);
             commandField.OnSubmit += CommandSubmitted;
+            commandField.gameObject.layer = deathLinkField.rightButton.gameObject.layer;
         }
         
         internal void ItemLogChanged(int value)

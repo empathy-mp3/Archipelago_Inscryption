@@ -8,6 +8,8 @@ namespace Archipelago_Inscryption.Components
 {
     internal class InputField : MainInputInteractable
     {
+        public override bool UpdateWhenPaused => true;
+
         public static bool IsAnySelected 
         {
             get
@@ -142,6 +144,13 @@ namespace Archipelago_Inscryption.Components
         {
             base.ManagedUpdate();
 
+            // HACK: manually update children when paused
+            // because I don't think there's a way to add a new override to an existing class...
+            if (FrameLoopManager.Instance.iterationDisabled)
+            {
+                keyboardInput.ManagedUpdate();
+            }
+
             if (InputButtons.GetButtonDown(Button.Select))
             {
                 if (isPointerInside)
@@ -162,7 +171,7 @@ namespace Archipelago_Inscryption.Components
 
             realText = keyboardInput.KeyboardInput;
 
-            bool showTextCursor = ((int)(Time.timeSinceLevelLoad * 2)) % 2 > 0;
+            bool showTextCursor = ((int)(Time.realtimeSinceStartup * 2)) % 2 > 0;
 
             DisplayText(realText, showTextCursor);
         }
