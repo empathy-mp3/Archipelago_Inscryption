@@ -4,10 +4,12 @@ using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using UnityEngine;
 
 namespace Archipelago_Inscryption.Patches
 {
@@ -178,6 +180,146 @@ namespace Archipelago_Inscryption.Patches
             }
             return true;
         }
+
+        [HarmonyPatch(typeof(DeckBuildingUI), "OnNamePanelPressed")]
+        [HarmonyPrefix]
+        static bool TrashTrapDontRemoveBrokenEgg(CardNamePanel panel)
+        {
+            if (panel.nameText.Text == "Broken Egg")
+            {
+				AudioController.Instance.PlaySound2D("toneless_negate", MixerGroup.None, 0.3f, 0f, null, new AudioParams.Repetition(0.1f, ""), null, null, false);
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(DeckBuildingUI), "OnClearDeckPressed")]
+        [HarmonyPrefix]
+        static bool TrashTrapDontClearBrokenEgg(DeckBuildingUI __instance)
+        {
+            AudioController.Instance.PlaySound2D("chipDelay_2", MixerGroup.GBCSFX, 0.75f, 0f, null, null, null, null, false);
+			AudioController.Instance.PlaySound2D("toneless_plonklow", MixerGroup.GBCSFX, 0.4f, 0f, null, null, null, null, false);
+			foreach (CardInfo card in new List<CardInfo>(SaveData.Data.deck.Cards))
+			{
+                if (card.name != "BrokenEgg")
+				    SaveData.Data.deck.RemoveCard(card);
+			}
+			__instance.UpdatePanelContents();
+            return false;
+        }
+
+
+        [HarmonyPatch(typeof(GBCEncounterManager), "LoadOverworldScene")]
+        [HarmonyPrefix]
+        static void TrashTrapRemoveOneBrokenEgg(GBCEncounterManager __instance)
+        {
+            CardInfo egg = SaveData.Data.deck.Cards.Find(card => card.name == "BrokenEgg");
+			if (egg != null)
+                SaveData.Data.deck.RemoveCard(egg);
+        }
+
+        [HarmonyPatch(typeof(TurnManager), "DoCombatPhase")]
+        [HarmonyPrefix]
+        static void ProcessBleachTrapOnBellRing(TurnManager __instance)
+        {
+            if (ArchipelagoData.Data.bleachTrapCount > 0)
+            {
+                if (RandomizerHelper.BleachTrapRemoveSigils())
+                    ArchipelagoData.Data.bleachTrapCount--;
+            }
+        }
+
+        [HarmonyPatch(typeof(Opponent), "QueueNewCards")]
+        [HarmonyPostfix]
+        static IEnumerator ProcessReinforcementsTrapOnUpkeep(IEnumerator __result, Opponent __instance)
+        {
+            while (__result.MoveNext())
+                yield return __result.Current;
+            if (ArchipelagoData.Data.reinforcementsTrapCount > 0)
+            {
+                yield return new WaitForSeconds(0.5f);
+                List<CardSlot> opponentSlots = Singleton<BoardManager>.Instance.OpponentSlotsCopy;
+                opponentSlots.RemoveAll((CardSlot x) => __instance.queuedCards.Find((PlayableCard y) => y.QueuedSlot == x));
+                if (opponentSlots.Count != 0)
+                {
+			        int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
+                    int seed2 = __instance.NumTurnsTaken;
+                    seed += seed2*37;
+                    if (SaveManager.SaveFile.IsPart1)
+                    {
+                        List<CardInfo> list = ScriptableObjectLoader<CardInfo>.AllData.FindAll((CardInfo x) => x.portraitTex != null && x.temple == CardTemple.Nature);
+                        foreach (CardSlot cardSlot in opponentSlots)
+                        {
+                            yield return __instance.QueueCard(CardLoader.Clone(list[SeededRandom.Range(0, list.Count, seed++)]), cardSlot, true, false, true);
+                            seed += seed2 * 23;
+                            seed2++;
+                        }
+                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                    }
+                    else if (SaveManager.SaveFile.IsPart2)
+                    {
+                        List<CardInfo> list = CardLoader.GetPixelCards();
+                        foreach (CardSlot cardSlot in opponentSlots)
+                        {
+                            yield return __instance.QueueCard(CardLoader.Clone(list[SeededRandom.Range(0, list.Count, seed++)]), cardSlot, false, false, true);
+                            seed += seed2 * 23;
+                            seed2++;
+                        }
+                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                    }
+                    else if (SaveManager.SaveFile.IsPart3)
+                    {
+                        List<CardInfo> list = ScriptableObjectLoader<CardInfo>.AllData.FindAll((CardInfo x) => x.portraitTex != null && x.temple == CardTemple.Tech);
+                        foreach (CardSlot cardSlot in opponentSlots)
+                        {
+                            yield return __instance.QueueCard(CardLoader.Clone(list[SeededRandom.Range(0, list.Count, seed++)]), cardSlot, true, false, true);
+                            seed += seed2 * 23;
+                            seed2++;
+                        }
+                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                    }
+                    yield return new WaitForSeconds(0.5f);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(DeckBuildingUI), "UpdatePanelContents")]
+        [HarmonyPostfix]
+        static void IncreaseMinDeckSizeInMenu(DeckBuildingUI __instance)
+        {
+            int deckSize = 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            __instance.cardCountText.SetText(SaveData.Data.deck.Cards.Count + "/" + deckSize, false);
+			__instance.autoCompleteButton.SetEnabled(SaveData.Data.deck.Cards.Count < deckSize);
+			__instance.collection.RefreshPage();
+        }
+
+        [HarmonyPatch(typeof(DeckInfo), "IsValidGBCDeck")]
+        [HarmonyPostfix]
+        static void IsValidGBCDeck(DeckInfo __instance, ref bool __result)
+		{
+			__result = __instance.cardIds.Count >= 20 + ArchipelagoData.Data.deckSizeTrapCount;
+		}
+
+        [HarmonyPatch(typeof(AutoDeckBuilder), "CompleteDeck")]
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> AutoCompleteFullDeck(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
+        {
+            var found = false;
+            foreach(var instruction in instructions)
+            {
+                if (instruction.LoadsConstant(20))
+                {
+                    yield return new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(RandomizerHelper), "NewDeckSize"));
+                    found = true;
+                }
+                else
+                    yield return instruction;
+            }
+            if (!found)
+            {
+                ArchipelagoModPlugin.Log.LogError($"Cannot find List<CardInfo>::get_Count in {__originalMethod.Name}");
+            }
+        }
     }
     
     [HarmonyPatch]
@@ -210,5 +352,6 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
     }    
+ 
 }
 

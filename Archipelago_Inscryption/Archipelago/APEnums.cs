@@ -165,6 +165,10 @@
         Act3,
         Currency,
         CardPack,
+        BleachTrap,
+        TrashTrap,
+        DeckSizeTrap,
+        ReinforcementsTrap,
         COUNT
     }
 }

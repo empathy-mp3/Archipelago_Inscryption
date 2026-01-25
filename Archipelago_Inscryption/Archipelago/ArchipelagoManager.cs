@@ -195,6 +195,49 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoData.Data.availableCardPacks++;
                 RandomizerHelper.UpdatePackButtonEnabled();
             }
+            else if (receivedItem == APItem.TrashTrap)
+            {
+                if (SaveManager.SaveFile.currentScene.Contains("Part1"))
+                    RunState.Run.playerDeck.AddCard(CardLoader.GetCardByName("BrokenEgg"));
+                else if (SaveManager.SaveFile.currentScene.Contains("GBC"))
+                    SaveData.Data.deck.AddCard(CardLoader.GetCardByName("BrokenEgg"));
+                else if (SaveManager.SaveFile.currentScene.Contains("Part3"))
+                {
+                    if (ArchipelagoOptions.randomizeSigils == RandomizeSigils.Disable || ArchipelagoOptions.randomizeSigils == RandomizeSigils.RandomizeOnce)
+                        Part3SaveData.Data.deck.AddCard(CardLoader.GetCardByName("Angler_Fish_Bad"));
+                    else
+                        Part3SaveData.Data.deck.AddCard(CardLoader.GetCardByName("EmptyVessel"));
+                }
+            }
+            else if (receivedItem == APItem.BleachTrap)
+            {
+                if (TurnManager.Instance == null)
+                {
+                    ArchipelagoData.Data.bleachTrapCount++;
+                }
+                else if (TurnManager.Instance.IsPlayerTurn) {
+                    if (!RandomizerHelper.BleachTrapRemoveSigils())
+                        {
+                            ArchipelagoData.Data.bleachTrapCount++;
+                        }
+                }
+                else
+                {
+                    ArchipelagoData.Data.bleachTrapCount++;
+                }
+            }
+            else if (receivedItem == APItem.DeckSizeTrap)
+            {
+                ArchipelagoData.Data.deckSizeTrapCount++;
+                if (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount)
+                {
+                    SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
+                }
+            }
+            else if (receivedItem == APItem.ReinforcementsTrap)
+            {
+                ArchipelagoData.Data.reinforcementsTrapCount++;
+            }
             else if (receivedItem == APItem.SquirrelTotemHead && !RunState.Run.totemTops.Contains(Tribe.Squirrel))
             {
                 RunState.Run.totemTops.Add(Tribe.Squirrel);

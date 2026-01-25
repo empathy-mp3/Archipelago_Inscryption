@@ -726,5 +726,25 @@ namespace Archipelago_Inscryption.Helpers
 
             return cardsInfoRandomPool;
         }
+
+        public static bool BleachTrapRemoveSigils()
+        {
+            if (SaveManager.SaveFile.IsPart2) return false;
+            List<CardSlot> ownValidCardSlots = Singleton<BoardManager>.Instance.PlayerSlotsCopy;
+			ownValidCardSlots.RemoveAll((CardSlot x) => x.Card == null || x.Card.Info.Abilities.Count <= 0 || 
+                x.Card.temporaryMods.Any(mod => mod.negateAbilities.Count != 0));
+            if (ownValidCardSlots.Count == 0) return false;
+            BleachPotItem bleach = new BleachPotItem();
+            foreach (CardSlot cardSlot in ownValidCardSlots)
+            {
+                bleach.RemoveCardAbilities(cardSlot.Card);
+            }
+            return true;
+        }
+
+        public static int NewDeckSize()
+        {
+            return 20 + ArchipelagoData.Data.deckSizeTrapCount;
+        }
     }
 }

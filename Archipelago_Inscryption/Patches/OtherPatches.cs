@@ -534,7 +534,8 @@ namespace Archipelago_Inscryption.Patches
                     extraList = [Ability.CorpseEater, Ability.Submerge, Ability.IceCube, Ability.BuffNeighbours, 
                     Ability.CreateBells, Ability.BuffGems, Ability.GemDependant, Ability.StrafeSwap, 
                     Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Evolve, Ability.MoveBeside, 
-                    Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath, Ability.CellTriStrike];
+                    Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath, Ability.CellTriStrike,
+                    Ability.ConduitBuffAttack, Ability.ConduitSpawnGems];
                     if (extraList.Contains(ability))
                     {
                         if (!info.metaCategories.Contains(AbilityMetaCategory.Part3Rulebook)) info.metaCategories.Add(AbilityMetaCategory.Part3Rulebook);

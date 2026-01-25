@@ -61,6 +61,13 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("vesselUpgrade3Location")]
         internal string vesselUpgrade3Location = "";
 
+        [JsonProperty("bleachTrapCount")]
+        internal int bleachTrapCount = 0;
+        [JsonProperty("deckSizeTrapCount")]
+        internal int deckSizeTrapCount = 0;
+        [JsonProperty("reinforcementsTrapCount")]
+        internal int reinforcementsTrapCount = 0;
+
         [JsonProperty("completedChecks")]
         internal List<long> completedChecks = new List<long>();
         [JsonProperty("receivedItems")]
