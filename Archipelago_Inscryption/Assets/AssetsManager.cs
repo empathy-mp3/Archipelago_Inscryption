@@ -42,6 +42,7 @@ namespace Archipelago_Inscryption.Assets
         internal static GameObject smallClockCluePrefab;
         internal static GameObject gbcSafeCluePrefab;
         internal static GameObject saveEntryPrefab;
+        internal static GameObject LockedNode2DPrefab;
 
         internal static Mesh checkCardHoloNodeMesh;
 

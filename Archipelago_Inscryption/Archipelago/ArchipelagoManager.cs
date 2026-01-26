@@ -459,6 +459,8 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeSigils = (RandomizeSigils)Convert.ToInt32(randomizeSigils);
             if (ArchipelagoClient.slotData.TryGetValue("extra_sigils", out var extraSigils))
                 ArchipelagoOptions.extraSigils = Convert.ToInt32(extraSigils) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("act1_randomize_nodes", out var act1RandomizeNodes))
+                ArchipelagoOptions.act1RandomizeNodes = Convert.ToInt32(act1RandomizeNodes) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))

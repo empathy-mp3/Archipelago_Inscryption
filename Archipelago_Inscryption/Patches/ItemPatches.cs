@@ -320,6 +320,57 @@ namespace Archipelago_Inscryption.Patches
                 ArchipelagoModPlugin.Log.LogError($"Cannot find List<CardInfo>::get_Count in {__originalMethod.Name}");
             }
         }
+
+        [HarmonyPatch(typeof(GameFlowManager), "DoTransitionSequence")]
+        [HarmonyPostfix]
+        static IEnumerator SkipAct1Nodes(IEnumerator __result, GameState gameState, NodeData triggeringNodeData)
+		{
+            if (gameState == GameState.SpecialCardSequence && ArchipelagoOptions.act1RandomizeNodes) {
+			    if ((triggeringNodeData is CardMergeNodeData && !ArchipelagoManager.HasItem(APItem.SacrificeStonesNode))
+			    || (triggeringNodeData is DuplicateMergeNodeData && !ArchipelagoManager.HasItem(APItem.MycologistsNode))
+			    || (triggeringNodeData is CardRemoveNodeData && !ArchipelagoManager.HasItem(APItem.BoneAltarNode))
+			    || (triggeringNodeData is CardStatBoostNodeData && !ArchipelagoManager.HasItem(APItem.CampfireNode))
+			    || (triggeringNodeData is GainConsumablesNodeData && !ArchipelagoManager.HasItem(APItem.BackpackNode))
+			    || (triggeringNodeData is BuildTotemNodeData && !ArchipelagoManager.HasItem(APItem.WoodcarverNode))
+			    || (triggeringNodeData is TradePeltsNodeData && !ArchipelagoManager.HasItem(APItem.TraderNode))
+			    || (triggeringNodeData is CopyCardNodeData && !ArchipelagoManager.HasItem(APItem.GoobertNode))) {
+				    yield return new WaitForSeconds(0.05f);
+                    PaperGameMap gameMap = PaperGameMap.Instance;
+                    MapDataReader dataReader = new MapDataReader();
+                    Vector2 sampleRange = new Vector2(gameMap.mapProgress, gameMap.mapProgress + 1f);
+                    List<MapNode> nodeList = gameMap.GetComponentsInChildren<MapNode>().ToList();
+                    List<PathSegment> pathList = gameMap.GetComponentsInChildren<PathSegment>().ToList();
+			        MapNode currentNode = nodeList.Find((MapNode x) => x.Data.id == RunState.Run.currentNodeId);
+                    if (currentNode != null)
+                    {
+                        dataReader.SetNodeAndPathColors(nodeList, pathList, currentNode);
+                    }
+			        Singleton<MapNodeManager>.Instance.FindAndSetActiveNodeInteractable();
+				    SaveManager.SaveToFile(true);
+                    yield break;
+                }
+                else
+                {
+                    while (__result.MoveNext())
+                        yield return __result.Current;
+                }
+            }
+            else
+            {
+                while (__result.MoveNext())
+                    yield return __result.Current;
+            }
+		}
+
+        [HarmonyPatch(typeof(NodeData.IsAscension), "Satisfied")]
+        [HarmonyPostfix]
+        static void MakeGoobertNodeAppear(ref bool __result)
+		{
+			if (ArchipelagoOptions.act1RandomizeNodes)
+            {
+                __result = true;
+            }
+		}
     }
     
     [HarmonyPatch]
