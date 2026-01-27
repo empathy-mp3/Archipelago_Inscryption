@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Archipelago_Inscryption.Assets
 {
@@ -33,6 +34,8 @@ namespace Archipelago_Inscryption.Assets
         internal static Texture2D[] smallClockClueTexs;
         internal static Texture2D[] factoryClockClueTexs;
 
+        internal static List<Texture2D> lockedNodeFrames;
+
         internal static GameObject cardPackPrefab;
         internal static GameObject selectableCardPrefab;
         internal static GameObject selectableDiskCardPrefab;
@@ -42,7 +45,6 @@ namespace Archipelago_Inscryption.Assets
         internal static GameObject smallClockCluePrefab;
         internal static GameObject gbcSafeCluePrefab;
         internal static GameObject saveEntryPrefab;
-        internal static GameObject LockedNode2DPrefab;
 
         internal static Mesh checkCardHoloNodeMesh;
 
@@ -116,6 +118,13 @@ namespace Archipelago_Inscryption.Assets
             menuCardAct3Continue = GenerateSprite(TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAACoAAAA4CAYAAACL3WrLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAC80lEQVRoge1avW4aQRAeTq5wBYYSCWFRuIioQG7cRErrOl0eIM/jB3Dn2q0lN2kiqJCLFMgIidJJXNmlnSIaNLc7OzszHDmQ8kmn5bjd2e/mb2cXGkWz9Q4HgCMAgNuXRd08RFweD/8SxZt9BCrxiH7ZG/Tr4JLEernafC7qo2HDf6JV4u31+TCIFs1WOZgkoGP3Bn1YL1el1jI+hHa8migAwGgyhvl0FrXayUaTcfSdZvzb67ON6Hw6Y9uUtlLjKTQvqzb9ermCj18+q8hYcX99o+qXDaaqSCKhkJhWtsn02rfPjcfWogATUQA+IDzg/FWCO4/+/vmUbKVnXriIaohUTbb2lenXj0dVP7WPcgKvHu5K918/fDI910JM+GESPzk7BQgCIDexl1iIotmSTU/Th9ZEu0KJ6Hq52lwhTs5OzcJD02+DyPSoRW9yt5LjXIpDRJQS5Mhi1cSlmauHu41f0s8U7U7XnOwjolwFQ92AapsjS4lJJD21gymP0jV6Pp1Bu9M1XUgyVaBIUOdRKhw14jGhF2qiqAkkuav6NIVG0Wy9374s4PJ4mKyyd104S/MiN5VGe4P+1rWoJFsDtelzAjmtS9qywrxdlsBpPTfOpVEqlAqw+Kh1m6HVeokoFU61YwmkVN/Ft+8wvDiPWswmSDZlAdH0uOeuAsOLc7ZFIMGUsmqv8BG5TePeEM0hS3Q0GZty6P31jbk/QH45Fn3U6p80KOhymwON+tRLihrtDfqbK6elMM14xoRzUpQ0msuB0sRcMLQ73cqW3hJRKR3RPEeL5nanCwDpgwV8AdrfcqbKEkVoVgskSO9DsrRP2N+KiKgmyWuDTHvAq4E5j4bOjqbFe/qM68MFyk6IhuDMHZp5m1M8xNZEOVKSr3oREbX6X/iDAz1pSfXxoBRMKDAsvTiS3j2Ut+pP1qMpVBHJlh/SEC4ftRYqCDxh8aBE1Fr5/EtEZ0+azRj6suelPMsnQHAAsY+IDiD2/Q8wjUP5O9Efh4zSzyLrPXYAAAAASUVORK5CYII="));
             menuCardAct3Complete = GenerateSprite(TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAACoAAAA4CAYAAACL3WrLAAAACXBIWXMAAAsTAAALEwEAmpwYAAACLElEQVRoge2aS46CQBCGC+NCnYUhQth0woorEE4xh51TEK7A1o1RM3Exo6thFqZI2/T7oZL0v0FbQn/5q6uqAZPFJh1gBloCAHz99K/mkOrzo7qD4pd3FJq4pAeH1e4lMCIlt/P4efFCDiNFUJ/6+/2eB+hik84DFCCG3q9i6EMogvpWBPWtCOpTseCH0FNAk9v5Ybduo6X6FHshXFYQAAA4HfbWtzvBQJPbeQQEuEPiuA1sEFAaEgGrugEAgL5rra4ZBHRY7SaAqKpuoO9aY1e9g+K6ZAFd5Q1UBojhxt9sXDUGRSCcRAcQ12vftdZOa4PySo0uIE9ZQYzKlRLUFfB4uUK+Xd+PBbF2VQoqKzO6gCKlpVkTkILKygwP8Hi5AgBMAHHcxVWlozYhpsFkSksCaUm0KoAQlAepCrEKbDzfwlXt3VPftZAVZBJmXUBUvl3D6bB/aKlV3Sh3V0LQYbVT9mVVwsggTXu+tqNV3YyJZRpu1XV1XJWCyly1Bcyo9cm2VpmMWih2k7wgxusSYFqLaUBV5itB0dWqbiAtyTiZCyAtdNW6PKHYdUO7imLd9QmoBUrXUp6reMSlEAJQC1QkOlNx8rwgQQBR2lnP1j42a7E+8roZJorLCzdl6EVCSHRW1G59vQ3U6vX0pDQYr1/7BlSC0mEXTcrWQdm5rlLuR3ljbCKJzvUpq6zXcdu3rG+Xn/3KPD529K2H0Ls+wwypEfTd/wCTzOXvRP9Jj4YMxVtpbQAAAABJRU5ErkJggg=="));
             menuCardAct4 = GenerateSprite(TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAACoAAAA4CAYAAACL3WrLAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWklEQVRoge2au4rCQBSGjyHCYqXPIVhuuT6AVUAs3MZWS5t9BhvL3TaNFiJY+QCm3HJhn0MrEQR3C0kY3Z3xnMkJkwnnq3KZy8f8k0wCUwsarR/wgBAAoDkduvYwcpgvr6LpSRlJBzFULz51np3I6Dh9fWbHgUMPEiLKyeW490M0aLT8EAWQ6HmR6ItARLnxRjR8XARgN+tp73XftqiO1DawdVRQogAASRT/ufayGZE6S9vYbUZkWbSoDtNo60iimCR7Oe7zi06Ga1S592X/5pwi6/yFn0QxOpFqPfUm7iMtilyi/70JiqLa0X/X67k7bp/PpPLkEXUhCWAxojadcCDRm5Do75HoDVQ3eurHsg7q8ms1Rz8GC5tqGePVK7mON2u9iHKDnqPqQ2Qzx0ztYUCJ2vyHc+NN9CLKjYhyI6LciCg3IsqNN6I3HyXqjoOykYmWfQNMzZftRL+Wil8BwUvNRwAAAABJRU5ErkJggg=="));
+
+            lockedNodeFrames = [
+                TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAADEAAAAxCAYAAABznEEcAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAt0lEQVRoge3Y3Q5FMBhE0fL+78yVxE9EzQwfyV732pmjaE9rAAAArxjC400Vc6cGuhM+niFRwimwsHKM5uSJAjbnF0gXkLM8VeJs3KviUh61xFmY3vHc6zfcZ8IOsCMtUaVE+dtoL3UnlFDqc3OQXE5lqktEllV1iQhKfAUlVtRvR2T/lbwTdwPFth7pvVPvuMrmMXdBRwjHqxvA9Nnc8pXjaWtFh6I1t4iVo/IvmyfmBwAAAH5iBg0aFiXSGoaoAAAAAElFTkSuQmCC"),
+                TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAADEAAAAxCAYAAABznEEcAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAtklEQVRoge3Y2xZAIBCF4Vje/5W5Yrkg2e1J+L97055yKCkBAAA0MQTUnFuP6ypWEjxsfEcRtYG9qhy1TTgaWMlZRmOIWvKETEGD5mbVuXqXg105C1Nas/b6jXo7OQLYXrM9PRMyZTZst0Gm3q1an1gJVxMR25dirEQvaMLA8vV2NaGEsW0/nCtxJ5S67/JcUBAiVzfk1BfVhErKE7GLVclZejnZPXo8Xb3+R8ER9cEHAAAAfmIBIIAYI4UExqIAAAAASUVORK5CYII="),
+                TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAADEAAAAxCAYAAABznEEcAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAxUlEQVRoge2Yyw6DMAwETdX//+X2VIki2vixCUaaOQdnNybGxgwAAABgCduEmK/VeytNeMXLNShMZMXvKemomlAY+JDW8hCKqJI+kEomfm06ijkSG9akzoRHwOZc5yZrYuZlDsdWZmLGN8dFxsSKihTaQ5WJy7Jg1qPElg+gg4kymOhCBxPlaqcyoSy7YTImOswgXyhfp6igf+tDBzWjix3Flnexz+gDAZbdk06TnVlSDzP2gVv/7TjDY+jSzhcAAAAAbswbQzwXKg/q8kQAAAAASUVORK5CYII="),
+                TextureFromBase64("iVBORw0KGgoAAAANSUhEUgAAADEAAAAxCAYAAABznEEcAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAwElEQVRoge2Yyw7CMAwEDeL/fxlORhwgkTfrtBUz18prb2zl0QgAAACALdyadJ87c7oFR8W35XYJVYq31+AwsWIgWapj1YTDQCLXsmJiZuCbthIz5aEETRgVkt+cHZQ78auIip5DIyIi7tWAAdXkti1WMWEdBYe+qxPqqlq64Rynw8DEWcDEB+qOZdnpFBNdbxBZ3zlO1VW1nTe7L4CzuNNcAJPuk/3N378nksu/7BLViCX/Eb9sOvMCAAAAAFyEF9GHFymRK1e8AAAAAElFTkSuQmCC")
+            ];
         }
 
         private static Texture2D TextureFromBase64(string data)

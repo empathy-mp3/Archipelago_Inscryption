@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
@@ -318,6 +319,26 @@ namespace Archipelago_Inscryption.Patches
             if (!found)
             {
                 ArchipelagoModPlugin.Log.LogError($"Cannot find List<CardInfo>::get_Count in {__originalMethod.Name}");
+            }
+        }
+
+        [HarmonyPatch(typeof(MapDataReader), "SpawnAndPlaceElement")]
+        [HarmonyPostfix]
+        static void ReplaceLockedNodeIcon(MapElementData data, GameObject __result)
+        {
+            if (!ArchipelagoOptions.act1RandomizeNodes) return;
+            if ((data is CardMergeNodeData && !ArchipelagoManager.HasItem(APItem.SacrificeStonesNode))
+                || (data is DuplicateMergeNodeData && !ArchipelagoManager.HasItem(APItem.MycologistsNode))
+                || (data is CardRemoveNodeData && !ArchipelagoManager.HasItem(APItem.BoneAltarNode))
+                || (data is CardStatBoostNodeData && !ArchipelagoManager.HasItem(APItem.CampfireNode))
+                || (data is GainConsumablesNodeData && !ArchipelagoManager.HasItem(APItem.BackpackNode))
+                || (data is BuildTotemNodeData && !ArchipelagoManager.HasItem(APItem.WoodcarverNode))
+                || (data is TradePeltsNodeData && !ArchipelagoManager.HasItem(APItem.TraderNode))
+                || (data is CopyCardNodeData && !ArchipelagoManager.HasItem(APItem.GoobertNode)))
+            {
+                var sprite = __result.GetComponentInChildren<AnimatingSprite>();
+                sprite.textureFrames = AssetsManager.lockedNodeFrames;
+                sprite.SetFrame(0);
             }
         }
 
