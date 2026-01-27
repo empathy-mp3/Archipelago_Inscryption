@@ -9,6 +9,7 @@ using HarmonyLib;
 using Pixelplacement;
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -942,6 +943,30 @@ namespace Archipelago_Inscryption.Patches
                 return ArchipelagoManager.HasCompletedCheck(APCheck.GBCBattleKaycee);
 
             return true;
+        }
+
+        [HarmonyPatch(typeof(Opponent), "OutroSequence")]
+        [HarmonyPatch(typeof(TotemOpponent), "OutroSequence")]
+        [HarmonyPostfix]
+        static IEnumerator GrantAct1BattleChecks(IEnumerator __result, Opponent __instance, bool wasDefeated)
+		{
+            if (ArchipelagoOptions.act1RandomizeNodes && __instance is not Part1BossOpponent
+                && (__instance is Part1Opponent || __instance is TotemOpponent)) {
+                if (wasDefeated)
+                {
+                    ArchipelagoManager.SendCheck(APCheck.CabinWoodlandsBattle1 + ArchipelagoData.Data.act1BattlesThisRun);
+                }
+                ArchipelagoData.Data.act1BattlesThisRun++;
+            }
+            while (__result.MoveNext())
+                yield return __result.Current;
+		}
+
+        [HarmonyPatch(typeof(RunState), "Initialize")]
+        [HarmonyPostfix]
+        static void ResetAct1Battles(RunState __instance)
+        {
+            ArchipelagoData.Data.act1BattlesThisRun = 0;
         }
     }
 
