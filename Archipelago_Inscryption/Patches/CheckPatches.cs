@@ -950,8 +950,8 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static IEnumerator GrantAct1BattleChecks(IEnumerator __result, Opponent __instance, bool wasDefeated)
 		{
-            if (ArchipelagoOptions.act1RandomizeNodes && __instance is not Part1BossOpponent
-                && (__instance is Part1Opponent || __instance is TotemOpponent)) {
+            if ((ArchipelagoOptions.randomizeNodes || ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) 
+                && __instance is not Part1BossOpponent && (__instance is Part1Opponent || __instance is TotemOpponent)) {
                 if (wasDefeated)
                 {
                     ArchipelagoManager.SendCheck(APCheck.CabinWoodlandsBattle1 + ArchipelagoData.Data.act1BattlesThisRun);

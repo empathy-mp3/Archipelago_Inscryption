@@ -381,6 +381,42 @@ namespace Archipelago_Inscryption.Archipelago
             else if (receivedItem == APItem.ConduitUpgrade)
             {
                 Part3SaveData.Data.sideDeckAbilities.Add(Ability.ConduitNull);
+            }   
+            else if (receivedItem == APItem.SmallerBackpackChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.LessConsumables);
+            }
+			else if (receivedItem == APItem.PriceyPeltsChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.ExpensivePelts);
+            }
+			else if (receivedItem == APItem.BossTotemsChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.BossTotems);
+            }
+			else if (receivedItem == APItem.TippedScalesChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.StartingDamage);
+            }
+			else if (receivedItem == APItem.AllTotemBattlesChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.AllTotems);
+            }
+			else if (receivedItem == APItem.MoreDifficultChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.HarderDeckTrials);
+            }
+			else if (receivedItem == APItem.ProgressiveCandle)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.LessLives);
+            }
+			else if (receivedItem == APItem.ProgressiveSquirrel)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.SubmergeSquirrels);
+            }
+			else if (receivedItem == APItem.ProgressiveGrizzlies)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.GrizzlyMode);
             }
 
             if (Singleton<GameFlowManager>.Instance != null && SaveManager.SaveFile.IsPart1)
@@ -459,8 +495,10 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeSigils = (RandomizeSigils)Convert.ToInt32(randomizeSigils);
             if (ArchipelagoClient.slotData.TryGetValue("extra_sigils", out var extraSigils))
                 ArchipelagoOptions.extraSigils = Convert.ToInt32(extraSigils) != 0;
-            if (ArchipelagoClient.slotData.TryGetValue("act1_randomize_nodes", out var act1RandomizeNodes))
-                ArchipelagoOptions.act1RandomizeNodes = Convert.ToInt32(act1RandomizeNodes) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("randomize_nodes", out var randomizeNodes))
+                ArchipelagoOptions.randomizeNodes = Convert.ToInt32(randomizeNodes) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("randomize_challenges", out var randomizeChallenges))
+                ArchipelagoOptions.randomizeChallenges = (RandomizeChallenges)Convert.ToInt32(randomizeChallenges);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))
