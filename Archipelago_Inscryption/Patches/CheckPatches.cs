@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
 
 namespace Archipelago_Inscryption.Patches
 {
@@ -967,6 +968,51 @@ namespace Archipelago_Inscryption.Patches
         static void ResetAct1Battles(RunState __instance)
         {
             ArchipelagoData.Data.act1BattlesThisRun = 0;
+        }
+
+        [HarmonyPatch(typeof(TradePeltsSequencer), "GetTradeCardInfos")]
+        [HarmonyPostfix]
+        static void TraderChecks(ref List<CardInfo> __result, int tier)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                if (tier == 0 && !ArchipelagoManager.HasCompletedCheck(APCheck.CabinTraderRabbitPelt))
+                {
+                    __result.RemoveAt(7);
+                    __result.Add(RandomizerHelper.GenerateCardInfo(APCheck.CabinTraderRabbitPelt));
+                }
+                else if (tier == 1 && !ArchipelagoManager.HasCompletedCheck(APCheck.CabinTraderWolfPelt))
+                {
+                    __result.RemoveAt(7);
+                    __result.Add(RandomizerHelper.GenerateCardInfo(APCheck.CabinTraderWolfPelt));
+                }
+                else if (tier == 2 && !ArchipelagoManager.HasCompletedCheck(APCheck.CabinTraderGoldenPelt))
+                {
+                    __result.RemoveAt(3);
+                    __result.Add(RandomizerHelper.GenerateCardInfo(APCheck.CabinTraderGoldenPelt));
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(TradePeltsSequencer), "OnCardSelected")]
+        [HarmonyPrefix]
+        static bool DontAddTraderCardIfCheckCard(TradePeltsSequencer __instance, SelectableCard card)
+        {
+            if (card.Info.name.Contains("ArchipelagoCheck"))
+            {
+                if (__instance.peltCards[0].name == "Card (Rabbit Pelt)")
+                    ArchipelagoManager.SendCheck(APCheck.CabinTraderRabbitPelt);
+                else if (__instance.peltCards[0].name == "Card (Wolf Pelt)")
+                    ArchipelagoManager.SendCheck(APCheck.CabinTraderWolfPelt);
+                else
+                    ArchipelagoManager.SendCheck(APCheck.CabinTraderGoldenPelt);
+			    __instance.RemoveLastPelt();
+			    card.SetEnabled(false);
+			    __instance.tradeCards.Remove(card);
+                __instance.deckPile.AddToPile(card.transform);
+                return false;
+            }
+            return true;
         }
     }
 

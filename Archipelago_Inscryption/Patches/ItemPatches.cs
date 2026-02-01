@@ -456,13 +456,31 @@ namespace Archipelago_Inscryption.Patches
 			    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 1)
 				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
 			    if (!ArchipelagoManager.HasItem(APItem.ProgressiveCandle))
-
+                {
+                    RunState.Run.maxPlayerLives = 1;
+                    RunState.Run.playerLives = 1;
 				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessLives);
+                }
 			    if (!ArchipelagoManager.HasItem(APItem.ProgressiveSquirrel))
 				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.SubmergeSquirrels);
-			    if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize && 
-                    !ArchipelagoManager.HasItem(APItem.ProgressiveGrizzlies))
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+			    if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize)
+                {
+                    if (!ArchipelagoManager.HasItem(APItem.ProgressiveGrizzlies))
+                    {
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                    }
+                    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveGrizzlies) == 1)
+                    {
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                    }
+                    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveGrizzlies) == 2)
+                    {
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                    }
+                }
             }
         }
 
@@ -507,25 +525,22 @@ namespace Archipelago_Inscryption.Patches
             }
 		}
 
-        [HarmonyPatch(typeof(CandleHolder), "UpdateArmsAndFlames")]
-        [HarmonyPrefix]
-        static void UpdateLives(CandleHolder __instance)
-		{
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) {
-                if (!ArchipelagoManager.HasItem(APItem.ProgressiveCandle))
-                {
-                    RunState.Run.maxPlayerLives = 1;
-                }
-                else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveCandle) == 1)
-                {
-                    RunState.Run.maxPlayerLives = 2;
-                }
-                else
-                {
-                    RunState.Run.maxPlayerLives = 3;
-                }
+        [HarmonyPatch(typeof(Part1BossOpponent), "HasGrizzlyGlitchPhase")]
+        [HarmonyPostfix]
+        static void DoProgressiveGrizzlies(ref bool __result, Part1BossOpponent __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize)
+            {
+                int grizzlyChallenges = 0;
+                if (__instance is ProspectorBossOpponent)
+                    grizzlyChallenges = 3;
+                if (__instance is AnglerBossOpponent)
+                    grizzlyChallenges = 2;
+                if (__instance is TrapperTraderBossOpponent)
+                    grizzlyChallenges = 1;
+                __result = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.GrizzlyMode) >= grizzlyChallenges;
             }
-		}
+        }
     }
     
     [HarmonyPatch]
