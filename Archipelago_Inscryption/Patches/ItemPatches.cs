@@ -395,7 +395,8 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
 		{
-			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+                SaveManager.SaveFile.IsPart1)
             {
 				__instance.ascensionRunInfoBar.SetActive(true);
 				__instance.ascensionChallengeArray.gameObject.SetActive(true);
@@ -410,7 +411,8 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu2(PauseMenu3D __instance)
 		{
-			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+                SaveManager.SaveFile.IsPart1)
             {
 				__instance.ascensionChallengeArray.SetIconsEnabled(!__instance.optionsMenuParent.activeSelf);
                 return false;
@@ -498,7 +500,8 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void NotRequireAscensionForChallenges(AscensionChallenge challenge, ref int __result, AscensionSaveData __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+                SaveManager.SaveFile.IsPart1)
             {
                 __result = __instance.activeChallenges.FindAll((AscensionChallenge x) => x == challenge).Count;;
             }
@@ -510,7 +513,8 @@ namespace Archipelago_Inscryption.Patches
 		{
             while (__result.MoveNext())
                 yield return __result.Current;
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+                SaveManager.SaveFile.IsPart1) {
                 List<AscensionChallenge> challenges = [.. AscensionSaveData.Data.activeChallenges];
                 challenges.RemoveAll((AscensionChallenge x) => x is not AscensionChallenge.StartingDamage);
                 if (challenges.Contains(AscensionChallenge.StartingDamage))

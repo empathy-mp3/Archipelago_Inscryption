@@ -858,6 +858,18 @@ namespace Archipelago_Inscryption.Patches
                 __instance.itemNodes[0] = checkNode;
             }
         }
+        [HarmonyPatch(typeof(FactoryGemsDrone), "Start")]
+        [HarmonyPrefix]
+        static bool DontRemoveGemsDrone(FactoryGemsDrone __instance)
+        {
+            if (!ArchipelagoManager.HasCompletedCheck(APCheck.FactoryGemsDrone))
+            {
+                ShelfInteractable shelfInteractable = __instance.shelf;
+                shelfInteractable.HoldableTaken = (Action)Delegate.Combine(shelfInteractable.HoldableTaken, new Action(__instance.OnGemsTaken));
+                return false;
+            }
+            return true;
+        }
 
         [HarmonyPatch(typeof(FactoryGemsDrone), "Start")]
         [HarmonyPostfix]
@@ -872,11 +884,8 @@ namespace Archipelago_Inscryption.Patches
 
             RandomizerHelper.CreateDiscoverableCardCheck(reference, APCheck.FactoryGemsDrone, true);
 
-            if (__instance.shelf.CurrentHoldable && !ArchipelagoManager.HasItem(APItem.GemsModule))
-            {
-                __instance.shelf.gameObject.SetActive(false);
-                __instance.gameObject.AddComponent<ActivateOnItemReceived>().Init(__instance.shelf.gameObject, APItem.GemsModule);
-            }
+            __instance.shelf.gameObject.SetActive(false);
+            __instance.gameObject.AddComponent<ActivateOnItemReceived>().Init(__instance.shelf.gameObject, APItem.GemsModule);
         }
 
         [HarmonyPatch(typeof(FirstPersonItemHolder), "PickUpHoldable")]

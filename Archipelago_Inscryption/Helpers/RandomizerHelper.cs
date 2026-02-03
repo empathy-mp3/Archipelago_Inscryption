@@ -678,6 +678,9 @@ namespace Archipelago_Inscryption.Helpers
 
         public static string GetPaintingAnimal()
         {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable &&
+                !ArchipelagoManager.HasItem(APItem.ProgressiveSquirrel))
+                    return "AquaSquirrel";
             return StoryEventsData.EventCompleted(StoryEvent.BeeFigurineFound) ? "Bee" : "Squirrel";
         }
 

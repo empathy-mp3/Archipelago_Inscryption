@@ -66,7 +66,8 @@ namespace Archipelago_Inscryption.Archipelago
             { APItem.LonelyWizbotCard,                  StoryEvent.TalkingBlueMageCardDiscovered },
             { APItem.FoulBackwaterShortcut,             StoryEvent.NatureHoloShortcut},
             { APItem.FilthyCorpseWorldShortcut,         StoryEvent.UndeadHoloShortcut},
-            { APItem.GaudyGemLandShortcut,              StoryEvent.WizardHoloShortcut}
+            { APItem.GaudyGemLandShortcut,              StoryEvent.WizardHoloShortcut},
+            { APItem.GemsModule,                        StoryEvent.GemsModuleFetched}
         };
 
         // When one of the following items is received, add the associated card(s) to the deck.
