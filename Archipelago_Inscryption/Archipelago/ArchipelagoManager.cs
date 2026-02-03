@@ -367,11 +367,11 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (receivedItem == APItem.VesselUpgrade)
             {
-                List<Ability> validVesselUpgrades = [Ability.WhackAMole, Ability.Sharp, Ability.GuardDog, 
-                    Ability.Reach, Ability.RandomAbility, Ability.GainBattery, Ability.ExplodeOnDeath, Ability.DeathShield, 
+                List<Ability> validVesselUpgrades = [Ability.WhackAMole, Ability.Sharp, Ability.Reach, 
+                Ability.RandomAbility, Ability.GainBattery, Ability.ExplodeOnDeath, Ability.DeathShield, 
                     Ability.LatchExplodeOnDeath, Ability.LatchDeathShield, Ability.LatchBrittle, Ability.Sentry, 
-                    Ability.DrawVesselOnHit, Ability.DebuffEnemy, Ability.CellBuffSelf, Ability.CellDrawRandomCardOnDeath];
-                List<Ability> extraVesselUpgrades = [Ability.CreateBells, Ability.DrawRabbits, Ability.MadeOfStone];
+                    Ability.DrawVesselOnHit, Ability.DebuffEnemy, Ability.CellBuffSelf];
+                List<Ability> extraVesselUpgrades = [Ability.CreateBells, Ability.DrawRabbits];
                 if (ArchipelagoOptions.extraSigils) validVesselUpgrades = validVesselUpgrades.Concat(extraVesselUpgrades).ToList();
                 foreach (Ability sigil in Part3SaveData.Data.sideDeckAbilities)
                 {
