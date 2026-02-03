@@ -1013,6 +1013,17 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
+        [HarmonyPatch(typeof(FreeTeethSkull), "SpawnTeethIfNotAscension")]
+        [HarmonyPrefix]
+        static bool NoFreeTeethIfRandomizeChallenge(FreeTeethSkull __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                return false;
+            }
+            return true;
+        }
+
         [HarmonyPatch(typeof(ItemSlot), "CreateItem")]
         [HarmonyPostfix]
         static void ReplaceSquirrelWithCheck(ItemSlot __instance)
