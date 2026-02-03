@@ -6,6 +6,7 @@ using Archipelago_Inscryption.Helpers;
 using Archipelago_Inscryption.Patches;
 using DiskCardGame;
 using GBC;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace Archipelago_Inscryption.Archipelago
             { StoryEvent.AnglerDefeated,                APCheck.CabinBossAngler },
             { StoryEvent.TrapperTraderDefeated,         APCheck.CabinBossTrapper },
             { StoryEvent.LeshyDefeated,                 APCheck.CabinBossLeshy },
+            { StoryEvent.StartScreenNewGameUnlocked,    APCheck.CabinNewGameButton},
             { StoryEvent.PhotographerDefeated,          APCheck.FactoryBossPhotographer },
             { StoryEvent.ArchivistDefeated,             APCheck.FactoryBossArchivist },
             { StoryEvent.CanvasDefeated,                APCheck.FactoryBossUnfinished },
@@ -381,6 +383,49 @@ namespace Archipelago_Inscryption.Archipelago
             else if (receivedItem == APItem.ConduitUpgrade)
             {
                 Part3SaveData.Data.sideDeckAbilities.Add(Ability.ConduitNull);
+            }   
+            else if (receivedItem == APItem.SmallerBackpackChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.LessConsumables);
+            }
+			else if (receivedItem == APItem.PriceyPeltsChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.ExpensivePelts);
+            }
+			else if (receivedItem == APItem.BossTotemsChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.BossTotems);
+            }
+			else if (receivedItem == APItem.TippedScalesChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.StartingDamage);
+            }
+			else if (receivedItem == APItem.AllTotemBattlesChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.AllTotems);
+            }
+			else if (receivedItem == APItem.MoreDifficultChallenge)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.HarderDeckTrials);
+            }
+			else if (receivedItem == APItem.ProgressiveCandle)
+            {
+                RunState.Run.maxPlayerLives++;
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.LessLives);
+            }
+			else if (receivedItem == APItem.ProgressiveSquirrel)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.SubmergeSquirrels);
+                if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveSquirrel) == 2)
+                {
+                    StoryEventsData.SetEventCompleted(StoryEvent.BeeFigurineFound);
+                    if (!RunState.Run.totemTops.Contains(Tribe.Insect))
+                        RunState.Run.totemTops.Add(Tribe.Insect);
+                }
+            }
+			else if (receivedItem == APItem.ProgressiveGrizzlies)
+            {
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.GrizzlyMode);
             }
 
             if (Singleton<GameFlowManager>.Instance != null && SaveManager.SaveFile.IsPart1)
@@ -399,14 +444,27 @@ namespace Archipelago_Inscryption.Archipelago
                     Singleton<CandleHolder>.Instance.anim.Play("add_candle");
                 }
 
-                if (receivedItem == APItem.BeeFigurine && Singleton<CardDrawPiles>.Instance is Part1CardDrawPiles piles)
+                if (receivedItem == APItem.ProgressiveCandle && Singleton<GameFlowManager>.Instance is Part1GameFlowManager)
                 {
-                    piles.SetSidePileFigurine(SidePileFigurine.Bee);
+                    if (Singleton<TurnManager>.Instance == null || !(Singleton<TurnManager>.Instance.Opponent is Part1BossOpponent))
+                        RunState.Run.playerLives = Mathf.Min(RunState.Run.maxPlayerLives, RunState.Run.playerLives + 1);
+
+                    Singleton<CandleHolder>.Instance.UpdateArmsAndFlames();
                 }
+
+                if (Singleton<CardDrawPiles>.Instance is Part1CardDrawPiles piles)
+                {
+                    if (receivedItem == APItem.BeeFigurine || 
+                    (receivedItem == APItem.ProgressiveSquirrel && piles.sidePileFigurine == SidePileFigurine.Squirrel))
+                        piles.SetSidePileFigurine(SidePileFigurine.Bee);
+                    else if (receivedItem == APItem.ProgressiveSquirrel && piles.sidePileFigurine == SidePileFigurine.Aquasquirrel)
+                        piles.SetSidePileFigurine(SidePileFigurine.Squirrel);
+                }
+                
             }
             else
             {
-                if (receivedItem == APItem.ExtraCandle)
+                if (receivedItem == APItem.ExtraCandle || receivedItem == APItem.ProgressiveCandle)
                 {
                     RunState.Run.playerLives = Mathf.Min(RunState.Run.maxPlayerLives, RunState.Run.playerLives + 1);
                 }
@@ -459,6 +517,10 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeSigils = (RandomizeSigils)Convert.ToInt32(randomizeSigils);
             if (ArchipelagoClient.slotData.TryGetValue("extra_sigils", out var extraSigils))
                 ArchipelagoOptions.extraSigils = Convert.ToInt32(extraSigils) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("randomize_nodes", out var randomizeNodes))
+                ArchipelagoOptions.randomizeNodes = Convert.ToInt32(randomizeNodes) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("randomize_challenges", out var randomizeChallenges))
+                ArchipelagoOptions.randomizeChallenges = (RandomizeChallenges)Convert.ToInt32(randomizeChallenges);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))

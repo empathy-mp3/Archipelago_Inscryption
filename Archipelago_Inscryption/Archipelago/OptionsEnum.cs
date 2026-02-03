@@ -22,6 +22,14 @@ namespace Archipelago_Inscryption.Archipelago
         COUNT
     }
 
+    internal enum RandomizeChallenges
+    {
+        Disable,
+        NoGrizzlies,
+        Randomize,
+        COUNT
+    }
+
     internal enum RandomizeHammer
     {
         Vanilla,

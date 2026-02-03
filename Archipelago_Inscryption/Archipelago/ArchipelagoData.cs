@@ -67,6 +67,8 @@ namespace Archipelago_Inscryption.Archipelago
         internal int deckSizeTrapCount = 0;
         [JsonProperty("reinforcementsTrapCount")]
         internal int reinforcementsTrapCount = 0;
+        [JsonProperty("act1Battles")]
+        internal int act1BattlesThisRun = 0;
 
         [JsonProperty("completedChecks")]
         internal List<long> completedChecks = new List<long>();

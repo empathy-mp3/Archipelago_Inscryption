@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
@@ -318,6 +319,226 @@ namespace Archipelago_Inscryption.Patches
             if (!found)
             {
                 ArchipelagoModPlugin.Log.LogError($"Cannot find List<CardInfo>::get_Count in {__originalMethod.Name}");
+            }
+        }
+
+        [HarmonyPatch(typeof(MapDataReader), "SpawnAndPlaceElement")]
+        [HarmonyPostfix]
+        static void ReplaceLockedNodeIcon(MapElementData data, GameObject __result)
+        {
+            if (!ArchipelagoOptions.randomizeNodes) return;
+            if ((data is CardMergeNodeData && !ArchipelagoManager.HasItem(APItem.SacrificeStonesNode))
+                || (data is DuplicateMergeNodeData && !ArchipelagoManager.HasItem(APItem.MycologistsNode))
+                || (data is CardRemoveNodeData && !ArchipelagoManager.HasItem(APItem.BoneAltarNode))
+                || (data is CardStatBoostNodeData && !ArchipelagoManager.HasItem(APItem.CampfireNode))
+                || (data is GainConsumablesNodeData && !ArchipelagoManager.HasItem(APItem.BackpackNode))
+                || (data is BuildTotemNodeData && !ArchipelagoManager.HasItem(APItem.WoodcarverNode))
+                || (data is CopyCardNodeData && !ArchipelagoManager.HasItem(APItem.GoobertNode)))
+            {
+                var sprite = __result.GetComponentInChildren<AnimatingSprite>();
+                sprite.textureFrames = AssetsManager.lockedNodeFrames;
+                sprite.SetFrame(0);
+            }
+        }
+
+        [HarmonyPatch(typeof(GameFlowManager), "DoTransitionSequence")]
+        [HarmonyPostfix]
+        static IEnumerator SkipAct1Nodes(IEnumerator __result, GameState gameState, NodeData triggeringNodeData)
+		{
+            if (gameState == GameState.SpecialCardSequence && ArchipelagoOptions.randomizeNodes) {
+			    if ((triggeringNodeData is CardMergeNodeData && !ArchipelagoManager.HasItem(APItem.SacrificeStonesNode))
+			    || (triggeringNodeData is DuplicateMergeNodeData && !ArchipelagoManager.HasItem(APItem.MycologistsNode))
+			    || (triggeringNodeData is CardRemoveNodeData && !ArchipelagoManager.HasItem(APItem.BoneAltarNode))
+			    || (triggeringNodeData is CardStatBoostNodeData && !ArchipelagoManager.HasItem(APItem.CampfireNode))
+			    || (triggeringNodeData is GainConsumablesNodeData && !ArchipelagoManager.HasItem(APItem.BackpackNode))
+			    || (triggeringNodeData is BuildTotemNodeData && !ArchipelagoManager.HasItem(APItem.WoodcarverNode))
+			    || (triggeringNodeData is CopyCardNodeData && !ArchipelagoManager.HasItem(APItem.GoobertNode))) {
+				    yield return new WaitForSeconds(0.05f);
+                    PaperGameMap gameMap = PaperGameMap.Instance;
+                    MapDataReader dataReader = new MapDataReader();
+                    Vector2 sampleRange = new Vector2(gameMap.mapProgress, gameMap.mapProgress + 1f);
+                    List<MapNode> nodeList = gameMap.GetComponentsInChildren<MapNode>().ToList();
+                    List<PathSegment> pathList = gameMap.GetComponentsInChildren<PathSegment>().ToList();
+			        MapNode currentNode = nodeList.Find((MapNode x) => x.Data.id == RunState.Run.currentNodeId);
+                    if (currentNode != null)
+                    {
+                        dataReader.SetNodeAndPathColors(nodeList, pathList, currentNode);
+                    }
+			        Singleton<MapNodeManager>.Instance.FindAndSetActiveNodeInteractable();
+				    SaveManager.SaveToFile(true);
+                    yield break;
+                }
+                else
+                {
+                    while (__result.MoveNext())
+                        yield return __result.Current;
+                }
+            }
+            else
+            {
+                while (__result.MoveNext())
+                    yield return __result.Current;
+            }
+		}
+
+        [HarmonyPatch(typeof(NodeData.IsAscension), "Satisfied")]
+        [HarmonyPostfix]
+        static void MakeGoobertNodeAppear(ref bool __result)
+		{
+			if (ArchipelagoOptions.randomizeNodes)
+            {
+                __result = true;
+            }
+		}
+
+        [HarmonyPatch(typeof(PauseMenu3D), "Start")]
+        [HarmonyPrefix]
+        static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
+		{
+			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+				__instance.ascensionRunInfoBar.SetActive(true);
+				__instance.ascensionChallengeArray.gameObject.SetActive(true);
+				__instance.menuController.transform.localPosition = new Vector3(0f, __instance.ascensionMenuYOffset, 0f);
+				__instance.optionsUIPanel.transform.localPosition = new Vector3(0f, -__instance.ascensionMenuYOffset, 0f);
+                return false;
+            }
+            return true;
+		}
+
+        [HarmonyPatch(typeof(PauseMenu3D), "Update")]
+        [HarmonyPrefix]
+        static bool ShowKayceeChallengesInPauseMenu2(PauseMenu3D __instance)
+		{
+			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+				__instance.ascensionChallengeArray.SetIconsEnabled(!__instance.optionsMenuParent.activeSelf);
+                return false;
+            }
+            return true;
+		}
+
+        [HarmonyPatch(typeof(RunState), "Initialize")]
+        [HarmonyPostfix]
+        static void SetChallengesOnStartup(RunState __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
+                if (!ArchipelagoManager.HasItem(APItem.SmallerBackpackChallenge))
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessConsumables);
+			    if (!ArchipelagoManager.HasItem(APItem.PriceyPeltsChallenge))
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.ExpensivePelts);
+			    if (!ArchipelagoManager.HasItem(APItem.BossTotemsChallenge))
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BossTotems);
+			    if (!ArchipelagoManager.HasItem(APItem.TippedScalesChallenge))
+                {
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                }
+			    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.TippedScalesChallenge) == 1)
+                {
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                }
+			    else
+                {
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                }
+			    if (!ArchipelagoManager.HasItem(APItem.AllTotemBattlesChallenge))
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.AllTotems);
+			    if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 0)
+                {
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
+                }
+			    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 1)
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
+			    if (!ArchipelagoManager.HasItem(APItem.ProgressiveCandle))
+                {
+                    RunState.Run.maxPlayerLives = 1;
+                    RunState.Run.playerLives = 1;
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessLives);
+                }
+			    if (!ArchipelagoManager.HasItem(APItem.ProgressiveSquirrel))
+				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.SubmergeSquirrels);
+			    if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize)
+                {
+                    if (!ArchipelagoManager.HasItem(APItem.ProgressiveGrizzlies))
+                    {
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                    }
+                    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveGrizzlies) == 1)
+                    {
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                    }
+                    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveGrizzlies) == 2)
+                    {
+				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                    }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(AscensionUnlockSchedule), "ChallengeIsUnlockedForLevel")]
+        [HarmonyPostfix]
+        static void UnlockAllChallenges(ref bool __result)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                __result = true;
+            }
+        }
+
+        [HarmonyPatch(typeof(AscensionSaveData), "GetNumChallengesOfTypeActive")]
+        [HarmonyPostfix]
+        static void NotRequireAscensionForChallenges(AscensionChallenge challenge, ref int __result, AscensionSaveData __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                __result = __instance.activeChallenges.FindAll((AscensionChallenge x) => x == challenge).Count;;
+            }
+        }
+
+        [HarmonyPatch(typeof(TurnManager), "SetupPhase")]
+        [HarmonyPostfix]
+        static IEnumerator ExtraTippedScales(IEnumerator __result)
+		{
+            while (__result.MoveNext())
+                yield return __result.Current;
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) {
+                List<AscensionChallenge> challenges = [.. AscensionSaveData.Data.activeChallenges];
+                challenges.RemoveAll((AscensionChallenge x) => x is not AscensionChallenge.StartingDamage);
+                if (challenges.Contains(AscensionChallenge.StartingDamage))
+                {
+                    challenges.Remove(AscensionChallenge.StartingDamage);
+			        foreach (AscensionChallenge i in challenges)
+                    {
+                        if (i == AscensionChallenge.StartingDamage)
+				            yield return Singleton<LifeManager>.Instance.ShowDamageSequence(1, 1, true, 0.125f, null, 0f, false);
+                    }
+                }
+            }
+		}
+
+        [HarmonyPatch(typeof(Part1BossOpponent), "HasGrizzlyGlitchPhase")]
+        [HarmonyPostfix]
+        static void DoProgressiveGrizzlies(ref bool __result, Part1BossOpponent __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize)
+            {
+                int grizzlyChallenges = 0;
+                if (__instance is ProspectorBossOpponent)
+                    grizzlyChallenges = 3;
+                if (__instance is AnglerBossOpponent)
+                    grizzlyChallenges = 2;
+                if (__instance is TrapperTraderBossOpponent)
+                    grizzlyChallenges = 1;
+                __result = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.GrizzlyMode) >= grizzlyChallenges;
             }
         }
     }

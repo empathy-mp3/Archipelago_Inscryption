@@ -519,8 +519,8 @@ namespace Archipelago_Inscryption.Patches
                 if (SaveManager.SaveFile.IsPart1) 
                 {
                     extraList = [Ability.Brittle, Ability.ExplodeOnDeath, Ability.Sniper, Ability.DeathShield,
-                    Ability.Sentry, Ability.SwapStats, Ability.BuffEnemy, Ability.MoveBeside, Ability.StrafeSwap, 
-                    Ability.DoubleStrike, Ability.GainAttackOnKill, Ability.Morsel, Ability.BoneDigger, Ability.OpponentBones];
+                    Ability.Sentry, Ability.BuffEnemy, Ability.MoveBeside, Ability.StrafeSwap, Ability.DoubleStrike, 
+                    Ability.GainAttackOnKill, Ability.Morsel, Ability.BoneDigger, Ability.OpponentBones];
                     if (extraList.Contains(ability))
                     {
                         if (!info.metaCategories.Contains(AbilityMetaCategory.Part1Rulebook)) info.metaCategories.Add(AbilityMetaCategory.Part1Rulebook);

@@ -9,11 +9,13 @@ using HarmonyLib;
 using Pixelplacement;
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
 
 namespace Archipelago_Inscryption.Patches
 {
@@ -942,6 +944,133 @@ namespace Archipelago_Inscryption.Patches
                 return ArchipelagoManager.HasCompletedCheck(APCheck.GBCBattleKaycee);
 
             return true;
+        }
+
+        [HarmonyPatch(typeof(Opponent), "OutroSequence")]
+        [HarmonyPatch(typeof(TotemOpponent), "OutroSequence")]
+        [HarmonyPostfix]
+        static IEnumerator GrantAct1BattleChecks(IEnumerator __result, Opponent __instance, bool wasDefeated)
+		{
+            if ((ArchipelagoOptions.randomizeNodes || ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) 
+                && __instance is not Part1BossOpponent && (__instance is Part1Opponent || __instance is TotemOpponent)) {
+                if (wasDefeated)
+                {
+                    ArchipelagoManager.SendCheck(APCheck.CabinWoodlandsBattle1 + ArchipelagoData.Data.act1BattlesThisRun);
+                }
+                ArchipelagoData.Data.act1BattlesThisRun++;
+            }
+            while (__result.MoveNext())
+                yield return __result.Current;
+		}
+
+        [HarmonyPatch(typeof(RunState), "Initialize")]
+        [HarmonyPostfix]
+        static void ResetAct1Battles(RunState __instance)
+        {
+            ArchipelagoData.Data.act1BattlesThisRun = 0;
+        }
+
+        [HarmonyPatch(typeof(TradePeltsSequencer), "GetTradeCardInfos")]
+        [HarmonyPostfix]
+        static void TraderChecks(ref List<CardInfo> __result, int tier)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                if (tier == 0 && !ArchipelagoManager.HasCompletedCheck(APCheck.CabinTraderRabbitPelt))
+                {
+                    __result.RemoveAt(7);
+                    __result.Add(RandomizerHelper.GenerateCardInfo(APCheck.CabinTraderRabbitPelt));
+                }
+                else if (tier == 1 && !ArchipelagoManager.HasCompletedCheck(APCheck.CabinTraderWolfPelt))
+                {
+                    __result.RemoveAt(7);
+                    __result.Add(RandomizerHelper.GenerateCardInfo(APCheck.CabinTraderWolfPelt));
+                }
+                else if (tier == 2 && !ArchipelagoManager.HasCompletedCheck(APCheck.CabinTraderGoldenPelt))
+                {
+                    __result.RemoveAt(3);
+                    __result.Add(RandomizerHelper.GenerateCardInfo(APCheck.CabinTraderGoldenPelt));
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(TradePeltsSequencer), "OnCardSelected")]
+        [HarmonyPrefix]
+        static bool DontAddTraderCardIfCheckCard(TradePeltsSequencer __instance, SelectableCard card)
+        {
+            if (card.Info.name.Contains("ArchipelagoCheck"))
+            {
+			    card.SetEnabled(false);
+			    __instance.tradeCards.Remove(card);
+                string cardName = card.Info.name;
+                string checkName = cardName.Substring(cardName.IndexOf('_') + 1);
+                APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
+                ArchipelagoManager.SendCheck(check);
+				__instance.deckPile.MoveCardToPile(card, true, 0f, 0.7f);
+                __instance.deckPile.AddToPile(card.transform);
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(ItemSlot), "CreateItem")]
+        [HarmonyPostfix]
+        static void ReplaceSquirrelWithCheck(ItemSlot __instance)
+        {
+            if (__instance.Item is CardBottleItem && ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable
+                && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
+                int area = RunState.Run.regionTier;
+                List<APCheck> validChecks = [];
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3)){
+                    validChecks.Add(APCheck.CabinWoodlandsConsumableCheck1 + area*3);
+                }
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3)){
+                    validChecks.Add(APCheck.CabinWoodlandsConsumableCheck2 + area*3);
+                }
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3)){
+                    validChecks.Add(APCheck.CabinWoodlandsConsumableCheck3 + area*3);
+                }
+                if (validChecks.Count != 0)
+                {
+                    var bottle = __instance.Item as CardBottleItem;
+                    int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
+                    seed += (int)(__instance.OriginalLocalPos.x + __instance.OriginalLocalPos.z) * 44;
+                    APCheck check = validChecks[SeededRandom.Range(0, validChecks.Count, seed++)];
+                    bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
+                    var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
+                    info.name = bottle.cardInfo.name;
+                    bottle.cardInfo = info;
+                    var card = bottle.GetComponentInChildren<SelectableCard>();
+                    var card2 = UnityEngine.Object.Instantiate(card);
+                    card2.name = card.name;
+                    card2.SetInfo(info);
+                    card2.transform.parent = card.transform.parent;
+                    card2.transform.localPosition = card.transform.localPosition;
+                    card2.transform.localRotation = card.transform.localRotation;
+                    card.gameObject.SetActive(false);
+                    card.transform.parent = null;
+                    UnityEngine.Object.Destroy(card);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(CardBottleItem), "ActivateSequence")]
+        [HarmonyPostfix]
+        static IEnumerator SendCheckInsteadOfAddingCard(IEnumerator __result, CardBottleItem __instance)
+        {
+            if (__instance.cardInfo.name.Contains("ArchipelagoCheck"))
+            {
+                __instance.PlayExitAnimation();
+                string cardName = __instance.cardInfo.name;
+                string checkName = cardName.Substring(cardName.IndexOf('_') + 1);
+                APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
+                ArchipelagoManager.SendCheck(check);
+                yield return new WaitForSeconds(0.25f);
+            }
+            else {
+                while (__result.MoveNext())
+                    yield return __result.Current;
+            }
         }
     }
 

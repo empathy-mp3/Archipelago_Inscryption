@@ -15,6 +15,8 @@ namespace Archipelago_Inscryption.Archipelago
         internal static RandomizeDeck randomizeDeck = RandomizeDeck.Disable;
         internal static RandomizeSigils randomizeSigils = RandomizeSigils.Disable;
         internal static bool extraSigils = false;
+        internal static bool randomizeNodes = false;
+        internal static RandomizeChallenges randomizeChallenges = RandomizeChallenges.Disable;
         internal static RandomizeHammer randomizeHammer = RandomizeHammer.Vanilla;
         internal static RandomizeShortcuts randomizeShortcuts = RandomizeShortcuts.Vanilla;
         internal static RandomizeVesselUpgrades randomizeVesselUpgrades = RandomizeVesselUpgrades.Vanilla;
