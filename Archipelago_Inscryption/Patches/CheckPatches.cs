@@ -1033,6 +1033,39 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
+        [HarmonyPatch(typeof(GainConsumablesSequencer), "GenerateItemChoices")]
+        [HarmonyPostfix]
+        static void GuaranteeConsumableChecks(List<ConsumableItemData> __result, GainConsumablesSequencer __instance)
+        {
+            int area = RunState.Run.regionTier;
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && area < 3)
+            {
+                List<ConsumableItemSlot> consumableslots = ItemsManager.Instance.consumableSlots.FindAll(x => x.Consumable is CardBottleItem);
+                List<APCheck> checksInBottles = [];
+                foreach (ConsumableItemSlot slot in consumableslots)
+                {
+                    CardBottleItem bottle = slot.Consumable as CardBottleItem;
+                    string checkName = bottle.cardInfo.name.Substring(bottle.cardInfo.name.IndexOf('_') + 1);
+                    APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
+                    checksInBottles.Add(check);
+                }
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3) &&
+                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck1 + area*3)){
+                    __result[0] = ItemsUtil.GetConsumableByName("TerrainBottle");
+                }
+                if (ArchipelagoOptions.randomizeNodes) {
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
+                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck2 + area*3)){
+                        __result[1] = ItemsUtil.GetConsumableByName("GoatBottle");
+                    }
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3) &&
+                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck3 + area*3)){
+                        __result[2] = ItemsUtil.GetConsumableByName("FrozenOpossumBottle");
+                    }
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(ItemSlot), "CreateItem")]
         [HarmonyPostfix]
         static void ReplaceSquirrelWithCheck(ItemSlot __instance)
@@ -1041,22 +1074,22 @@ namespace Archipelago_Inscryption.Patches
                 && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
                 int area = RunState.Run.regionTier;
                 if (area < 3) {
-                    List<APCheck> validChecks = [];
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3)){
-                        validChecks.Add(APCheck.CabinWoodlandsConsumableCheck1 + area*3);
+                    APCheck check = 0;
+                    var bottle = __instance.Item as CardBottleItem;
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3) &&
+                        bottle.name.Contains("TerrainBottle")){
+                        check = APCheck.CabinWoodlandsConsumableCheck1 + area*3;
                     }
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3)){
-                        validChecks.Add(APCheck.CabinWoodlandsConsumableCheck2 + area*3);
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
+                    bottle.name.Contains("GoatBottle") && ArchipelagoOptions.randomizeNodes){
+                        check = APCheck.CabinWoodlandsConsumableCheck2 + area*3;
                     }
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3)){
-                        validChecks.Add(APCheck.CabinWoodlandsConsumableCheck3 + area*3);
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3) &&
+                    bottle.name.Contains("FrozenOpossumBottle") && ArchipelagoOptions.randomizeNodes){
+                        check = APCheck.CabinWoodlandsConsumableCheck3 + area*3;
                     }
-                    if (validChecks.Count != 0)
+                    if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
                     {
-                        var bottle = __instance.Item as CardBottleItem;
-                        int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
-                        seed += (int)(__instance.OriginalLocalPos.x + __instance.OriginalLocalPos.z) * 44;
-                        APCheck check = validChecks[SeededRandom.Range(0, validChecks.Count, seed++)];
                         bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
                         var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
                         info.name = bottle.cardInfo.name;
