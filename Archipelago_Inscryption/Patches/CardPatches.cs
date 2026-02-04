@@ -141,6 +141,8 @@ namespace Archipelago_Inscryption.Patches
             var card2 = UnityEngine.Object.Instantiate(__instance.fullConsumablesReward);
             card.mods = new List<CardModificationInfo>(__instance.fullConsumablesReward.mods);
             card.name = __instance.fullConsumablesReward.name;
+            card2.mods = new List<CardModificationInfo>(__instance.fullConsumablesReward.mods);
+            card2.name = __instance.fullConsumablesReward.name;
             RandomizeSigils(card);
             __instance.fullConsumablesReward = card;
             while (__result.MoveNext())

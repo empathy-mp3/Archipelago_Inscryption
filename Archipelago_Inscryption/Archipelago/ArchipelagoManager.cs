@@ -412,13 +412,17 @@ namespace Archipelago_Inscryption.Archipelago
             }
 			else if (receivedItem == APItem.ProgressiveCandle)
             {
+                if (RunState.Run.maxPlayerLives >= 2)
+                {
+                    StoryEventsData.SetEventCompleted(StoryEvent.CandleArmFound);
+                }
                 RunState.Run.maxPlayerLives++;
 			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.LessLives);
             }
 			else if (receivedItem == APItem.ProgressiveSquirrel)
             {
 			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.SubmergeSquirrels);
-                if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveSquirrel) == 2)
+                if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveSquirrel) >= 2)
                 {
                     StoryEventsData.SetEventCompleted(StoryEvent.BeeFigurineFound);
                     if (!RunState.Run.totemTops.Contains(Tribe.Insect))
