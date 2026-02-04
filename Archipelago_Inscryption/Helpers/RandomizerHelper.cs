@@ -275,7 +275,7 @@ namespace Archipelago_Inscryption.Helpers
                 }
                 else if (checkInfo.category is ItemFlags.Advancement)
                 {
-                    info.appearanceBehaviour.Add(CardAppearanceBehaviour.Appearance.RareCardColors);
+                    info.appearanceBehaviour.Add(CardAppearanceBehaviour.Appearance.RareCardBackground);
                     info.metaCategories.Add(CardMetaCategory.Rare);
                 }
             }

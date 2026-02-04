@@ -134,10 +134,18 @@ namespace Archipelago_Inscryption.Patches
             }
         }
         [HarmonyPatch(typeof(GainConsumablesSequencer), "FullConsumablesSequence")]
-        [HarmonyPrefix]
-        static void RandomizeRatSigils(GainConsumablesSequencer __instance)
+        [HarmonyPostfix]
+        static IEnumerator RandomizeRatSigils(IEnumerator __result, GainConsumablesSequencer __instance)
         {
-            RandomizeSigils(__instance.fullConsumablesReward);
+            var card = UnityEngine.Object.Instantiate(__instance.fullConsumablesReward);
+            var card2 = UnityEngine.Object.Instantiate(__instance.fullConsumablesReward);
+            card.mods = new List<CardModificationInfo>(__instance.fullConsumablesReward.mods);
+            card.name = __instance.fullConsumablesReward.name;
+            RandomizeSigils(card);
+            __instance.fullConsumablesReward = card;
+            while (__result.MoveNext())
+                yield return __result.Current;
+            __instance.fullConsumablesReward = card2;
         }
 
         [HarmonyPatch(typeof(CardSingleChoicesSequencer), "CostChoiceChosen", MethodType.Enumerator)]
