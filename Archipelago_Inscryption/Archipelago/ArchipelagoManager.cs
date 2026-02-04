@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
+using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
@@ -661,7 +662,8 @@ namespace Archipelago_Inscryption.Archipelago
                     scoutInfo.Player.Slot,
                     scoutInfo.Player.Name,
                     scoutInfo.ItemId,
-                    scoutInfo.ItemDisplayName)
+                    scoutInfo.ItemDisplayName,
+                    scoutInfo.Flags)
                 );
             }
         }
@@ -738,7 +740,7 @@ namespace Archipelago_Inscryption.Archipelago
                 return info;
             }
 
-            CheckInfo basicInfo = new CheckInfo((int)check + ID_OFFSET, 0, "Player", 0, check.ToString());
+            CheckInfo basicInfo = new CheckInfo((int)check + ID_OFFSET, 0, "Player", 0, check.ToString(), ItemFlags.None);
 
             return basicInfo;
         }
@@ -751,14 +753,16 @@ namespace Archipelago_Inscryption.Archipelago
         internal string recipientName;
         internal long itemId;
         internal string itemName;
+        internal ItemFlags category;
 
-        public CheckInfo(long checkId, int recipientId, string recipientName, long itemId, string itemName)
+        public CheckInfo(long checkId, int recipientId, string recipientName, long itemId, string itemName, ItemFlags category)
         {
             this.checkId = checkId;
             this.recipientId = recipientId;
             this.recipientName = recipientName;
             this.itemId = itemId;
             this.itemName = itemName;
+            this.category = category;
         }
     }
 

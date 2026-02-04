@@ -1040,7 +1040,7 @@ namespace Archipelago_Inscryption.Patches
             if (__instance.Item is CardBottleItem && ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable
                 && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
                 int area = RunState.Run.regionTier;
-                if (area != 3) {
+                if (area < 3) {
                     List<APCheck> validChecks = [];
                     if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3)){
                         validChecks.Add(APCheck.CabinWoodlandsConsumableCheck1 + area*3);

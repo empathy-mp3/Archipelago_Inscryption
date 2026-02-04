@@ -1,4 +1,5 @@
-﻿using Archipelago_Inscryption.Archipelago;
+﻿using Archipelago.MultiClient.Net.Enums;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Utils;
@@ -265,6 +266,19 @@ namespace Archipelago_Inscryption.Helpers
             info.hideAttackAndHealth = true;
             info.portraitTex = AssetsManager.cardPortraitSprite;
             info.pixelPortrait = AssetsManager.cardPixelPortraitSprite;
+            if (!SaveManager.SaveFile.IsPart3)
+            {
+                if (checkInfo.category is ItemFlags.None)
+                {
+                    info.appearanceBehaviour.Add(CardAppearanceBehaviour.Appearance.TerrainBackground);
+                    info.traits.Add(Trait.Terrain);
+                }
+                else if (checkInfo.category is ItemFlags.Advancement)
+                {
+                    info.appearanceBehaviour.Add(CardAppearanceBehaviour.Appearance.RareCardColors);
+                    info.metaCategories.Add(CardMetaCategory.Rare);
+                }
+            }
             string[] discoverTextDialogs = SaveManager.SaveFile.IsPart3 ? checkCardP03Dialog : checkCardLeshyDialog;
             info.description = discoverTextDialogs[UnityEngine.Random.Range(0, discoverTextDialogs.Length)];
             return info;
