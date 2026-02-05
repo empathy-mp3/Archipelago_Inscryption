@@ -1068,43 +1068,55 @@ namespace Archipelago_Inscryption.Patches
 
         [HarmonyPatch(typeof(ItemSlot), "CreateItem")]
         [HarmonyPostfix]
-        static void ReplaceSquirrelWithCheck(ItemSlot __instance)
+        static void ReplaceBottlesWithCheck(ItemSlot __instance)
         {
-            if (__instance.Item is CardBottleItem && ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable
-                && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
+            if (__instance.Item is CardBottleItem && ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) 
+            {
+                APCheck check = 0;
+                var bottle = __instance.Item as CardBottleItem;
                 int area = RunState.Run.regionTier;
-                if (area < 3) {
-                    APCheck check = 0;
-                    var bottle = __instance.Item as CardBottleItem;
+                if (bottle.Data.name.Contains("_"))
+                {
+                    check = (APCheck)Enum.Parse(typeof(APCheck), bottle.Data.name.Substring(bottle.Data.name.IndexOf("_") + 1));
+                    ArchipelagoModPlugin.Log.LogMessage("_");
+                }
+                else if (area < 3 && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
                     if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3) &&
-                        bottle.name.Contains("TerrainBottle")){
+                        bottle.Data.name.Contains("TerrainBottle")){
                         check = APCheck.CabinWoodlandsConsumableCheck1 + area*3;
                     }
                     if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
-                    bottle.name.Contains("GoatBottle") && ArchipelagoOptions.randomizeNodes){
+                    bottle.Data.name.Contains("GoatBottle") && ArchipelagoOptions.randomizeNodes){
                         check = APCheck.CabinWoodlandsConsumableCheck2 + area*3;
                     }
                     if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3) &&
-                    bottle.name.Contains("FrozenOpossumBottle") && ArchipelagoOptions.randomizeNodes){
+                    bottle.Data.name.Contains("FrozenOpossumBottle") && ArchipelagoOptions.randomizeNodes){
                         check = APCheck.CabinWoodlandsConsumableCheck3 + area*3;
                     }
-                    if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
-                    {
-                        bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
-                        var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
-                        info.name = bottle.cardInfo.name;
-                        bottle.cardInfo = info;
-                        var card = bottle.GetComponentInChildren<SelectableCard>();
-                        var card2 = UnityEngine.Object.Instantiate(card);
-                        card2.name = card.name;
-                        card2.SetInfo(info);
-                        card2.transform.parent = card.transform.parent;
-                        card2.transform.localPosition = card.transform.localPosition;
-                        card2.transform.localRotation = card.transform.localRotation;
-                        card.gameObject.SetActive(false);
-                        card.transform.parent = null;
-                        UnityEngine.Object.Destroy(card);
-                    }
+                    ArchipelagoModPlugin.Log.LogMessage("terraingoatopossum");
+                    bottle.Data.name = "CheckBottle_" + check.ToString();
+                }
+                else
+                {
+                    ArchipelagoModPlugin.Log.LogMessage("neither");
+                }
+                if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
+                {
+                    ArchipelagoModPlugin.Log.LogMessage("check != 0");
+                    bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
+                    var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
+                    info.name = bottle.cardInfo.name;
+                    bottle.cardInfo = info;
+                    var card = bottle.GetComponentInChildren<SelectableCard>();
+                    var card2 = UnityEngine.Object.Instantiate(card);
+                    card2.name = card.name;
+                    card2.SetInfo(info);
+                    card2.transform.parent = card.transform.parent;
+                    card2.transform.localPosition = card.transform.localPosition;
+                    card2.transform.localRotation = card.transform.localRotation;
+                    card.gameObject.SetActive(false);
+                    card.transform.parent = null;
+                    UnityEngine.Object.Destroy(card);
                 }
             }
         }

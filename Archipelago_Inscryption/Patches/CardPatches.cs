@@ -264,12 +264,12 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void RandomizeBottleSigil(ItemData data, bool skipDropAnimation, ItemSlot __instance)
         {
-            if (__instance.Item is CardBottleItem)
+            if (__instance.Item is CardBottleItem && !__instance.Item.Data.name.Contains("_"))
             {
                 var bottle = __instance.Item as CardBottleItem;
                 var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
                 info.name = bottle.cardInfo.name;
-                if (data.name.Contains("$"))
+                if (data.name.Contains("$") && !data.name.Contains("_"))
                 {
                     var replacement = new SigilReplacementInfo();
                     replacement.abilities.Add((Ability)Enum.Parse(typeof(Ability), data.name.Substring(data.name.IndexOf("$") + 1)));
@@ -312,6 +312,10 @@ namespace Archipelago_Inscryption.Patches
         static void GetCorrectBottleItem(ref string name, ref string __state)
         {
             __state = name;
+            if (name.Contains("_")) // code for consumable checks that's just better to put here
+            {
+                name = "SquirrelBottle";
+            }
             if (name.Contains("$"))
             {
                 name = name.Substring(0, name.IndexOf("$"));
