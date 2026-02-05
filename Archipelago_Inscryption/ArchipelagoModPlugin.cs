@@ -16,7 +16,7 @@ namespace Archipelago_Inscryption
     {
         internal const string PluginGuid = "ballininc.inscryption.archipelagomod";
         internal const string PluginName = "ArchipelagoMod";
-        internal const string PluginVersion = "1.3.1";
+        internal const string PluginVersion = "1.3.2";
 
         internal static ManualLogSource Log;
         internal static string SavePath => savePathConfig.Value;
