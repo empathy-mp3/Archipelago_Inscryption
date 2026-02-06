@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Archipelago_Inscryption.Patches
 {
@@ -543,6 +544,39 @@ namespace Archipelago_Inscryption.Patches
                 if (__instance is TrapperTraderBossOpponent)
                     grizzlyChallenges = 1;
                 __result = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.GrizzlyMode) >= grizzlyChallenges;
+            }
+        }
+
+        [HarmonyPatch(typeof(BrokenBridgeEntrance), "BridgeFixed")]
+        [HarmonyPostfix]
+        static void ApplyAct2BridgeRando(ref bool __result, BrokenBridgeEntrance __instance)
+        {
+            if (ArchipelagoOptions.act2RandomizeBridge != Act2RandomizeBridge.Disable)
+            {
+                __result = ArchipelagoManager.HasItem(APItem.GBCBridgeRepair);
+            }
+        }
+
+        [HarmonyPatch(typeof(SceneTransitionVolume), "OnPlayerCollision")]
+        [HarmonyPrefix]
+        static void GoToLeftSideAct2(SceneTransitionVolume __instance)
+        {
+            if (ArchipelagoOptions.act2RandomizeBridge == Act2RandomizeBridge.LeftSideStart)
+            {
+                if (SceneManager.GetActiveScene().name == "GBC_Starting_Island") {
+                    SaveData.Data.overworldNode = "Tech Elevator";
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(NavigationZone2D), "CanMoveInDirection")]
+        [HarmonyPostfix]
+        static void BlockBrokenBridgeFromOtherSide(ref bool __result, NavigationZone2D __instance, LookDirection dir)
+        {
+            if (ArchipelagoOptions.act2RandomizeBridge == Act2RandomizeBridge.LeftSideStart &&
+                __instance.name == "WestBridge" && dir == LookDirection.East)
+            {
+                __result = ArchipelagoManager.HasItem(APItem.GBCBridgeRepair);
             }
         }
     }

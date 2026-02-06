@@ -138,7 +138,10 @@ namespace Archipelago_Inscryption.Archipelago
                     SaveData.Data.wizardTemple.cameraPosition = Vector2.zero;
 
                     SaveManager.SaveFile.currentScene = "GBC_WorldMap";
-                    SaveData.Data.overworldNode = "StartingIsland";
+                    if (ArchipelagoOptions.act2RandomizeBridge == Act2RandomizeBridge.LeftSideStart)
+                        SaveData.Data.overworldNode = "TechElevator";
+                    else
+                        SaveData.Data.overworldNode = "StartingIsland";
                     LoadingScreenManager.LoadScene(SaveManager.SaveFile.currentScene);
                 }
             }

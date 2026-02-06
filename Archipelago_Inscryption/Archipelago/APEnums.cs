@@ -180,6 +180,7 @@
         DrownedSoulCard,
         SalmonCard,
         GBCCloverPlant,
+        GBCBridgeRepair,
         ExtraBattery,
         NanoArmorGenerator,
         MrsBombRemote,

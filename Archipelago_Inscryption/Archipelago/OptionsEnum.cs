@@ -29,6 +29,13 @@ namespace Archipelago_Inscryption.Archipelago
         Randomize,
         COUNT
     }
+    internal enum Act2RandomizeBridge
+    {
+        Disable,
+        Enable,
+        LeftSideStart,
+        COUNT
+    }
 
     internal enum RandomizeHammer
     {

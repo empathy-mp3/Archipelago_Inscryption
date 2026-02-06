@@ -527,6 +527,8 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeNodes = Convert.ToInt32(randomizeNodes) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("randomize_challenges", out var randomizeChallenges))
                 ArchipelagoOptions.randomizeChallenges = (RandomizeChallenges)Convert.ToInt32(randomizeChallenges);
+            if (ArchipelagoClient.slotData.TryGetValue("act2_randomize_bridge", out var act2RandomizeBridge))
+                ArchipelagoOptions.act2RandomizeBridge = (Act2RandomizeBridge)Convert.ToInt32(act2RandomizeBridge);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))
