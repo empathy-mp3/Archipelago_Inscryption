@@ -1038,7 +1038,7 @@ namespace Archipelago_Inscryption.Patches
         static void GuaranteeConsumableChecks(List<ConsumableItemData> __result, GainConsumablesSequencer __instance)
         {
             int area = RunState.Run.regionTier;
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && area < 3)
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && area < 3 && ArchipelagoOptions.randomizeNodes)
             {
                 List<ConsumableItemSlot> consumableslots = ItemsManager.Instance.consumableSlots.FindAll(x => x.Consumable is CardBottleItem);
                 List<APCheck> checksInBottles = [];
@@ -1053,15 +1053,9 @@ namespace Archipelago_Inscryption.Patches
                     !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck1 + area*3)){
                     __result[0] = ItemsUtil.GetConsumableByName("TerrainBottle");
                 }
-                if (ArchipelagoOptions.randomizeNodes) {
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
-                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck2 + area*3)){
-                        __result[1] = ItemsUtil.GetConsumableByName("GoatBottle");
-                    }
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3) &&
-                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck3 + area*3)){
-                        __result[2] = ItemsUtil.GetConsumableByName("FrozenOpossumBottle");
-                    }
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
+                !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck2 + area*3)){
+                    __result[1] = ItemsUtil.GetConsumableByName("GoatBottle");
                 }
             }
         }
@@ -1078,7 +1072,6 @@ namespace Archipelago_Inscryption.Patches
                 if (bottle.Data.name.Contains("_"))
                 {
                     check = (APCheck)Enum.Parse(typeof(APCheck), bottle.Data.name.Substring(bottle.Data.name.IndexOf("_") + 1));
-                    ArchipelagoModPlugin.Log.LogMessage("_");
                 }
                 else if (area < 3 && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
                     if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3) &&
@@ -1089,20 +1082,10 @@ namespace Archipelago_Inscryption.Patches
                     bottle.Data.name.Contains("GoatBottle") && ArchipelagoOptions.randomizeNodes){
                         check = APCheck.CabinWoodlandsConsumableCheck2 + area*3;
                     }
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck3 + area*3) &&
-                    bottle.Data.name.Contains("FrozenOpossumBottle") && ArchipelagoOptions.randomizeNodes){
-                        check = APCheck.CabinWoodlandsConsumableCheck3 + area*3;
-                    }
-                    ArchipelagoModPlugin.Log.LogMessage("terraingoatopossum");
                     bottle.Data.name = "CheckBottle_" + check.ToString();
-                }
-                else
-                {
-                    ArchipelagoModPlugin.Log.LogMessage("neither");
                 }
                 if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
                 {
-                    ArchipelagoModPlugin.Log.LogMessage("check != 0");
                     bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
                     var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
                     info.name = bottle.cardInfo.name;
@@ -1137,6 +1120,60 @@ namespace Archipelago_Inscryption.Patches
             else {
                 while (__result.MoveNext())
                     yield return __result.Current;
+            }
+        }
+
+        [HarmonyPatch(typeof(ActiveAfterAmountOfRuns), "ConditionIsMet")]
+        [HarmonyPostfix]
+        static void SetTarotCardActive(ActiveAfterAmountOfRuns __instance, ref bool __result)
+        {
+            if (__instance.gameObject.name != "TarotCardInteractable") return;
+            if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Disable) return;
+            if (ArchipelagoManager.HasCompletedCheck(APCheck.CabinTarotCardBelowFigurines)) return;
+            __result = true;
+        }
+
+        [HarmonyPatch(typeof(CabinSecretCardEvent), "Start")]
+        [HarmonyPrefix]
+        static bool ReplaceCabinTarotCardWithCheck(CabinSecretCardEvent __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) {
+                __instance.gameObject.SetActive(true);
+                DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.pickupInteractable.gameObject, APCheck.CabinTarotCardBelowFigurines, true);
+                __instance.card.gameObject.SetActive(false);
+                if (!checkCard) return true;
+                checkCard.transform.eulerAngles = new Vector3(70f, 100f, 0f);
+                checkCard.transform.localScale = Vector3.one * 0.7114f;
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(FreeTeethSkull), "Start")]
+        [HarmonyPrefix]
+        static void CreateSkullCardCheck(FreeTeethSkull __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.teethObjects[0].gameObject, APCheck.CabinFreeTeethSkull, false);
+                if (!checkCard) return;
+                checkCard.transform.localEulerAngles = new Vector3(80f, 180f, 356f);
+                checkCard.transform.position = new Vector3(7f, 7.6f, 17.4f);
+                checkCard.transform.localScale = Vector3.one * 0.7114f;
+            }
+        }
+
+        [HarmonyPatch(typeof(CabinRulebookInteractable), "Start")]
+        [HarmonyPostfix]
+        static void CreateCheckByRulebook(CabinRulebookInteractable __instance)
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            {
+                DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.gameObject, APCheck.CabinCardByRulebook, false);
+                if (!checkCard) return;
+                checkCard.transform.localEulerAngles = new Vector3(60f, 270f, 0f);
+                checkCard.transform.position = new Vector3(-7.5f, 8.08f, -11.5f);
+                checkCard.transform.localScale = Vector3.one * 0.7114f;
             }
         }
     }
