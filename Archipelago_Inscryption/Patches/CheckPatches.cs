@@ -917,6 +917,15 @@ namespace Archipelago_Inscryption.Patches
             return false;
         }
 
+        [HarmonyPatch(typeof(FetchGemsModuleAreaSequencer), "PreEnteredSequence")]
+        [HarmonyPostfix]
+        static IEnumerator NoStopIconsIfHasGemsModule(IEnumerator __result, FetchGemsModuleAreaSequencer __instance)
+        {
+            while (__result.MoveNext())
+                yield return __result.Current;
+            __instance.SetStopIconsShown(false);
+        }
+
         [HarmonyPatch(typeof(BonelordNPC), "SetRewardsGiven")]
         [HarmonyPostfix]
         static void MoveFemurPedestal(BonelordNPC __instance)
