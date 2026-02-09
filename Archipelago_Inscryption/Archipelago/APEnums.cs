@@ -131,6 +131,7 @@
         FactoryVesselUpgrade2,
         FactoryVesselUpgrade3,
         FactoryConduitUpgrade,
+        FactoryWizardTowerSatelliteDish,
         COUNT
     }
 
@@ -198,6 +199,8 @@
         GaudyGemLandShortcut,
         VesselUpgrade,
         ConduitUpgrade,
+        FactoryBridgeRepair,
+        ResplendentBastionGate,
         Hammer,
         Act1,
         Act2,

@@ -579,6 +579,43 @@ namespace Archipelago_Inscryption.Patches
                 __result = ArchipelagoManager.HasItem(APItem.GBCBridgeRepair);
             }
         }
+
+        [HarmonyPatch(typeof(BrokenBridgeAreaSequencer), "EasternBossCleared", MethodType.Getter)]
+        [HarmonyPrefix]
+        static bool FixAct3Bridge(ref bool __result)
+        {
+            if (ArchipelagoOptions.act3Overhaul)
+            {
+                __result = ArchipelagoManager.HasItem(APItem.FactoryBridgeRepair);
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(HoloGameMap), "PoweredOff", MethodType.Getter)]
+        [HarmonyPrefix]
+        static bool DontPowerOffScreen(ref bool __result)
+        {
+            if (ArchipelagoOptions.act3Overhaul)
+            {
+                __result = false;
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(HoloMapArea), "Start")]
+        [HarmonyPostfix]
+        static void ReworkInspectometerBattery(HoloMapArea __instance)
+        {
+            if (ArchipelagoOptions.act3Overhaul && __instance.name == "HoloMapArea_NeutralEastMain_7(Clone)")
+            {
+                if (!StoryEventsData.EventCompleted(StoryEvent.HoloMapBatteryFetched))
+                {
+                    __instance.ForceDisableDirectionNode(LookDirection.North);
+                }
+            }
+        }
     }
     
     [HarmonyPatch]

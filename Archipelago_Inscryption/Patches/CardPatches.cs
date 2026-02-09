@@ -67,6 +67,8 @@ namespace Archipelago_Inscryption.Patches
                 var newAbility = learnedAbilities[SeededRandom.Range(0, learnedAbilities.Count, seed++)];
                 replacement.abilities.Add(newAbility.ability);
                 learnedAbilities.Remove(newAbility);
+                if (newAbility.ability is Ability.PermaDeath)
+                    replacement.attackAdjustment++;
             }
             if (replacement.abilities.Count <= 0) return;
             card.mods.Add(replacement);

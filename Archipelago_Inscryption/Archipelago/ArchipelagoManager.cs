@@ -370,8 +370,8 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 List<Ability> validVesselUpgrades = [Ability.WhackAMole, Ability.Sharp, Ability.Reach, 
                 Ability.RandomAbility, Ability.GainBattery, Ability.ExplodeOnDeath, Ability.DeathShield, 
-                    Ability.LatchExplodeOnDeath, Ability.LatchDeathShield, Ability.LatchBrittle, Ability.Sentry, 
-                    Ability.DrawVesselOnHit, Ability.DebuffEnemy, Ability.CellBuffSelf];
+                    Ability.LatchExplodeOnDeath, Ability.LatchDeathShield, Ability.LatchBrittle, 
+                    Ability.Sentry, Ability.DebuffEnemy, Ability.CellBuffSelf];
                 List<Ability> extraVesselUpgrades = [Ability.CreateBells, Ability.DrawRabbits];
                 if (ArchipelagoOptions.extraSigils) validVesselUpgrades = validVesselUpgrades.Concat(extraVesselUpgrades).ToList();
                 foreach (Ability sigil in Part3SaveData.Data.sideDeckAbilities)
@@ -432,6 +432,10 @@ namespace Archipelago_Inscryption.Archipelago
 			else if (receivedItem == APItem.ProgressiveGrizzlies)
             {
 			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.GrizzlyMode);
+            }
+			else if (receivedItem == APItem.ResplendentBastionGate)
+            {
+			    StoryEventsData.SetEventCompleted(StoryEvent.HoloTechAreaUnlocked);
             }
 
             if (Singleton<GameFlowManager>.Instance != null && SaveManager.SaveFile.IsPart1)
@@ -529,6 +533,8 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeChallenges = (RandomizeChallenges)Convert.ToInt32(randomizeChallenges);
             if (ArchipelagoClient.slotData.TryGetValue("act2_randomize_bridge", out var act2RandomizeBridge))
                 ArchipelagoOptions.act2RandomizeBridge = (Act2RandomizeBridge)Convert.ToInt32(act2RandomizeBridge);
+            if (ArchipelagoClient.slotData.TryGetValue("act3_overhaul", out var act3Overhaul))
+                ArchipelagoOptions.act3Overhaul = Convert.ToInt32(act3Overhaul) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))

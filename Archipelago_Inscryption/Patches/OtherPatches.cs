@@ -550,10 +550,23 @@ namespace Archipelago_Inscryption.Patches
 
         [HarmonyPatch(typeof(CreateCardsAdjacent), "ModifySpawnedCard")]
         [HarmonyPostfix]
-        static void DisplaySpawnedCardSigilsAct3(CardInfo card)
+        static void DisplayBellSigilsAct3(CardInfo card)
         {
             if (SaveManager.SaveFile.IsPart3)
                 card.Mods.Last().fromCardMerge = false;
+        }
+
+        [HarmonyPatch(typeof(DrawRabbits), "CardToDraw", MethodType.Getter)]
+        [HarmonyPostfix]
+        static void DisplayRabbitSigilsAct3(ref CardInfo __result)
+        {
+            if (SaveManager.SaveFile.IsPart3)
+            {
+                foreach (CardModificationInfo mod in __result.Mods)
+                {
+                    mod.fromCardMerge = false;
+                }
+            }
         }
     }
     

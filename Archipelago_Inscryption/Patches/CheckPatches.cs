@@ -711,7 +711,8 @@ namespace Archipelago_Inscryption.Patches
                 __instance.lootNodes.RemoveAll(entry => entry.nodeType == HoloMapNode.NodeDataType.ModifySideDeck);
                 HoloMapArea Area = __instance.GetComponentInParent<HoloMapArea>();
                 HoloMapNode check = Area.transform.Find("Nodes/CardChoiceNode3D(Clone)").GetComponent<HoloMapNode>();
-                __instance.lootNodes.Add(check);
+                if (check)
+                    __instance.lootNodes.Add(check);
             }
         }
         
@@ -923,7 +924,23 @@ namespace Archipelago_Inscryption.Patches
         {
             while (__result.MoveNext())
                 yield return __result.Current;
-            __instance.SetStopIconsShown(false);
+            if (ArchipelagoManager.HasItem(APItem.GemsModule))
+                __instance.SetStopIconsShown(false);
+        }
+
+        [HarmonyPatch(typeof(HoloMapSatelliteDish), "OnInteracted")]
+        [HarmonyPrefix]
+        static bool ReplaceWizardSatelliteWithCheck(HoloMapSatelliteDish __instance)
+        {
+            if (__instance.wizardAreaSatellite)
+            {
+                ArchipelagoManager.SendCheck(APCheck.FactoryWizardTowerSatelliteDish);
+			    SaveManager.SaveToFile(true);
+			    __instance.node.gameObject.SetActive(false);
+			    __instance.StartCoroutine(__instance.ActivateSequence());
+                return false;
+            }
+            return true;
         }
 
         [HarmonyPatch(typeof(BonelordNPC), "SetRewardsGiven")]
@@ -1146,7 +1163,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool ReplaceCabinTarotCardWithCheck(CabinSecretCardEvent __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable) {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && SaveManager.saveFile.IsPart1) {
                 __instance.gameObject.SetActive(true);
                 DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.pickupInteractable.gameObject, APCheck.CabinTarotCardBelowFigurines, true);
                 __instance.card.gameObject.SetActive(false);
@@ -1162,7 +1179,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static void CreateSkullCardCheck(FreeTeethSkull __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && SaveManager.saveFile.IsPart1)
             {
                 DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.teethObjects[0].gameObject, APCheck.CabinFreeTeethSkull, false);
                 if (!checkCard) return;
@@ -1176,7 +1193,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void CreateCheckByRulebook(CabinRulebookInteractable __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && SaveManager.saveFile.IsPart1)
             {
                 DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.gameObject, APCheck.CabinCardByRulebook, false);
                 if (!checkCard) return;
