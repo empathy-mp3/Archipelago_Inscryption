@@ -576,9 +576,11 @@ namespace Archipelago_Inscryption.Archipelago
             if (ArchipelagoOptions.skipTutorial && !StoryEventsData.EventCompleted(StoryEvent.TutorialRun3Completed))
                 ArchipelagoOptions.SkipTutorial();
             if (ArchipelagoOptions.randomizeShortcuts == RandomizeShortcuts.Open && !StoryEventsData.EventCompleted(StoryEvent.WizardHoloShortcut))
+            {
                 StoryEventsData.SetEventCompleted(StoryEvent.NatureHoloShortcut, false, false);
                 StoryEventsData.SetEventCompleted(StoryEvent.UndeadHoloShortcut, false, false);
                 StoryEventsData.SetEventCompleted(StoryEvent.WizardHoloShortcut, false, false);
+            }
 
             ScoutChecks();
             VerifyGoalCompletion();

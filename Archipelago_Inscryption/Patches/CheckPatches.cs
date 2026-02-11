@@ -932,12 +932,24 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool ReplaceWizardSatelliteWithCheck(HoloMapSatelliteDish __instance)
         {
-            if (__instance.wizardAreaSatellite)
+            if (__instance.wizardAreaSatellite && ArchipelagoOptions.act3Overhaul)
             {
                 ArchipelagoManager.SendCheck(APCheck.FactoryWizardTowerSatelliteDish);
 			    SaveManager.SaveToFile(true);
 			    __instance.node.gameObject.SetActive(false);
 			    __instance.StartCoroutine(__instance.ActivateSequence());
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(typeof(HoloMapSatelliteDish), "TurnedOn", MethodType.Getter)]
+        [HarmonyPrefix]
+        static bool SetSatelliteActiveBasedOnCheck(HoloMapSatelliteDish __instance, ref bool __result)
+        {
+            if (__instance.wizardAreaSatellite && ArchipelagoOptions.act3Overhaul)
+            {
+                __result = ArchipelagoManager.HasCompletedCheck(APCheck.FactoryWizardTowerSatelliteDish);
                 return false;
             }
             return true;
@@ -1100,18 +1112,18 @@ namespace Archipelago_Inscryption.Patches
                     check = (APCheck)Enum.Parse(typeof(APCheck), bottle.Data.name.Substring(bottle.Data.name.IndexOf("_") + 1));
                 }
                 else if (area < 3 && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3) &&
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*2) &&
                         bottle.Data.name.Contains("TerrainBottle")){
-                        check = APCheck.CabinWoodlandsConsumableCheck1 + area*3;
+                        check = APCheck.CabinWoodlandsConsumableCheck1 + area*2;
                     }
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
+                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*2) &&
                     bottle.Data.name.Contains("GoatBottle") && ArchipelagoOptions.randomizeNodes){
-                        check = APCheck.CabinWoodlandsConsumableCheck2 + area*3;
+                        check = APCheck.CabinWoodlandsConsumableCheck2 + area*2;
                     }
-                    bottle.Data.name = "CheckBottle_" + check.ToString();
                 }
                 if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
                 {
+                    bottle.Data.name = "CheckBottle_" + check.ToString();
                     bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
                     var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
                     info.name = bottle.cardInfo.name;
