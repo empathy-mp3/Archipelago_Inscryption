@@ -955,6 +955,14 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
+        [HarmonyPatch(typeof(UnlockDredgingRoomAreaSequencer), "OnInteracted")]
+        [HarmonyPrefix]
+        static void UnlockStandingOnUnlockingDredgingRoom(UnlockDredgingRoomAreaSequencer __instance)
+        {
+            if (!StoryEventsData.EventCompleted(StoryEvent.HandCuffReleased) && __instance.CanTriggerSequence())
+                StoryEventsData.SetEventCompleted(StoryEvent.HandCuffReleased);
+        }
+
         [HarmonyPatch(typeof(BonelordNPC), "SetRewardsGiven")]
         [HarmonyPostfix]
         static void MoveFemurPedestal(BonelordNPC __instance)
