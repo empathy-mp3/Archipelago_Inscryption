@@ -955,7 +955,7 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
-        [HarmonyPatch(typeof(UnlockDredgingRoomAreaSequencer), "OnInteracted")]
+        [HarmonyPatch(typeof(UnlockDredgingRoomAreaSequencer), "OnAreaEntered")]
         [HarmonyPrefix]
         static void UnlockStandingOnUnlockingDredgingRoom(UnlockDredgingRoomAreaSequencer __instance)
         {
