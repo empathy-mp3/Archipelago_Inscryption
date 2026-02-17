@@ -22,6 +22,14 @@ namespace Archipelago_Inscryption.Archipelago
         COUNT
     }
 
+    internal enum Act1FinalBoss
+    {
+        Leshy,
+        Royal,
+        RandomEveryRun,
+        COUNT
+    }
+
     internal enum RandomizeChallenges
     {
         Disable,

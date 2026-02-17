@@ -527,6 +527,10 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.randomizeSigils = (RandomizeSigils)Convert.ToInt32(randomizeSigils);
             if (ArchipelagoClient.slotData.TryGetValue("extra_sigils", out var extraSigils))
                 ArchipelagoOptions.extraSigils = Convert.ToInt32(extraSigils) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("port_kaycees_mod", out var portKayceesMod))
+                ArchipelagoOptions.portKayceesMod = Convert.ToInt32(portKayceesMod) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("act1_final_boss", out var act1FinalBoss))
+                ArchipelagoOptions.act1FinalBoss = (Act1FinalBoss)Convert.ToInt32(act1FinalBoss);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_nodes", out var randomizeNodes))
                 ArchipelagoOptions.randomizeNodes = Convert.ToInt32(randomizeNodes) != 0;
             if (ArchipelagoClient.slotData.TryGetValue("randomize_challenges", out var randomizeChallenges))

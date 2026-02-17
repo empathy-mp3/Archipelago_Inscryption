@@ -397,7 +397,7 @@ namespace Archipelago_Inscryption.Patches
         static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
 		{
 			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
-                SaveManager.SaveFile.IsPart1)
+                SaveManager.SaveFile.IsPart1 || ArchipelagoOptions.act1FinalBoss != Act1FinalBoss.Leshy)
             {
 				__instance.ascensionRunInfoBar.SetActive(true);
 				__instance.ascensionChallengeArray.gameObject.SetActive(true);
@@ -413,7 +413,7 @@ namespace Archipelago_Inscryption.Patches
         static bool ShowKayceeChallengesInPauseMenu2(PauseMenu3D __instance)
 		{
 			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
-                SaveManager.SaveFile.IsPart1)
+                SaveManager.SaveFile.IsPart1 || ArchipelagoOptions.act1FinalBoss != Act1FinalBoss.Leshy)
             {
 				__instance.ascensionChallengeArray.SetIconsEnabled(!__instance.optionsMenuParent.activeSelf);
                 return false;
@@ -425,9 +425,9 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void SetChallengesOnStartup(RunState __instance)
         {
+            AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
             if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
             {
-                AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
                 if (!ArchipelagoManager.HasItem(APItem.SmallerBackpackChallenge))
 				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessConsumables);
 			    if (!ArchipelagoManager.HasItem(APItem.PriceyPeltsChallenge))
@@ -485,13 +485,24 @@ namespace Archipelago_Inscryption.Patches
                     }
                 }
             }
+            if (ArchipelagoOptions.act1FinalBoss == Act1FinalBoss.Royal)
+            {
+			    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.FinalBoss);
+            }
+            else if (ArchipelagoOptions.act1FinalBoss == Act1FinalBoss.RandomEveryRun)
+            {
+                int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
+                if (SeededRandom.Range(0, 1, seed++) == 1)
+			        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.FinalBoss);
+            }
         }
 
         [HarmonyPatch(typeof(AscensionUnlockSchedule), "ChallengeIsUnlockedForLevel")]
         [HarmonyPostfix]
         static void UnlockAllChallenges(ref bool __result)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable ||
+                ArchipelagoOptions.act1FinalBoss != Act1FinalBoss.Leshy)
             {
                 __result = true;
             }
@@ -501,7 +512,8 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void NotRequireAscensionForChallenges(AscensionChallenge challenge, ref int __result, AscensionSaveData __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+            if ((ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable ||
+                ArchipelagoOptions.act1FinalBoss != Act1FinalBoss.Leshy) && 
                 SaveManager.SaveFile.IsPart1)
             {
                 __result = __instance.activeChallenges.FindAll((AscensionChallenge x) => x == challenge).Count;;

@@ -29,6 +29,8 @@ namespace Archipelago_Inscryption.Archipelago
         internal static bool enableAct3 = false;
         internal static bool skipTutorial = false;
         internal static bool skipEpilogue = false;
+        internal static bool portKayceesMod = false;
+        internal static Act1FinalBoss act1FinalBoss = Act1FinalBoss.Leshy;
         internal static EpitaphPiecesRandomization epitaphPiecesRandomization = EpitaphPiecesRandomization.AllPieces;
 
         private static Sprite[] wizardClues;
