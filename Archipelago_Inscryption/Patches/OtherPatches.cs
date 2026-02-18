@@ -568,6 +568,13 @@ namespace Archipelago_Inscryption.Patches
                 }
             }
         }
+
+        [HarmonyPatch(typeof(SafeInteractable), "OpenDoor")]
+        [HarmonyPostfix]
+        static void RemoveRecordFromSafe(SafeInteractable __instance)
+        {
+            __instance.secretAscensionContents.SetActive(false);
+        }
     }
     
     class ZioPathFixPatch
