@@ -170,9 +170,12 @@ namespace Archipelago_Inscryption.Archipelago
                 {
                     var card = CardLoader.GetCardByName(info.cardsToUnlock[i]);
                     receivingCardForAct = info.isPart3 ? 3 : 1;
-                    CardPatches.RandomizeSigils(card);
-                    (info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck).AddCard(card);
-                    receivingCardForAct = 0;
+                    try {
+                        CardPatches.RandomizeSigils(card);
+                        (info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck).AddCard(card);
+                    } finally {
+                        receivingCardForAct = 0;
+                    }
                 }
 
                 for (int i = 0; i < info.rigDraws.Length; i++)
@@ -184,8 +187,11 @@ namespace Archipelago_Inscryption.Archipelago
             else if (itemPixelCardPair.TryGetValue(receivedItem, out string cardName))
             {
                 receivingCardForAct = 2;
-                SaveManager.SaveFile.CollectGBCCard(CardLoader.GetCardByName(cardName));
-                receivingCardForAct = 0;
+                try {
+                    SaveManager.SaveFile.CollectGBCCard(CardLoader.GetCardByName(cardName));
+                } finally {
+                    receivingCardForAct = 0;
+                }
             }
 
             if (receivedItem == APItem.Currency)
