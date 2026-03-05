@@ -576,7 +576,21 @@ namespace Archipelago_Inscryption.Patches
             __instance.secretAscensionContents.SetActive(false);
         }
     }
-    
+
+    [HarmonyPatch]
+    class RoyalBossPatch
+    {
+        [HarmonyPatch(typeof(Opponent), "CreateOpponent")]
+        [HarmonyPrefix]
+        static void CreateRoyalOpponent(EncounterData encounterData)
+        {
+            if (AscensionSaveData.Data.activeChallenges.Contains(AscensionChallenge.FinalBoss) && encounterData.opponentType == Opponent.Type.LeshyBoss)
+            {
+                encounterData.opponentType = Opponent.Type.PirateSkullBoss;
+            }
+        }
+    }
+
     class ZioPathFixPatch
     {
         static bool Prepare()

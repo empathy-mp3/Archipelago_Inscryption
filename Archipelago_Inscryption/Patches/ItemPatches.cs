@@ -425,9 +425,9 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void SetChallengesOnStartup(RunState __instance)
         {
-            AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
             if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
             {
+                AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
                 if (!ArchipelagoManager.HasItem(APItem.SmallerBackpackChallenge))
 				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessConsumables);
 			    if (!ArchipelagoManager.HasItem(APItem.PriceyPeltsChallenge))
@@ -484,6 +484,10 @@ namespace Archipelago_Inscryption.Patches
 				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
                     }
                 }
+            }
+            else if (ArchipelagoOptions.act1FinalBoss != Act1FinalBoss.Leshy)
+            {
+                AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
             }
             if (ArchipelagoOptions.act1FinalBoss == Act1FinalBoss.Royal)
             {
