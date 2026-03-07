@@ -266,7 +266,7 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (receivedItem == APItem.Dagger && SaveManager.SaveFile.IsPart1)
             {
-                if (RunState.Run.consumables.Count >= 3)
+                if (RunState.Run.consumables.Count >= RunState.Run.MaxConsumables)
                 {
                     string itemName = RunState.Run.consumables[0];
                     if (RunState.Run.consumables.Contains("Pliers"))
@@ -275,7 +275,8 @@ namespace Archipelago_Inscryption.Archipelago
                     }
                     else
                     {
-                        for (int i = 2; i >= 0; i--)
+                        int lessConsumables = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.LessConsumables);
+                        for (int i = 2 - lessConsumables; i >= 0; i--)
                         {
                             if (RunState.Run.consumables[i] != "FishHook")
                             {
@@ -295,10 +296,11 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (receivedItem == APItem.AnglerHook && SaveManager.SaveFile.IsPart1)
             {
-                if (RunState.Run.consumables.Count >= 3)
+                if (RunState.Run.consumables.Count >= RunState.Run.MaxConsumables)
                 {
                     string itemName = RunState.Run.consumables[0];
-                    for (int i = 2; i >= 0; i--)
+                    int lessConsumables = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.LessConsumables);
+                    for (int i = 2 - lessConsumables; i >= 0; i--)
                     {
                         if (RunState.Run.consumables[i] != "SpecialDagger")
                         {

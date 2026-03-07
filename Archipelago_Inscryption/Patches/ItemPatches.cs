@@ -547,6 +547,16 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
+        [HarmonyPostfix]
+        static void RemoveSquirrelBottleIfSmallerBackpack(RunState __instance)
+        {
+            if (StoryEventsData.EventCompleted(StoryEvent.FishHookUnlocked) && AscensionSaveData.Data.ChallengeIsActive(AscensionChallenge.LessConsumables))
+            {
+                __instance.consumables.Remove("SquirrelBottle");
+            }
+        }
+
         [HarmonyPatch(typeof(BrokenBridgeEntrance), "BridgeFixed")]
         [HarmonyPostfix]
         static void ApplyAct2BridgeRando(ref bool __result, BrokenBridgeEntrance __instance)
