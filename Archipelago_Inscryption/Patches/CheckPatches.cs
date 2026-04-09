@@ -1095,12 +1095,12 @@ namespace Archipelago_Inscryption.Patches
                     APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
                     checksInBottles.Add(check);
                 }
-                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*3) &&
-                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck1 + area*3)){
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*2) &&
+                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck1 + area*2)){
                     __result[0] = ItemsUtil.GetConsumableByName("TerrainBottle");
                 }
-                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*3) &&
-                !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck2 + area*3)){
+                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*2) &&
+                !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck2 + area*2)){
                     __result[1] = ItemsUtil.GetConsumableByName("GoatBottle");
                 }
             }
