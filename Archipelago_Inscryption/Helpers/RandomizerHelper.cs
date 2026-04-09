@@ -746,11 +746,26 @@ namespace Archipelago_Inscryption.Helpers
 
         public static bool BleachTrapRemoveSigils()
         {
-            if (SaveManager.SaveFile.IsPart2) return false;
             List<CardSlot> ownValidCardSlots = Singleton<BoardManager>.Instance.PlayerSlotsCopy;
 			ownValidCardSlots.RemoveAll((CardSlot x) => x.Card == null || x.Card.Info.Abilities.Count <= 0 || 
                 x.Card.temporaryMods.Any(mod => mod.negateAbilities.Count != 0));
             if (ownValidCardSlots.Count == 0) return false;
+            if (SaveManager.SaveFile.IsPart2) {
+                foreach (CardSlot cardSlot in ownValidCardSlots)
+                {
+                    var info = UnityEngine.Object.Instantiate(cardSlot.Card.Info);
+                    info.name = cardSlot.Card.Info.name;
+                    for (int i = 0; i < info.mods.Count; i++)
+                    {
+                        if (info.mods[i] is SigilReplacementInfo)
+                        {
+                            info.mods.RemoveAt(i--);
+                        }
+                    }
+                    cardSlot.Card.SetInfo(info);
+                }
+            }
+            AudioController.Instance.PlaySound2D("magnificus_brush_splatter_bleach", MixerGroup.None, 0.5f);
             BleachPotItem bleach = new BleachPotItem();
             foreach (CardSlot cardSlot in ownValidCardSlots)
             {
