@@ -117,6 +117,9 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 if (SceneLoader.ActiveSceneName != "GBC_Starting_Island" && SceneLoader.ActiveSceneName != "GBC_WorldMap")
                 {
+                    if (Singleton<DialogueHandler>.Instance != null && Singleton<DialogueHandler>.Instance.Playing)
+                        yield return new WaitUntil(() => !Singleton<DialogueHandler>.Instance.Playing);
+
                     if (GBCEncounterManager.Instance != null && GBCEncounterManager.Instance.EncounterOccurring)
                     {
                         yield return new WaitUntil(() => 
