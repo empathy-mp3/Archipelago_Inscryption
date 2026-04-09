@@ -239,7 +239,8 @@ namespace Archipelago_Inscryption.Archipelago
             else if (receivedItem == APItem.DeckSizeTrap)
             {
                 ArchipelagoData.Data.deckSizeTrapCount++;
-                if (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount)
+                while (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount
+                    && SaveData.Data.collection.cardIds.Count >= 20)
                 {
                     SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
                 }

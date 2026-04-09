@@ -289,6 +289,11 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void IncreaseMinDeckSizeInMenu(DeckBuildingUI __instance)
         {
+            while (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount
+                && SaveData.Data.collection.cardIds.Count != 0)
+            {
+                SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
+            }
             int deckSize = 20 + ArchipelagoData.Data.deckSizeTrapCount;
             __instance.cardCountText.SetText(SaveData.Data.deck.Cards.Count + "/" + deckSize, false);
 			__instance.autoCompleteButton.SetEnabled(SaveData.Data.deck.Cards.Count < deckSize);
