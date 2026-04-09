@@ -268,9 +268,14 @@ namespace Archipelago_Inscryption.Components
             }
         }
 
-        internal void QueueSave()
+        internal IEnumerator QueueSave()
         {
+            if (Singleton<TurnManager>.Instance != null && !Singleton<TurnManager>.Instance.GameEnding && 
+                !Singleton<TurnManager>.Instance.GameEnded)
+
+                yield return new WaitUntil(() => Singleton<TurnManager>.Instance.GameEnding);
             saveTimer = 0.5f;
+            yield break;
         }
 
         internal void UpdateConnectionStatus(bool connected)
