@@ -4,6 +4,7 @@ using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -13,6 +14,7 @@ using UnityEngine;
 using System.IO;
 using BepInEx;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace Archipelago_Inscryption.Patches
 {
@@ -574,6 +576,33 @@ namespace Archipelago_Inscryption.Patches
         static void RemoveRecordFromSafe(SafeInteractable __instance)
         {
             __instance.secretAscensionContents.SetActive(false);
+        }
+    }
+
+    [HarmonyPatch]
+    class Act3NodeIdFix
+    {
+        [HarmonyPatch(typeof(MapNodeManager), "DoMoveToNewNode")]
+        [HarmonyPostfix]
+        static IEnumerator FixAct3BreakingCurrentNodeId1(IEnumerator __result, MapNodeManager __instance, MapNode newNode)
+        {
+            if (SaveManager.SaveFile.IsPart3)
+            {
+			    __instance.MovingNodes = true;
+			    __instance.SetAllNodesInteractable(false);
+			    __instance.transitioningGridY = newNode.Data.gridY;
+			    Singleton<ViewManager>.Instance.Controller.LockState = ViewLockState.Locked;
+			    yield return PlayerMarker.Instance.MoveToPoint(newNode.transform.position, true);
+			    yield return newNode.OnArriveAtNode();
+			    Singleton<ViewManager>.Instance.Controller.LockState = ViewLockState.Unlocked;
+			    __instance.MovingNodes = false;
+                yield break;
+            }
+            else
+            {
+                while (__result.MoveNext())
+                    yield return __result.Current;
+            }
         }
     }
     
