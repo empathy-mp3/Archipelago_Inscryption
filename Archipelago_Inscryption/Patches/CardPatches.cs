@@ -253,6 +253,11 @@ namespace Archipelago_Inscryption.Patches
             __instance.defaultIconGroups.Add(four);
         }
 
+        // Baseline (un-adjusted) scale of each button instance, captured the first time we see it,
+        // so repeated DisplayAbilities calls on the same card always rescale from the same starting
+        // point instead of compounding on top of whatever we set it to last time.
+        static readonly Dictionary<PixelActivatedAbilityButton, Vector3> activatedAbilityButtonBaselineScales = new();
+
         [HarmonyPatch(typeof(PixelCardAbilityIcons), "DisplayAbilities", [typeof(List<Ability>), typeof(PlayableCard)])]
         [HarmonyPostfix]
         static void RepositionAct2ActivatedAbilityButton(List<Ability> abilities, List<GameObject> ___abilityIconGroups,
@@ -270,10 +275,32 @@ namespace Archipelago_Inscryption.Patches
             var icons = ___abilityIconGroups[abilities.Count - 1].GetComponentsInChildren<SpriteRenderer>();
             if (index >= icons.Length) return;
 
-            // Multi-sigil layouts also shrink the icons to fit more per card, so match scale too --
-            // otherwise the button keeps its single-sigil-sized default and overflows the slot.
             ___activatedAbilityButton.transform.localPosition = icons[index].transform.localPosition;
-            ___activatedAbilityButton.transform.localScale = icons[index].transform.localScale;
+
+            if (!activatedAbilityButtonBaselineScales.TryGetValue(___activatedAbilityButton, out Vector3 baselineScale))
+            {
+                baselineScale = ___activatedAbilityButton.transform.localScale;
+                activatedAbilityButtonBaselineScales[___activatedAbilityButton] = baselineScale;
+            }
+            ___activatedAbilityButton.transform.localScale = baselineScale;
+
+            // Multi-sigil layouts also shrink the icons to fit more per card, but that shrink could come
+            // from the icon's own transform scale, its parent's, or just smaller baked sprite art -- so
+            // rather than guessing which, compare actual rendered (world-space) bounds and scale the
+            // button by that ratio, relative to its own baseline. This is correct regardless of how the
+            // icon's smaller size is achieved.
+            var buttonRenderer = ___activatedAbilityButton.GetComponentInChildren<SpriteRenderer>();
+            if (buttonRenderer == null) return;
+
+            Bounds targetBounds = icons[index].bounds;
+            Bounds currentBounds = buttonRenderer.bounds;
+            if (currentBounds.size.x <= 0f || currentBounds.size.y <= 0f) return;
+
+            ___activatedAbilityButton.transform.localScale = new Vector3(
+                baselineScale.x * (targetBounds.size.x / currentBounds.size.x),
+                baselineScale.y * (targetBounds.size.y / currentBounds.size.y),
+                baselineScale.z
+            );
         }
 
         [HarmonyPatch(typeof(ItemSlot), "CreateItem", [typeof(ItemData), typeof(bool)])]
