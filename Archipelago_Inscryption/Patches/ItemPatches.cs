@@ -110,7 +110,7 @@ namespace Archipelago_Inscryption.Patches
 
             codes.RemoveAt(codeIndex);
 
-            var newCodes = new List<CodeInstruction>() 
+            var newCodes = new List<CodeInstruction>()
             {
                 new CodeInstruction(OpCodes.Ldarg_0),
                 new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(WolfTalkingCard), "OnDrawnFallbackDialogueId"))
@@ -167,7 +167,8 @@ namespace Archipelago_Inscryption.Patches
         static bool DisablePart3Hammer(HammerItemSlot __instance)
         {
             if (ArchipelagoOptions.randomizeHammer != RandomizeHammer.Vanilla)
-                if (!ArchipelagoManager.HasItem(APItem.Hammer)) {
+                if (!ArchipelagoManager.HasItem(APItem.Hammer))
+                {
                     return false;
                 }
             return true;
@@ -177,7 +178,8 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool FixPart3Cleanup(HammerItemSlot __instance)
         {
-            if (__instance.Item == null) {
+            if (__instance.Item == null)
+            {
                 return false;
             }
             return true;
@@ -189,7 +191,7 @@ namespace Archipelago_Inscryption.Patches
         {
             if (panel.nameText.Text == "Broken Egg")
             {
-				AudioController.Instance.PlaySound2D("toneless_negate", MixerGroup.None, 0.3f, 0f, null, new AudioParams.Repetition(0.1f, ""), null, null, false);
+                AudioController.Instance.PlaySound2D("toneless_negate", MixerGroup.None, 0.3f, 0f, null, new AudioParams.Repetition(0.1f, ""), null, null, false);
                 return false;
             }
             return true;
@@ -200,13 +202,13 @@ namespace Archipelago_Inscryption.Patches
         static bool TrashTrapDontClearBrokenEgg(DeckBuildingUI __instance)
         {
             AudioController.Instance.PlaySound2D("chipDelay_2", MixerGroup.GBCSFX, 0.75f, 0f, null, null, null, null, false);
-			AudioController.Instance.PlaySound2D("toneless_plonklow", MixerGroup.GBCSFX, 0.4f, 0f, null, null, null, null, false);
-			foreach (CardInfo card in new List<CardInfo>(SaveData.Data.deck.Cards))
-			{
+            AudioController.Instance.PlaySound2D("toneless_plonklow", MixerGroup.GBCSFX, 0.4f, 0f, null, null, null, null, false);
+            foreach (CardInfo card in new List<CardInfo>(SaveData.Data.deck.Cards))
+            {
                 if (card.name != "BrokenEgg")
-				    SaveData.Data.deck.RemoveCard(card);
-			}
-			__instance.UpdatePanelContents();
+                    SaveData.Data.deck.RemoveCard(card);
+            }
+            __instance.UpdatePanelContents();
             return false;
         }
 
@@ -216,7 +218,7 @@ namespace Archipelago_Inscryption.Patches
         static void TrashTrapRemoveOneBrokenEgg(GBCEncounterManager __instance)
         {
             CardInfo egg = SaveData.Data.deck.Cards.Find(card => card.name == "BrokenEgg");
-			if (egg != null)
+            if (egg != null)
                 SaveData.Data.deck.RemoveCard(egg);
         }
 
@@ -244,9 +246,9 @@ namespace Archipelago_Inscryption.Patches
                 opponentSlots.RemoveAll((CardSlot x) => __instance.queuedCards.Find((PlayableCard y) => y.QueuedSlot == x));
                 if (opponentSlots.Count != 0)
                 {
-			        int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
+                    int seed = SaveManager.SaveFile.GetCurrentRandomSeed();
                     int seed2 = __instance.NumTurnsTaken;
-                    seed += seed2*37;
+                    seed += seed2 * 37;
                     if (SaveManager.SaveFile.IsPart1)
                     {
                         List<CardInfo> list = ScriptableObjectLoader<CardInfo>.AllData.FindAll((CardInfo x) => x.portraitTex != null && x.temple == CardTemple.Nature);
@@ -296,23 +298,23 @@ namespace Archipelago_Inscryption.Patches
             }
             int deckSize = 20 + ArchipelagoData.Data.deckSizeTrapCount;
             __instance.cardCountText.SetText(SaveData.Data.deck.Cards.Count + "/" + deckSize, false);
-			__instance.autoCompleteButton.SetEnabled(SaveData.Data.deck.Cards.Count < deckSize);
-			__instance.collection.RefreshPage();
+            __instance.autoCompleteButton.SetEnabled(SaveData.Data.deck.Cards.Count < deckSize);
+            __instance.collection.RefreshPage();
         }
 
         [HarmonyPatch(typeof(DeckInfo), "IsValidGBCDeck")]
         [HarmonyPostfix]
         static void IsValidGBCDeck(DeckInfo __instance, ref bool __result)
-		{
-			__result = __instance.cardIds.Count >= 20 + ArchipelagoData.Data.deckSizeTrapCount;
-		}
+        {
+            __result = __instance.cardIds.Count >= 20 + ArchipelagoData.Data.deckSizeTrapCount;
+        }
 
         [HarmonyPatch(typeof(AutoDeckBuilder), "CompleteDeck")]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> AutoCompleteFullDeck(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
         {
             var found = false;
-            foreach(var instruction in instructions)
+            foreach (var instruction in instructions)
             {
                 if (instruction.LoadsConstant(20))
                 {
@@ -350,28 +352,30 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPatch(typeof(GameFlowManager), "DoTransitionSequence")]
         [HarmonyPostfix]
         static IEnumerator SkipAct1Nodes(IEnumerator __result, GameState gameState, NodeData triggeringNodeData)
-		{
-            if (gameState == GameState.SpecialCardSequence && ArchipelagoOptions.randomizeNodes) {
-			    if ((triggeringNodeData is CardMergeNodeData && !ArchipelagoManager.HasItem(APItem.SacrificeStonesNode))
-			    || (triggeringNodeData is DuplicateMergeNodeData && !ArchipelagoManager.HasItem(APItem.MycologistsNode))
-			    || (triggeringNodeData is CardRemoveNodeData && !ArchipelagoManager.HasItem(APItem.BoneAltarNode))
-			    || (triggeringNodeData is CardStatBoostNodeData && !ArchipelagoManager.HasItem(APItem.CampfireNode))
-			    || (triggeringNodeData is GainConsumablesNodeData && !ArchipelagoManager.HasItem(APItem.BackpackNode))
-			    || (triggeringNodeData is BuildTotemNodeData && !ArchipelagoManager.HasItem(APItem.WoodcarverNode))
-			    || (triggeringNodeData is CopyCardNodeData && !ArchipelagoManager.HasItem(APItem.GoobertNode))) {
-				    yield return new WaitForSeconds(0.05f);
+        {
+            if (gameState == GameState.SpecialCardSequence && ArchipelagoOptions.randomizeNodes)
+            {
+                if ((triggeringNodeData is CardMergeNodeData && !ArchipelagoManager.HasItem(APItem.SacrificeStonesNode))
+                || (triggeringNodeData is DuplicateMergeNodeData && !ArchipelagoManager.HasItem(APItem.MycologistsNode))
+                || (triggeringNodeData is CardRemoveNodeData && !ArchipelagoManager.HasItem(APItem.BoneAltarNode))
+                || (triggeringNodeData is CardStatBoostNodeData && !ArchipelagoManager.HasItem(APItem.CampfireNode))
+                || (triggeringNodeData is GainConsumablesNodeData && !ArchipelagoManager.HasItem(APItem.BackpackNode))
+                || (triggeringNodeData is BuildTotemNodeData && !ArchipelagoManager.HasItem(APItem.WoodcarverNode))
+                || (triggeringNodeData is CopyCardNodeData && !ArchipelagoManager.HasItem(APItem.GoobertNode)))
+                {
+                    yield return new WaitForSeconds(0.05f);
                     PaperGameMap gameMap = PaperGameMap.Instance;
                     MapDataReader dataReader = new MapDataReader();
                     Vector2 sampleRange = new Vector2(gameMap.mapProgress, gameMap.mapProgress + 1f);
                     List<MapNode> nodeList = gameMap.GetComponentsInChildren<MapNode>().ToList();
                     List<PathSegment> pathList = gameMap.GetComponentsInChildren<PathSegment>().ToList();
-			        MapNode currentNode = nodeList.Find((MapNode x) => x.Data.id == RunState.Run.currentNodeId);
+                    MapNode currentNode = nodeList.Find((MapNode x) => x.Data.id == RunState.Run.currentNodeId);
                     if (currentNode != null)
                     {
                         dataReader.SetNodeAndPathColors(nodeList, pathList, currentNode);
                     }
-			        Singleton<MapNodeManager>.Instance.FindAndSetActiveNodeInteractable();
-				    SaveManager.SaveToFile(true);
+                    Singleton<MapNodeManager>.Instance.FindAndSetActiveNodeInteractable();
+                    SaveManager.SaveToFile(true);
                     yield break;
                 }
                 else
@@ -385,46 +389,46 @@ namespace Archipelago_Inscryption.Patches
                 while (__result.MoveNext())
                     yield return __result.Current;
             }
-		}
+        }
 
         [HarmonyPatch(typeof(NodeData.IsAscension), "Satisfied")]
         [HarmonyPostfix]
         static void MakeGoobertNodeAppear(ref bool __result)
-		{
-			if (ArchipelagoOptions.randomizeNodes)
+        {
+            if (ArchipelagoOptions.randomizeNodes)
             {
                 __result = true;
             }
-		}
+        }
 
         [HarmonyPatch(typeof(PauseMenu3D), "Start")]
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
-		{
-			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable &&
                 SaveManager.SaveFile.IsPart1)
             {
-				__instance.ascensionRunInfoBar.SetActive(true);
-				__instance.ascensionChallengeArray.gameObject.SetActive(true);
-				__instance.menuController.transform.localPosition = new Vector3(0f, __instance.ascensionMenuYOffset, 0f);
-				__instance.optionsUIPanel.transform.localPosition = new Vector3(0f, -__instance.ascensionMenuYOffset, 0f);
+                __instance.ascensionRunInfoBar.SetActive(true);
+                __instance.ascensionChallengeArray.gameObject.SetActive(true);
+                __instance.menuController.transform.localPosition = new Vector3(0f, __instance.ascensionMenuYOffset, 0f);
+                __instance.optionsUIPanel.transform.localPosition = new Vector3(0f, -__instance.ascensionMenuYOffset, 0f);
                 return false;
             }
             return true;
-		}
+        }
 
         [HarmonyPatch(typeof(PauseMenu3D), "Update")]
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu2(PauseMenu3D __instance)
-		{
-			if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable &&
                 SaveManager.SaveFile.IsPart1)
             {
-				__instance.ascensionChallengeArray.SetIconsEnabled(!__instance.optionsMenuParent.activeSelf);
+                __instance.ascensionChallengeArray.SetIconsEnabled(!__instance.optionsMenuParent.activeSelf);
                 return false;
             }
             return true;
-		}
+        }
 
         [HarmonyPatch(typeof(RunState), "Initialize")]
         [HarmonyPostfix]
@@ -434,59 +438,59 @@ namespace Archipelago_Inscryption.Patches
             {
                 AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
                 if (!ArchipelagoManager.HasItem(APItem.SmallerBackpackChallenge))
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessConsumables);
-			    if (!ArchipelagoManager.HasItem(APItem.PriceyPeltsChallenge))
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.ExpensivePelts);
-			    if (!ArchipelagoManager.HasItem(APItem.BossTotemsChallenge))
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BossTotems);
-			    if (!ArchipelagoManager.HasItem(APItem.TippedScalesChallenge))
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessConsumables);
+                if (!ArchipelagoManager.HasItem(APItem.PriceyPeltsChallenge))
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.ExpensivePelts);
+                if (!ArchipelagoManager.HasItem(APItem.BossTotemsChallenge))
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BossTotems);
+                if (!ArchipelagoManager.HasItem(APItem.TippedScalesChallenge))
                 {
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
                 }
-			    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.TippedScalesChallenge) == 1)
+                else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.TippedScalesChallenge) == 1)
                 {
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
                 }
-			    else
+                else
                 {
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.StartingDamage);
                 }
-			    if (!ArchipelagoManager.HasItem(APItem.AllTotemBattlesChallenge))
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.AllTotems);
-			    if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 0)
+                if (!ArchipelagoManager.HasItem(APItem.AllTotemBattlesChallenge))
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.AllTotems);
+                if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 0)
                 {
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
                 }
-			    else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 1)
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
-			    if (!ArchipelagoManager.HasItem(APItem.ProgressiveCandle))
+                else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.MoreDifficultChallenge) == 1)
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.BaseDifficulty);
+                if (!ArchipelagoManager.HasItem(APItem.ProgressiveCandle))
                 {
                     RunState.Run.maxPlayerLives = 1;
                     RunState.Run.playerLives = 1;
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessLives);
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.LessLives);
                 }
-			    if (!ArchipelagoManager.HasItem(APItem.ProgressiveSquirrel))
-				    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.SubmergeSquirrels);
-			    if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize)
+                if (!ArchipelagoManager.HasItem(APItem.ProgressiveSquirrel))
+                    AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.SubmergeSquirrels);
+                if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Randomize)
                 {
                     if (!ArchipelagoManager.HasItem(APItem.ProgressiveGrizzlies))
                     {
-				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
-				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
-				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
                     }
                     else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveGrizzlies) == 1)
                     {
-				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
-				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
                     }
                     else if (ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveGrizzlies) == 2)
                     {
-				        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
+                        AscensionSaveData.Data.activeChallenges.Add(AscensionChallenge.GrizzlyMode);
                     }
                 }
             }
@@ -506,34 +510,35 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void NotRequireAscensionForChallenges(AscensionChallenge challenge, ref int __result, AscensionSaveData __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable &&
                 SaveManager.SaveFile.IsPart1)
             {
-                __result = __instance.activeChallenges.FindAll((AscensionChallenge x) => x == challenge).Count;;
+                __result = __instance.activeChallenges.FindAll((AscensionChallenge x) => x == challenge).Count; ;
             }
         }
 
         [HarmonyPatch(typeof(TurnManager), "SetupPhase")]
         [HarmonyPostfix]
         static IEnumerator ExtraTippedScales(IEnumerator __result)
-		{
+        {
             while (__result.MoveNext())
                 yield return __result.Current;
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && 
-                SaveManager.SaveFile.IsPart1) {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable &&
+                SaveManager.SaveFile.IsPart1)
+            {
                 List<AscensionChallenge> challenges = [.. AscensionSaveData.Data.activeChallenges];
                 challenges.RemoveAll((AscensionChallenge x) => x is not AscensionChallenge.StartingDamage);
                 if (challenges.Contains(AscensionChallenge.StartingDamage))
                 {
                     challenges.Remove(AscensionChallenge.StartingDamage);
-			        foreach (AscensionChallenge i in challenges)
+                    foreach (AscensionChallenge i in challenges)
                     {
                         if (i == AscensionChallenge.StartingDamage)
-				            yield return Singleton<LifeManager>.Instance.ShowDamageSequence(1, 1, true, 0.125f, null, 0f, false);
+                            yield return Singleton<LifeManager>.Instance.ShowDamageSequence(1, 1, true, 0.125f, null, 0f, false);
                     }
                 }
             }
-		}
+        }
 
         [HarmonyPatch(typeof(Part1BossOpponent), "HasGrizzlyGlitchPhase")]
         [HarmonyPostfix]
@@ -578,7 +583,8 @@ namespace Archipelago_Inscryption.Patches
         {
             if (ArchipelagoOptions.act2RandomizeBridge == Act2RandomizeBridge.LeftSideStart)
             {
-                if (SceneManager.GetActiveScene().name == "GBC_Starting_Island") {
+                if (SceneManager.GetActiveScene().name == "GBC_Starting_Island")
+                {
                     SaveData.Data.overworldNode = "Tech Elevator";
                 }
             }
@@ -619,6 +625,20 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
+        // With act3Overhaul, there are situations where the player will be forced to get up from
+        // the map for a story beat but be unable to satisfy the conditions to get back to it (see
+        // DontPowerOffScreen above). That's patched so the player can return to the map at will,
+        // but it leaves the player marker hidden when it should be visible. Keep it visible instead.
+        [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
+        [HarmonyPostfix]
+        static void KeepPlayerMarkerVisibleDuringOverhaul()
+        {
+            if (ArchipelagoOptions.act3Overhaul && PlayerMarker.Instance != null)
+            {
+                PlayerMarker.Instance.gameObject.SetActive(true);
+            }
+        }
+
         [HarmonyPatch(typeof(HoloMapArea), "Start")]
         [HarmonyPostfix]
         static void ReworkInspectometerBattery(HoloMapArea __instance)
@@ -632,7 +652,7 @@ namespace Archipelago_Inscryption.Patches
             }
         }
     }
-    
+
     [HarmonyPatch]
     class AnglerHookRemovalPatch
     {
@@ -662,7 +682,7 @@ namespace Archipelago_Inscryption.Patches
 
             return codes.AsEnumerable();
         }
-    }    
- 
+    }
+
 }
 

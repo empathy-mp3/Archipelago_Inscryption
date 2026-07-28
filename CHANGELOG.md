@@ -5,6 +5,7 @@
    - Some sigils' icons were drawn assuming they'd always be the only sigil on a card, so they rendered oversized and overlapped their neighbors once mixed with others.
    - The activated-ability button (the clickable energy/bones-cost button on some sigils) had a fixed position/size that only worked for a card with exactly one sigil, so it could cover up whichever sigil landed in its spot.
    - A conduit sigil's background graphic (Healing Circuit, etc.) didn't leave room for other sigils sharing the card, so they'd render on top of it instead of below it.
+ - Fixed a bug with `act3_overhaul` where the player marker on the holomap could stay permanently hidden if the player returned to the map before finishing the Dredging Room sequence, even though the map itself remained fully usable.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
