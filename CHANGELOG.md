@@ -7,6 +7,8 @@
    - A conduit sigil's background graphic (Healing Circuit, etc.) didn't leave room for other sigils sharing the card, so they'd render on top of it instead of below it.
  - Fixed a bug with `act3_overhaul` where the player marker on the holomap could stay permanently hidden if the player returned to the map before finishing the Dredging Room sequence, even though the map itself remained fully usable.
  - Fixed a bug with `act3_overhaul` where the battery "CHARGING" overlay could stay stuck on top of the holomap indefinitely after fetching the Inspectometer Battery, instead of clearing once the battery finished charging.
+ - Fixed a bug with `act3_overhaul` where the holomap stayed fully accessible during battery charging instead of locking out like vanilla, while still avoiding the softlock the lockout previously risked for players who don't have the Inspectometer Battery item yet.
+ - Fixed a bug with `act3_overhaul` where, if the Inspectometer Battery was received before naturally meeting the Scrybes, bringing the battery to the table could interrupt the charging sequence with an unrelated "go check the dredging room" reminder.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).

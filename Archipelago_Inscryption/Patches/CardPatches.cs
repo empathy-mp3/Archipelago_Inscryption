@@ -269,10 +269,8 @@ namespace Archipelago_Inscryption.Patches
             int count = Math.Min(abilities.Count, icons.Length);
             if (count <= 1) return;
 
-            // A "layout group for N icons" is authored with its N slots at fixed, evenly-spaced
-            // positions; the smallest gap between any two of those positions is a hard ceiling
-            // nothing should exceed, regardless of which (or how many) sigils on the card turn
-            // out to be oversized.
+            // The smallest gap between any two of the layout's fixed icon slots is a hard ceiling
+            // no icon should exceed, regardless of how many sigils turn out to be oversized.
             float cellWidth = float.MaxValue;
             for (int i = 0; i < count; i++)
             {
@@ -293,8 +291,8 @@ namespace Archipelago_Inscryption.Patches
                 icons[i].transform.localScale = new Vector3(scale, scale, scale);
             }
 
-            // Move sigils down if there's a conduit companion, so that the conduit icon can
-            // sit above them without overlapping. 
+            // Move sigils down if there's a conduit companion, so the conduit icon can sit above
+            // them without overlapping.
             int conduitIndex = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).conduit);
             if (conduitIndex >= 0 && conduitIndex < count)
             {
@@ -333,14 +331,8 @@ namespace Archipelago_Inscryption.Patches
         // the button's pixel art too small to render legibly.
         const float ActivatedAbilityButtonScaleMargin = 1f;
 
-        // Moves/rescales the activated-ability button to match a target sigil icon slot. Scale is
-        // computed from stable, stateless reference points -- the target icon's current world-space
-        // size and the button's own icon sprite's native (unscaled) asset size -- rather than any
-        // cached "baseline", since this card display can be a pooled UI element reused across
-        // different cards (e.g. a scrollable card list), where cached per-instance state risks getting
-        // applied to a completely different card later. A single
-        // uniform factor, rather than independent X/Y ratios, keeps the overlay's own proportions
-        // intact instead of stretching it.
+        // Scale is computed from stateless reference points, not a cached baseline, since this
+        // pooled UI element can be reused across different cards later.
         static void RepositionOverlay(Transform overlay, SpriteRenderer targetIcon, SpriteRenderer overlayIconRenderer)
         {
             overlay.localPosition = targetIcon.transform.localPosition;

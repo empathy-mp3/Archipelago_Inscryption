@@ -613,22 +613,73 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
+        // True only while OnTakenToGameTable's charging sequence is actively running -- can
+        // never be true before the player is holding a battery, so this can't cause a softlock.
+        static bool chargingBatteryInProgress = false;
+
         [HarmonyPatch(typeof(HoloGameMap), "PoweredOff", MethodType.Getter)]
         [HarmonyPrefix]
-        static bool DontPowerOffScreen(ref bool __result)
+        static bool GateMapScreenPower(ref bool __result)
         {
             if (ArchipelagoOptions.act3Overhaul)
             {
+                if (chargingBatteryInProgress)
+                {
+                    return true; // let the original getter's vanilla-matching value apply
+                }
+
                 __result = false;
                 return false;
             }
             return true;
         }
 
-        // With act3Overhaul, there are situations where the player will be forced to get up from
-        // the map for a story beat but be unable to satisfy the conditions to get back to it (see
-        // DontPowerOffScreen above). That's patched so the player can return to the map at will,
-        // but it leaves the player marker hidden when it should be visible. Keep it visible instead.
+        // Marks charging as started and forces the screen dark immediately as the battery is
+        // placed, matching vanilla.
+        [HarmonyPatch(typeof(HoldableBattery), "OnTakenToGameTable")]
+        [HarmonyPrefix]
+        static void StartChargingBattery()
+        {
+            if (ArchipelagoOptions.act3Overhaul)
+            {
+                chargingBatteryInProgress = true;
+                HoloGameMap.Instance.ShowPoweredOn(poweredOn: false);
+            }
+        }
+
+        // OnTakenToGameTable's own final step is ShowPoweredOn(true), a reliable "charging is
+        // done" signal (unlike a postfix on the coroutine method, which fires at creation time).
+        [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
+        [HarmonyPostfix]
+        static void EndChargingBatteryOnPowerRestore(bool poweredOn)
+        {
+            if (poweredOn)
+            {
+                chargingBatteryInProgress = false;
+            }
+        }
+
+        // Item randomization can hand out the battery before Part3MetScrybes, so
+        // OnTakenToGameTable's own map-open call can retrigger this reminder mid-delivery.
+        [HarmonyPatch(typeof(TextDisplayer), "PlayDialogueEvent")]
+        [HarmonyPrefix]
+        static bool SkipFixCameraReminderDuringCharging(string eventId, ref IEnumerator __result)
+        {
+            if (ArchipelagoOptions.act3Overhaul && chargingBatteryInProgress && eventId == "P03FixCameraReminder")
+            {
+                __result = SkippedDialogue();
+                return false;
+            }
+            return true;
+        }
+
+        static IEnumerator SkippedDialogue()
+        {
+            yield break;
+        }
+
+        // GateMapScreenPower lets the player return to the map at will, but that can leave the
+        // player marker hidden when it should be visible. Keep it visible instead.
         [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
         [HarmonyPostfix]
         static void KeepPlayerMarkerVisibleDuringOverhaul()
