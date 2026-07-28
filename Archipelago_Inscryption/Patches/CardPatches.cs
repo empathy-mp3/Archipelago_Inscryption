@@ -270,7 +270,10 @@ namespace Archipelago_Inscryption.Patches
             var icons = ___abilityIconGroups[abilities.Count - 1].GetComponentsInChildren<SpriteRenderer>();
             if (index >= icons.Length) return;
 
+            // Multi-sigil layouts also shrink the icons to fit more per card, so match scale too --
+            // otherwise the button keeps its single-sigil-sized default and overflows the slot.
             ___activatedAbilityButton.transform.localPosition = icons[index].transform.localPosition;
+            ___activatedAbilityButton.transform.localScale = icons[index].transform.localScale;
         }
 
         [HarmonyPatch(typeof(ItemSlot), "CreateItem", [typeof(ItemData), typeof(bool)])]
