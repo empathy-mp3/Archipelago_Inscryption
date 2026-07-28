@@ -86,6 +86,13 @@ namespace Archipelago_Inscryption.Patches
                 && x.ability != Ability.CreateEgg
                 && x.ability != Ability.HydraEgg
                 && x.ability != Ability.Tutor
+                // Conduit sigils (ConduitHeal, ConduitEnergy, etc.) are meant only for the dedicated
+                // finale conduit-puzzle cards. They add a persistent board-wide ConduitCircuitManager
+                // and a separate fixed-position icon overlay (PixelCardAbilityIcons.conduitIcon) that's
+                // never repositioned/rescaled by the per-sigil-count layout, so one landing on a normal
+                // randomized battle card both looks broken (overlapping icons) and pulls in puzzle-only
+                // gameplay side effects that don't apply outside that context.
+                && !x.conduit
             );
             // string hash function: djb2 by Dan Bernstein via http://www.cse.yorku.ca/~oz/hash.html
             var hash = 5381;
