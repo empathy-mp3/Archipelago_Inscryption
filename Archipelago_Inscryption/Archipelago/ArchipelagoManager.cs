@@ -68,7 +68,8 @@ namespace Archipelago_Inscryption.Archipelago
             { APItem.FoulBackwaterShortcut,             StoryEvent.NatureHoloShortcut},
             { APItem.FilthyCorpseWorldShortcut,         StoryEvent.UndeadHoloShortcut},
             { APItem.GaudyGemLandShortcut,              StoryEvent.WizardHoloShortcut},
-            { APItem.GemsModule,                        StoryEvent.GemsModuleFetched}
+            { APItem.GemsModule,                        StoryEvent.GemsModuleFetched},
+            { APItem.ResplendentBastionGate,            StoryEvent.HoloTechAreaUnlocked}
         };
 
         // When one of the following items is received, add the associated card(s) to the deck.
@@ -149,7 +150,7 @@ namespace Archipelago_Inscryption.Archipelago
 
                 ApplyItemReceived(item.Item);
 
-                Singleton<ArchipelagoUI>.Instance.QueueSave();
+                Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
 
                 return true;
             }
@@ -442,10 +443,6 @@ namespace Archipelago_Inscryption.Archipelago
             {
 			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.GrizzlyMode);
             }
-			else if (receivedItem == APItem.ResplendentBastionGate)
-            {
-			    StoryEventsData.SetEventCompleted(StoryEvent.HoloTechAreaUnlocked);
-            }
 
             if (Singleton<GameFlowManager>.Instance != null && SaveManager.SaveFile.IsPart1)
             {
@@ -709,7 +706,7 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 ArchipelagoData.Data.completedChecks.Add(checkID);
                 ArchipelagoClient.SendChecksToServerAsync();
-                Singleton<ArchipelagoUI>.Instance.QueueSave();
+                Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
             }
         }
 
