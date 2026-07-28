@@ -617,23 +617,21 @@ namespace Archipelago_Inscryption.Patches
         // never be true before the player is holding a battery, so this can't cause a softlock.
         static bool chargingBatteryInProgress = false;
 
+        // The only two states that may lock the map. Deliberately omits vanilla's out-of-power
+        // lockout, which would strand a player whose Inspectometer Battery item hasn't arrived.
+        static bool MapLockedOut =>
+            chargingBatteryInProgress
+            || (StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked)
+                && !StoryEventsData.EventCompleted(StoryEvent.Part3MetScrybes));
+
         [HarmonyPatch(typeof(HoloGameMap), "PoweredOff", MethodType.Getter)]
         [HarmonyPrefix]
         static bool GateMapScreenPower(ref bool __result)
         {
-            if (ArchipelagoOptions.act3Overhaul)
-            {
-                // DredgingRoomUnlocked now only fires once all 4 bosses are defeated, so
-                // vanilla's own lockout until Part3MetScrybes is safe to let through here too.
-                if (chargingBatteryInProgress || StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked))
-                {
-                    return true; // let the original getter's vanilla-matching value apply
-                }
+            if (!ArchipelagoOptions.act3Overhaul) return true;
 
-                __result = false;
-                return false;
-            }
-            return true;
+            __result = MapLockedOut;
+            return false;
         }
 
         // Marks charging as started and forces the screen dark immediately as the battery is
@@ -646,18 +644,27 @@ namespace Archipelago_Inscryption.Patches
             {
                 chargingBatteryInProgress = true;
                 HoloGameMap.Instance.ShowPoweredOn(poweredOn: false);
+
+                // Vanilla reaches charging with no area loaded, since PowerOutAreaSequencer
+                // destroys it and a dead map can't respawn one. Our usable map can, so match it.
+                HoloMapArea currentArea = Singleton<HoloMapAreaManager>.Instance.CurrentArea;
+                if (currentArea != null) UnityEngine.Object.Destroy(currentArea.gameObject);
             }
         }
 
-        // OnTakenToGameTable's own final step is ShowPoweredOn(true), a reliable "charging is
-        // done" signal (unlike a postfix on the coroutine method, which fires at creation time).
         [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
         [HarmonyPostfix]
-        static void EndChargingBatteryOnPowerRestore(bool poweredOn)
+        static void RestoreMapStateAfterPowerChange(bool poweredOn)
         {
-            if (poweredOn)
+            // OnTakenToGameTable's own final step, so a reliable "charging finished" signal
+            // (unlike a postfix on the coroutine method, which fires at creation time).
+            if (poweredOn) chargingBatteryInProgress = false;
+
+            // ShowPoweredOn(false) hides the marker, so restore it whenever the map is still
+            // usable -- otherwise it stays hidden on a map the player can freely reopen.
+            if (ArchipelagoOptions.act3Overhaul && !MapLockedOut && PlayerMarker.Instance != null)
             {
-                chargingBatteryInProgress = false;
+                PlayerMarker.Instance.gameObject.SetActive(true);
             }
         }
 
@@ -678,30 +685,6 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerator SkippedDialogue()
         {
             yield break;
-        }
-
-        // GateMapScreenPower lets the player return to the map at will, but that can leave the
-        // player marker hidden when it should be visible. Keep it visible instead.
-        [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
-        [HarmonyPostfix]
-        static void KeepPlayerMarkerVisibleDuringOverhaul()
-        {
-            if (ArchipelagoOptions.act3Overhaul && PlayerMarker.Instance != null)
-            {
-                PlayerMarker.Instance.gameObject.SetActive(true);
-            }
-        }
-
-        // Fixes the battery "CHARGING" overlay staying stuck on the map under act3Overhaul --
-        // ShowPoweredOn(false) clears the screen prefab, but ShowPoweredOn(true) never does.
-        [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
-        [HarmonyPostfix]
-        static void ClearStaleScreenPrefabDuringOverhaul(bool poweredOn, HoloGameMap __instance)
-        {
-            if (ArchipelagoOptions.act3Overhaul && poweredOn)
-            {
-                __instance.ScreenCamera.ClearScreenPrefab();
-            }
         }
 
         // OnAreaActive fires for every area entered, so re-checking the trigger guard here
