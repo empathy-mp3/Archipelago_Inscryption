@@ -639,6 +639,18 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        // Fixes the battery "CHARGING" overlay staying stuck on the map under act3Overhaul --
+        // ShowPoweredOn(false) clears the screen prefab, but ShowPoweredOn(true) never does.
+        [HarmonyPatch(typeof(HoloGameMap), "ShowPoweredOn")]
+        [HarmonyPostfix]
+        static void ClearStaleScreenPrefabDuringOverhaul(bool poweredOn, HoloGameMap __instance)
+        {
+            if (ArchipelagoOptions.act3Overhaul && poweredOn)
+            {
+                __instance.ScreenCamera.ClearScreenPrefab();
+            }
+        }
+
         [HarmonyPatch(typeof(HoloMapArea), "Start")]
         [HarmonyPostfix]
         static void ReworkInspectometerBattery(HoloMapArea __instance)
