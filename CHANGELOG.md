@@ -1,3 +1,98 @@
+### 1.4.5
+ - Fixed a bug where items and checks weren't reliably saved to disk shortly after being received, because the save coroutine was never actually started.
+ - Fixed a bug where the Resplendent Bastion Gate item had no reconnect-time recovery if its flag failed to save, unlike most other items.
+
+### 1.4.4
+ - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
+ - Fixed a softlock where it wouldn't add extra cards from deck size traps unless you started Act 2, which let your deck size be larger than the amount of cards you have.
+ - Made it impossible to receive a deathlink during Act 2 dialogue.
+ - Fixed a bug where the consumable checks were looking at the wrong checks for whether to guarantee a bottle to spawn.
+ - Fixed a bug where if you get a check in battle and quit and reload Act 1, you'd be on the battle node as if you'd already beaten it.
+ - Fixed a bug where clicking a node in Act 3 would modify Act 1's `currentNodeId`, which would usually place you far below the Act 1 map and softlock you.
+ - Slightly reworded the Randomize Challenges option description to be more accurate.
+
+### 1.4.3
+ - Fixed a bug where multiple games of Inscryption Beta with different options caused a myriad of issues including generation failures.
+ - Fixed a bug where Dagger and Angler Hook weren't properly accounting for Smaller Backpack Challenge.
+ - Adjusted the logic for bypassing grizzlies.
+
+### 1.4.2
+ - Fixed a bug where two Act 1 items would be progression at the wrong times.
+ - Changed up Act 1 logic a little.
+ - Fixed a potential softlock with unlocking the dredging room before being allowed to stand up.
+ - Fixed the Kaycee's Mod record sometimes appearing in the safe.
+ - Fixed a bug where Act 2 sigil randomization would affect other acts.
+
+### 1.4.1
+ - Fixed a bug where two of the shortcuts were always open.
+ - Fixed a bug where the wizard satellite wouldn't give its check after getting the Resplendent Bastion Gate item.
+ - Fixed a bug where Boulders and Black Goats in bottles would always turn into squirrels.
+ - Fixed a bug where consumable checks were sending the wrong check.
+
+### 1.4.0
+ - Added `act2_randomize_bridge`. The bridge repair is tied to an item instead of scrybes with this option.
+ - Added `act3_overhaul`. In addition to randomizing the bridge like the previous option, it also makes the Inspectometer Battery only lock Foul Backwater instead of locking you out of the game, and randomizes the Resplendent Bastion Gate, adding a check for the satellite that normally unlocks it.
+ - Changed `randomize_challenges` to have only 2 consumable checks per area, replaced with 3 sphere 1 checks around the cabin.
+ - Made hard requirements for beating grizzlies.
+ - Various other undocumented fixes.
+
+### 1.3.2
+ - Check cards in Act 1 and Act 2 now show as rare if they're progression and terrain if they're filler.
+ - Fixed a lot of logic bugs.
+ - Guaranteed consumable checks are now given for ones you haven't gotten yet.
+ - Consumable checks now properly save their info when quitting to title.
+ - Fixed pack rat getting duplicated sigils with `randomize_sigils: randomize_once`.
+ - Fixed map area 4 giving consumable checks that send Act 2 checks.
+ - Removed some particularly bad vessel upgrades from the sigil pool.
+ - Fixed the third candle not showing up after restarting a run.
+
+### 1.3.1
+ - Gems Module now gives you a gem side deck instantly, rather than requiring you to retrieve it first.
+ - Fixed a bug where Leshy would sometimes logically require Progressive Grizzlies despite not having Grizzly Bosses applied to him.
+ - Made the Free Teeth Skull non-functional with randomize challenges.
+ - Fixed a bug where challenges would apply to other acts (e.g. Tipped Scales dealing damage on entering an Act 3 battle).
+ - Made paintings require aquasquirrels instead of squirrels when that's your side deck.
+
+### 1.3.0
+ - Added two big Act 1 options that add combat logic to Act 1:
+	- `randomize_nodes`: all upgrade nodes in Act 1 are inoperable until you find the item for them. Adds Goobert's Copy Card Node.
+	- `randomize_challenges`: most Kaycee's Mod challenges are ported into Act 1 and disabled by finding their item. Grizzly Bosses is split into 3 "Progressive Grizzlies", and Tipped Scales Challenge has two more copies that each remove a health at the start of each battle.
+ - Reorganized options into option groups and added further descriptions for options that were missing clarification.
+
+### 1.2.1
+ - Added traps: two permanent (making your deck less consistent) and two temporary (applying for just one fight).
+ - Various `randomize_sigils: randomize_once` bug fixes.
+
+### 1.2.0
+ - Added `act_unlocks` and new `goal` options. You can now choose how many acts need to be beaten to goal, and whether you start with every act, unlock them in order, or unlock them through items like "Act 1", "Act 2", etc.
+ - Added a new chapter select screen and in-game AP settings menu, letting you re-enter Act 1 without restarting your run, toggle deathlink, limit the item log, and send commands.
+ - Fixed many bugs across nearly every feature added up to this point.
+
+### 1.1.5
+ - Added `randomize_sigils: randomize_once`. Cards get random sigils the moment you see them, and they don't change after that.
+ - Made the title screen properly display which act is enabled at any given time.
+ - Fixed a bug where finishing Act 3 might never take you to the epilogue.
+ - Removed some sigils from `extra_sigils` that didn't work as intended.
+
+### 1.1.4
+ - Added `extra_sigils`. Some Act 1 sigils can now appear in Act 3 and vice versa (as well as some Kaycee's Mod sigils), affecting totems, card upgrade nodes, `randomize_sigils`, and `randomize_vessel_upgrades`.
+ - Fixed a bug where the epilogue button would show up immediately if every act was enabled, and wouldn't show up otherwise.
+
+### 1.1.3
+ - Added `randomize_vessel_upgrades`. Vessel upgrades from bosses (and the conduit upgrade in Resplendent Bastion) can now be randomized in Act 3, giving a random sigil when received, including sigils outside the normal pool like Stinky or Buff When Powered.
+
+### 1.1.2
+ - Added `randomize_shortcuts`. The shortcuts in Act 3 can now be randomized.
+ - Fixed a major bug where almost every Act 3 item received would instead give the item 2 IDs later.
+ - Fixed a bug where the hammer wouldn't go away at the end of battles.
+
+### 1.1.1
+ - Added `randomize_hammer`. You can now choose to delete the hammer entirely so you never receive it.
+ - Fixed a visual bug where the Archipelago save file would display the wrong number of acts necessary to goal.
+
+### 1.1.0
+ - Added options to choose which acts you wish to play, and whether you need to play them in order or in any order.
+
 ### 1.0.3
  - Fixed client version string forcing the use of a discontinued client version.
 
