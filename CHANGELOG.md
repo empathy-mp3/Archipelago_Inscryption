@@ -2,6 +2,7 @@
  - Fixed a bug where items and checks weren't reliably saved to disk shortly after being received, because the save coroutine was never actually started.
  - Fixed a bug where the Resplendent Bastion Gate item had no reconnect-time recovery if its flag failed to save, unlike most other items.
  - Fixed a bug in Act 2 where the activated-ability button (the clickable energy/bones-cost button on some sigils) could cover up other sigils on the same card when randomize sigils mixed it with others.
+ - Fixed a bug where Act 2 sigil randomization could put a conduit sigil (normally only found on the finale's conduit puzzle cards, like Healing Circuit) onto a regular battle card, causing overlapping icon graphics and pulling in puzzle-only board effects that don't apply during a normal fight.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
