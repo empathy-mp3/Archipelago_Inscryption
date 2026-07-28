@@ -253,6 +253,26 @@ namespace Archipelago_Inscryption.Patches
             __instance.defaultIconGroups.Add(four);
         }
 
+        [HarmonyPatch(typeof(PixelCardAbilityIcons), "DisplayAbilities", [typeof(List<Ability>), typeof(PlayableCard)])]
+        [HarmonyPostfix]
+        static void RepositionAct2ActivatedAbilityButton(List<Ability> abilities, List<GameObject> ___abilityIconGroups,
+            PixelActivatedAbilityButton ___activatedAbilityButton)
+        {
+            // The button has a fixed prefab position (matching where the lone sigil sits when a card
+            // has just one ability), so when Act 2 sigil randomization mixes an activated-ability sigil
+            // with others on the same card, the button ends up covering whichever sigil landed in that
+            // slot instead of the activated one. Move it to wherever its own sigil actually landed.
+            if (abilities.Count <= 0 || abilities.Count - 1 >= ___abilityIconGroups.Count) return;
+
+            int index = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).activated);
+            if (index < 0) return;
+
+            var icons = ___abilityIconGroups[abilities.Count - 1].GetComponentsInChildren<SpriteRenderer>();
+            if (index >= icons.Length) return;
+
+            ___activatedAbilityButton.transform.localPosition = icons[index].transform.localPosition;
+        }
+
         [HarmonyPatch(typeof(ItemSlot), "CreateItem", [typeof(ItemData), typeof(bool)])]
         [HarmonyPrefix]
         static void DontModifyItemTemplates(ref ItemData data)
