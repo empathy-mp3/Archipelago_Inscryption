@@ -260,10 +260,7 @@ namespace Archipelago_Inscryption.Patches
             __instance.defaultIconGroups.Add(four);
         }
 
-        // Baseline (un-adjusted) scale of each button instance, captured the first time we see it,
-        // so repeated DisplayAbilities calls on the same card always rescale from the same starting
-        // point instead of compounding on top of whatever we set it to last time.
-        static readonly Dictionary<PixelActivatedAbilityButton, Vector3> activatedAbilityButtonBaselineScales = new();
+        static readonly FieldInfo activatedButtonIconRendererField = AccessTools.Field(typeof(PixelActivatedAbilityButton), "iconRenderer");
 
         [HarmonyPatch(typeof(PixelCardAbilityIcons), "DisplayAbilities", [typeof(List<Ability>), typeof(PlayableCard)])]
         [HarmonyPostfix]
@@ -284,30 +281,26 @@ namespace Archipelago_Inscryption.Patches
 
             ___activatedAbilityButton.transform.localPosition = icons[index].transform.localPosition;
 
-            if (!activatedAbilityButtonBaselineScales.TryGetValue(___activatedAbilityButton, out Vector3 baselineScale))
-            {
-                baselineScale = ___activatedAbilityButton.transform.localScale;
-                activatedAbilityButtonBaselineScales[___activatedAbilityButton] = baselineScale;
-            }
-            ___activatedAbilityButton.transform.localScale = baselineScale;
+            // Compute the required scale from stable, stateless reference points -- the target
+            // icon's current world-space size and the button's own icon sprite's native (unscaled)
+            // asset size -- instead of caching a "baseline" scale per component instance. This card
+            // display can be a pooled UI element reused for different cards (e.g. a scrollable card
+            // list), so any state cached against a specific instance risks getting applied to a
+            // completely different card later. A single uniform factor, rather than independent X/Y
+            // ratios, keeps the button's own proportions intact instead of stretching it.
+            var iconRenderer = (SpriteRenderer)activatedButtonIconRendererField.GetValue(___activatedAbilityButton);
+            if (iconRenderer == null || iconRenderer.sprite == null) return;
 
-            // Multi-sigil layouts also shrink the icons to fit more per card, but that shrink could come
-            // from the icon's own transform scale, its parent's, or just smaller baked sprite art -- so
-            // rather than guessing which, compare actual rendered (world-space) bounds and scale the
-            // button by that ratio, relative to its own baseline. This is correct regardless of how the
-            // icon's smaller size is achieved.
-            var buttonRenderer = ___activatedAbilityButton.GetComponentInChildren<SpriteRenderer>();
-            if (buttonRenderer == null) return;
+            float nativeWidth = iconRenderer.sprite.bounds.size.x;
+            if (nativeWidth <= 0f) return;
 
-            Bounds targetBounds = icons[index].bounds;
-            Bounds currentBounds = buttonRenderer.bounds;
-            if (currentBounds.size.x <= 0f || currentBounds.size.y <= 0f) return;
+            float parentScaleX = ___activatedAbilityButton.transform.parent != null
+                ? ___activatedAbilityButton.transform.parent.lossyScale.x
+                : 1f;
+            if (parentScaleX == 0f) return;
 
-            ___activatedAbilityButton.transform.localScale = new Vector3(
-                baselineScale.x * (targetBounds.size.x / currentBounds.size.x),
-                baselineScale.y * (targetBounds.size.y / currentBounds.size.y),
-                baselineScale.z
-            );
+            float uniformScale = icons[index].bounds.size.x / (nativeWidth * parentScaleX);
+            ___activatedAbilityButton.transform.localScale = new Vector3(uniformScale, uniformScale, uniformScale);
         }
 
         [HarmonyPatch(typeof(ItemSlot), "CreateItem", [typeof(ItemData), typeof(bool)])]
