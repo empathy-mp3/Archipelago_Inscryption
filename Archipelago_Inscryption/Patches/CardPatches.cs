@@ -86,13 +86,6 @@ namespace Archipelago_Inscryption.Patches
                 && x.ability != Ability.CreateEgg
                 && x.ability != Ability.HydraEgg
                 && x.ability != Ability.Tutor
-                // Conduit sigils (ConduitHeal, ConduitEnergy, etc.) are meant only for the dedicated
-                // finale conduit-puzzle cards. They add a persistent board-wide ConduitCircuitManager
-                // and a separate fixed-position icon overlay (PixelCardAbilityIcons.conduitIcon) that's
-                // never repositioned/rescaled by the per-sigil-count layout, so one landing on a normal
-                // randomized battle card both looks broken (overlapping icons) and pulls in puzzle-only
-                // gameplay side effects that don't apply outside that context.
-                && !x.conduit
             );
             // string hash function: djb2 by Dan Bernstein via http://www.cse.yorku.ca/~oz/hash.html
             var hash = 5381;
@@ -165,7 +158,7 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerable<CodeInstruction> RandomizeCostTribeChoiceSigils(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
         {
             var found = false;
-            foreach(var instruction in instructions)
+            foreach (var instruction in instructions)
             {
                 if (instruction.Calls(typeof(Card).GetMethod("SetInfo")))
                 {
@@ -186,7 +179,7 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerable<CodeInstruction> RandomizeBoulderRewardSigils(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
         {
             var found = false;
-            foreach(var instruction in instructions)
+            foreach (var instruction in instructions)
             {
                 if (instruction.Calls(typeof(SelectableCard).GetMethod("Initialize", [typeof(CardInfo), typeof(Action<SelectableCard>), typeof(Action<SelectableCard>), typeof(bool), typeof(Action<SelectableCard>)])))
                 {
@@ -262,45 +255,106 @@ namespace Archipelago_Inscryption.Patches
 
         static readonly FieldInfo activatedButtonIconRendererField = AccessTools.Field(typeof(PixelActivatedAbilityButton), "iconRenderer");
 
+        const float ConduitCompanionIconShrink = 0.7f;
+        const float ConduitCompanionIconMargin = 0.2f;
+
         [HarmonyPatch(typeof(PixelCardAbilityIcons), "DisplayAbilities", [typeof(List<Ability>), typeof(PlayableCard)])]
         [HarmonyPostfix]
-        static void RepositionAct2ActivatedAbilityButton(List<Ability> abilities, List<GameObject> ___abilityIconGroups,
-            PixelActivatedAbilityButton ___activatedAbilityButton)
+        static void NormalizeAct2IconSizesAndOverlays(List<Ability> abilities, List<GameObject> ___abilityIconGroups,
+            PixelActivatedAbilityButton ___activatedAbilityButton, GameObject ___conduitIcon)
         {
-            // The button has a fixed prefab position (matching where the lone sigil sits when a card
-            // has just one ability), so when Act 2 sigil randomization mixes an activated-ability sigil
-            // with others on the same card, the button ends up covering whichever sigil landed in that
-            // slot instead of the activated one. Move it to wherever its own sigil actually landed.
             if (abilities.Count <= 0 || abilities.Count - 1 >= ___abilityIconGroups.Count) return;
 
-            int index = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).activated);
-            if (index < 0) return;
-
             var icons = ___abilityIconGroups[abilities.Count - 1].GetComponentsInChildren<SpriteRenderer>();
-            if (index >= icons.Length) return;
+            int count = Math.Min(abilities.Count, icons.Length);
+            if (count <= 1) return;
 
-            ___activatedAbilityButton.transform.localPosition = icons[index].transform.localPosition;
+            // A "layout group for N icons" is authored with its N slots at fixed, evenly-spaced
+            // positions; the smallest gap between any two of those positions is a hard ceiling
+            // nothing should exceed, regardless of which (or how many) sigils on the card turn
+            // out to be oversized.
+            float cellWidth = float.MaxValue;
+            for (int i = 0; i < count; i++)
+            {
+                for (int j = i + 1; j < count; j++)
+                {
+                    float dx = Mathf.Abs(icons[i].transform.localPosition.x - icons[j].transform.localPosition.x);
+                    if (dx > 0.0001f && dx < cellWidth) cellWidth = dx;
+                }
+            }
+            if (cellWidth == float.MaxValue) return;
 
-            // Compute the required scale from stable, stateless reference points -- the target
-            // icon's current world-space size and the button's own icon sprite's native (unscaled)
-            // asset size -- instead of caching a "baseline" scale per component instance. This card
-            // display can be a pooled UI element reused for different cards (e.g. a scrollable card
-            // list), so any state cached against a specific instance risks getting applied to a
-            // completely different card later. A single uniform factor, rather than independent X/Y
-            // ratios, keeps the button's own proportions intact instead of stretching it.
-            var iconRenderer = (SpriteRenderer)activatedButtonIconRendererField.GetValue(___activatedAbilityButton);
-            if (iconRenderer == null || iconRenderer.sprite == null) return;
+            for (int i = 0; i < count; i++)
+            {
+                if (icons[i].sprite == null) continue;
+                float nativeWidth = icons[i].sprite.bounds.size.x;
+                if (nativeWidth <= 0f) continue;
+                float scale = Mathf.Min(1f, cellWidth / nativeWidth);
+                icons[i].transform.localScale = new Vector3(scale, scale, scale);
+            }
 
-            float nativeWidth = iconRenderer.sprite.bounds.size.x;
+            // Move sigils down if there's a conduit companion, so that the conduit icon can
+            // sit above them without overlapping. 
+            int conduitIndex = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).conduit);
+            if (conduitIndex >= 0 && conduitIndex < count)
+            {
+                var conduitRenderer = ___conduitIcon.GetComponentInChildren<SpriteRenderer>();
+                if (conduitRenderer != null && conduitRenderer.sprite != null)
+                {
+                    float conduitBottomY = conduitRenderer.bounds.min.y;
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (i == conduitIndex || icons[i].sprite == null) continue;
+
+                        icons[i].transform.localScale *= ConduitCompanionIconShrink;
+
+                        Vector3 pos = icons[i].transform.position;
+                        float clearedY = conduitBottomY - icons[i].bounds.extents.y;
+                        if (clearedY < pos.y)
+                        {
+                            pos.y = clearedY + ConduitCompanionIconMargin * icons[i].bounds.size.y;
+                        }
+                        icons[i].transform.position = pos;
+                    }
+                }
+            }
+
+
+            // Move the activated-ability button to match the position of the activated sigil icon.
+            int activatedIndex = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).activated);
+            if (activatedIndex >= 0 && activatedIndex < count)
+            {
+                var iconRenderer = (SpriteRenderer)activatedButtonIconRendererField.GetValue(___activatedAbilityButton);
+                RepositionOverlay(___activatedAbilityButton.transform, icons[activatedIndex], iconRenderer);
+            }
+        }
+
+        // Reverted back to 1 (exact icon-size match, no extra shrink): a smaller margin here made
+        // the button's pixel art too small to render legibly.
+        const float ActivatedAbilityButtonScaleMargin = 1f;
+
+        // Moves/rescales the activated-ability button to match a target sigil icon slot. Scale is
+        // computed from stable, stateless reference points -- the target icon's current world-space
+        // size and the button's own icon sprite's native (unscaled) asset size -- rather than any
+        // cached "baseline", since this card display can be a pooled UI element reused across
+        // different cards (e.g. a scrollable card list), where cached per-instance state risks getting
+        // applied to a completely different card later. A single
+        // uniform factor, rather than independent X/Y ratios, keeps the overlay's own proportions
+        // intact instead of stretching it.
+        static void RepositionOverlay(Transform overlay, SpriteRenderer targetIcon, SpriteRenderer overlayIconRenderer)
+        {
+            overlay.localPosition = targetIcon.transform.localPosition;
+
+            if (overlayIconRenderer == null || overlayIconRenderer.sprite == null) return;
+
+            float nativeWidth = overlayIconRenderer.sprite.bounds.size.x;
             if (nativeWidth <= 0f) return;
 
-            float parentScaleX = ___activatedAbilityButton.transform.parent != null
-                ? ___activatedAbilityButton.transform.parent.lossyScale.x
-                : 1f;
+            float parentScaleX = overlay.parent != null ? overlay.parent.lossyScale.x : 1f;
             if (parentScaleX == 0f) return;
 
-            float uniformScale = icons[index].bounds.size.x / (nativeWidth * parentScaleX);
-            ___activatedAbilityButton.transform.localScale = new Vector3(uniformScale, uniformScale, uniformScale);
+            float uniformScale = ActivatedAbilityButtonScaleMargin * targetIcon.bounds.size.x / (nativeWidth * parentScaleX);
+            overlay.localScale = new Vector3(uniformScale, uniformScale, uniformScale);
         }
 
         [HarmonyPatch(typeof(ItemSlot), "CreateItem", [typeof(ItemData), typeof(bool)])]
