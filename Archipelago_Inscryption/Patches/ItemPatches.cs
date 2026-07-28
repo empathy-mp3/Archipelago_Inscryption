@@ -623,7 +623,9 @@ namespace Archipelago_Inscryption.Patches
         {
             if (ArchipelagoOptions.act3Overhaul)
             {
-                if (chargingBatteryInProgress)
+                // DredgingRoomUnlocked now only fires once all 4 bosses are defeated, so
+                // vanilla's own lockout until Part3MetScrybes is safe to let through here too.
+                if (chargingBatteryInProgress || StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked))
                 {
                     return true; // let the original getter's vanilla-matching value apply
                 }
@@ -700,6 +702,43 @@ namespace Archipelago_Inscryption.Patches
             {
                 __instance.ScreenCamera.ClearScreenPrefab();
             }
+        }
+
+        // OnAreaActive fires for every area entered, so re-checking the trigger guard here
+        // catches it as soon as it's satisfied, without hand-wiring to boss-defeat directly.
+        [HarmonyPatch(typeof(HoloMapArea), "OnAreaActive")]
+        [HarmonyPostfix]
+        static void CheckDredgingRoomUnlockOnAreaChange()
+        {
+            if (!ArchipelagoOptions.act3Overhaul || StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked))
+            {
+                return;
+            }
+
+            // The real sequencer only exists while its own area is loaded. It has no fields,
+            // so one persistent instance on CustomCoroutine's utility object stands in for it.
+            if (dredgingRoomSequencer == null)
+            {
+                dredgingRoomSequencer = CustomCoroutine.Instance.gameObject.AddComponent<UnlockDredgingRoomAreaSequencer>();
+            }
+            dredgingRoomSequencer.OnAreaEntered();
+        }
+
+        static UnlockDredgingRoomAreaSequencer dredgingRoomSequencer;
+
+        // Replaces the TelegrapherDefeated requirement with "all 4 bosses defeated" -- covers
+        // both our per-area check above and the vanilla walk-in path with one guard.
+        [HarmonyPatch(typeof(UnlockDredgingRoomAreaSequencer), "CanTriggerSequence")]
+        [HarmonyPrefix]
+        static bool RequireAllBossesForDredgingRoomTrigger(ref bool __result)
+        {
+            if (ArchipelagoOptions.act3Overhaul)
+            {
+                __result = !StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked)
+                    && Part3SaveData.GetNumBossesDefeated() == 4;
+                return false;
+            }
+            return true;
         }
 
         [HarmonyPatch(typeof(HoloMapArea), "Start")]

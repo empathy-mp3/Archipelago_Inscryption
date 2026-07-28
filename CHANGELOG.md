@@ -9,6 +9,7 @@
  - Fixed a bug with `act3_overhaul` where the battery "CHARGING" overlay could stay stuck on top of the holomap indefinitely after fetching the Inspectometer Battery, instead of clearing once the battery finished charging.
  - Fixed a bug with `act3_overhaul` where the holomap stayed fully accessible during battery charging instead of locking out like vanilla, while still avoiding the softlock the lockout previously risked for players who don't have the Inspectometer Battery item yet.
  - Fixed a bug with `act3_overhaul` where, if the Inspectometer Battery was received before naturally meeting the Scrybes, bringing the battery to the table could interrupt the charging sequence with an unrelated "go check the dredging room" reminder.
+ - Fixed a bug with `act3_overhaul` where the Dredging Room sequence became entirely avoidable, since nothing forced the player there anymore once the holomap stayed accessible. It now unlocks automatically (and the map properly locks out until the Scrybes are met, like vanilla) once all 4 Act 3 area bosses are defeated.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
