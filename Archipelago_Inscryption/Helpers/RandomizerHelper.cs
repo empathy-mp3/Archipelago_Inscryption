@@ -271,7 +271,6 @@ namespace Archipelago_Inscryption.Helpers
                 if (checkInfo.category is ItemFlags.None)
                 {
                     info.appearanceBehaviour.Add(CardAppearanceBehaviour.Appearance.TerrainBackground);
-                    info.traits.Add(Trait.Terrain);
                 }
                 else if (checkInfo.category is ItemFlags.Advancement)
                 {

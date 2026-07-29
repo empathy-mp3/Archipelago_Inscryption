@@ -522,6 +522,24 @@ namespace Archipelago_Inscryption.Patches
             card = info;
         }
 
+        // Act 2 picks its background from Trait.Terrain and ignores appearance behaviours, so
+        // apply TerrainBackground here rather than tagging check cards as real terrain.
+        [HarmonyPatch(typeof(PixelCardDisplayer), "UpdateBackground")]
+        [HarmonyPostfix]
+        static void ApplyTerrainAppearanceToArchipelagoCards(CardInfo info, PixelCardDisplayer __instance,
+            Sprite ___terrainCardBackground, Sprite ___rareTerrainCardBackground)
+        {
+            if (info?.name == null || !info.name.StartsWith("Archipelago")) return;
+            if (!info.appearanceBehaviour.Contains(CardAppearanceBehaviour.Appearance.TerrainBackground)) return;
+
+            SpriteRenderer renderer = __instance.GetComponent<SpriteRenderer>();
+            if (renderer == null) return;
+
+            renderer.sprite = info.metaCategories.Contains(CardMetaCategory.Rare)
+                ? ___rareTerrainCardBackground
+                : ___terrainCardBackground;
+        }
+
         [HarmonyPatch(typeof(MagnificusBattleSequencer), "RemoveCardAbilities")]
         [HarmonyPrefix]
         static void Act2MagnificusUnrandomizeSigils(PlayableCard card)
