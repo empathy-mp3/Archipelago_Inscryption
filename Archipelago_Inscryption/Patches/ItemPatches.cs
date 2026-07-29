@@ -174,15 +174,31 @@ namespace Archipelago_Inscryption.Patches
             return true;
         }
 
+        // InitializeHammer's CreateItem destroys whatever occupies the slot. Nothing should ever
+        // be in there, but skipping the hammer is recoverable where destroying an item is not.
+        [HarmonyPatch(typeof(HammerItemSlot), "InitializeHammer")]
+        [HarmonyPrefix]
+        static bool DontDestroyItemInHammerSlot(HammerItemSlot __instance)
+        {
+            if (SlotHoldsHammer(__instance) || __instance.Item == null) return true;
+
+            ArchipelagoModPlugin.Log.LogWarning(
+                $"Hammer slot already holds {__instance.Item.Data.name}; skipping the hammer rather than destroying it.");
+            return false;
+        }
+
         [HarmonyPatch(typeof(HammerItemSlot), "CleanupHammer")]
         [HarmonyPrefix]
         static bool FixPart3Cleanup(HammerItemSlot __instance)
         {
-            if (__instance.Item == null)
-            {
-                return false;
-            }
-            return true;
+            // Cleanup destroys whatever is in the slot too, so only run it for an actual hammer --
+            // the slot is empty when the hammer was gated off, and may hold an item per the above.
+            return SlotHoldsHammer(__instance);
+        }
+
+        static bool SlotHoldsHammer(HammerItemSlot slot)
+        {
+            return slot.Item != null && slot.hammerData != null && slot.Item.Data.name == slot.hammerData.name;
         }
 
         [HarmonyPatch(typeof(DeckBuildingUI), "OnNamePanelPressed")]
