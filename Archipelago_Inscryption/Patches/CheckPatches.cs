@@ -1131,7 +1131,9 @@ namespace Archipelago_Inscryption.Patches
                 }
                 if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
                 {
+                    string oldBottleName = bottle.Data.name;
                     bottle.Data.name = "CheckBottle_" + check.ToString();
+                    RandomizerHelper.RenameItemInSaveData(__instance, oldBottleName, bottle.Data.name);
                     bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
                     var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
                     info.name = bottle.cardInfo.name;

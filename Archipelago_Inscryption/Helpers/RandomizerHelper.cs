@@ -283,6 +283,22 @@ namespace Archipelago_Inscryption.Helpers
             return info;
         }
 
+        // A bottle's rolled sigil (or check id) is encoded into the live ItemData's name, so the
+        // saved list still holds the pre-rename name. Correct it here, where both names are known.
+        internal static void RenameItemInSaveData(ItemSlot slot, string oldName, string newName)
+        {
+            if (oldName == newName) return;
+
+            ItemsManager manager = Singleton<ItemsManager>.Instance;
+            // CreateItem also fires for slots that are not inventory -- card choice offers, trader
+            // displays -- whose items share these names and must never rewrite the saved list.
+            if (manager == null || !(slot is ConsumableItemSlot consumableSlot)) return;
+            if (!manager.consumableSlots.Contains(consumableSlot)) return;
+
+            int index = manager.SaveDataItemsList.IndexOf(oldName);
+            if (index >= 0) manager.SaveDataItemsList[index] = newName;
+        }
+
         internal static CardInfo GenerateCardInfoWithName(string name, string description)
         {
             CardInfo info = ScriptableObject.CreateInstance<CardInfo>();
