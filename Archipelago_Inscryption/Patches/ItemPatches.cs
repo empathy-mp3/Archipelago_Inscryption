@@ -687,15 +687,22 @@ namespace Archipelago_Inscryption.Patches
             yield break;
         }
 
-        // OnAreaActive fires for every area entered, so re-checking the trigger guard here
-        // catches it as soon as it's satisfied, without hand-wiring to boss-defeat directly.
-        [HarmonyPatch(typeof(HoloMapArea), "OnAreaActive")]
+        // Vanilla triggers this on area entry, so match that. MoveAreasSequence is the
+        // player-driven move only; cutscene teleports use MoveToAreaDirectly and are skipped.
+        [HarmonyPatch(typeof(HoloMapAreaManager), "MoveAreasSequence")]
         [HarmonyPostfix]
-        static void CheckDredgingRoomUnlockOnAreaChange()
+        static void CheckDredgingRoomUnlockOnAreaMove(ref IEnumerator __result)
         {
+            __result = AppendDredgingRoomUnlockCheck(__result);
+        }
+
+        static IEnumerator AppendDredgingRoomUnlockCheck(IEnumerator original)
+        {
+            yield return original;
+
             if (!ArchipelagoOptions.act3Overhaul || StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked))
             {
-                return;
+                yield break;
             }
 
             // The real sequencer only exists while its own area is loaded. It has no fields,
