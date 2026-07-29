@@ -10,6 +10,7 @@
  - Fixed a bug with `act3_overhaul` where, if the Inspectometer Battery was received before naturally meeting the Scrybes, bringing the battery to the table could interrupt the charging sequence with an unrelated "go check the dredging room" reminder.
  - Fixed a bug with `act3_overhaul` where the Dredging Room sequence became entirely avoidable, since nothing forced the player there anymore once the holomap stayed accessible. It now unlocks automatically (and the map properly locks out until the Scrybes are met, like vanilla) once all 4 Act 3 area bosses are defeated.
  - Fixed a bug where Archipelago check cards for filler items displayed "CAN'T BE SACRIFICED." in Act 2. They were being tagged as terrain cards purely to get the terrain-style card background, which also made the game describe them as unsacrificeable.
+ - Fixed a bug where the Act 3 hammer could be saved as if it were one of your items, which left it showing up in a normal item slot, pushed a real item into the hammer slot, and could then destroy that item when the next battle started. Existing affected saves correct themselves on load.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).

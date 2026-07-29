@@ -428,17 +428,44 @@ namespace Archipelago_Inscryption.Patches
             __result.name = __state;
         }
 
+        // Part3ItemsManager grants the hammer on battle start and destroys it on battle end, so it
+        // is never an owned item -- but its slot is in consumableSlots, so it can be mistaken for one.
+        static string GetHammerItemName(ItemsManager manager)
+        {
+            foreach (var slot in manager.consumableSlots)
+            {
+                if (slot is HammerItemSlot hammerSlot && hammerSlot.hammerData != null)
+                    return hammerSlot.hammerData.name;
+            }
+            return null;
+        }
+
+        // Runs before the slots are filled, so a save that already lists the hammer cannot push a
+        // real item into the hammer slot, where InitializeHammer would destroy it.
+        [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
+        [HarmonyPrefix]
+        static void DropHammerFromItemList(ItemsManager __instance)
+        {
+            string hammerItemName = GetHammerItemName(__instance);
+            if (hammerItemName != null)
+                __instance.SaveDataItemsList.RemoveAll(x => x == hammerItemName);
+        }
+
         [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
         [HarmonyPostfix]
         static void FixBottlesInSaveFile(ref ItemsManager __instance)
         {
+            string hammerItemName = GetHammerItemName(__instance);
+
             __instance.SaveDataItemsList.Clear();
             foreach (var slot in __instance.consumableSlots)
             {
-                if (slot.Item is not null)
-                {
-                    __instance.SaveDataItemsList.Add(slot.Item.Data.name);
-                }
+                if (slot.Item is null) continue;
+                // Matched on the item rather than the slot, so a real item that somehow ends up in
+                // the hammer slot is still saved rather than silently dropped.
+                if (hammerItemName != null && slot.Item.Data.name == hammerItemName) continue;
+
+                __instance.SaveDataItemsList.Add(slot.Item.Data.name);
             }
         }
 
