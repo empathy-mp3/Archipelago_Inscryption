@@ -11,6 +11,10 @@
  - Fixed a bug with `act3_overhaul` where the Dredging Room sequence became entirely avoidable, since nothing forced the player there anymore once the holomap stayed accessible. It now unlocks automatically (and the map properly locks out until the Scrybes are met, like vanilla) once all 4 Act 3 area bosses are defeated.
  - Fixed a bug where Archipelago check cards for filler items displayed "CAN'T BE SACRIFICED." in Act 2. They were being tagged as terrain cards purely to get the terrain-style card background, which also made the game describe them as unsacrificeable.
  - Fixed a bug where the Act 3 hammer could be saved as if it were one of your items, which left it showing up in a normal item slot, pushed a real item into the hammer slot, and could then destroy that item when the next battle started.
+ - Fixed several problems with the Archipelago check card that replaces the tarot card below the cabin figurines:
+   - It could be picked up without zooming in on the box first, unlike the vanilla card, and rendered completely black when taken that way because the close-up lighting only applies to the zoomed-in view. It's now gated behind the zoom like the original.
+   - Even while correctly locked, it still showed a "pick up" cursor and swallowed clicks meant for the box, so clicking it did nothing at all instead of zooming in.
+   - The card clipped through the shelf while being held up for inspection. The camera and card now pull back together during the close-up so it clears the shelf, keeping the original framing.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
