@@ -1,4 +1,4 @@
-﻿using Archipelago.MultiClient.Net.Models;
+using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Utils;
@@ -270,12 +270,15 @@ namespace Archipelago_Inscryption.Components
 
         internal IEnumerator QueueSave()
         {
-            if (Singleton<TurnManager>.Instance != null && !Singleton<TurnManager>.Instance.GameEnding && 
-                !Singleton<TurnManager>.Instance.GameEnded)
+            TurnManager turnManager = Singleton<TurnManager>.Instance;
+            if (turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded)
+            {
+                // The battle can end and destroy the TurnManager mid-wait, so treat that as the
+                // battle being over instead of dereferencing a dead singleton and dying here.
+                yield return new WaitUntil(() => turnManager == null || turnManager.GameEnding);
+            }
 
-                yield return new WaitUntil(() => Singleton<TurnManager>.Instance.GameEnding);
             saveTimer = 0.5f;
-            yield break;
         }
 
         internal void UpdateConnectionStatus(bool connected)

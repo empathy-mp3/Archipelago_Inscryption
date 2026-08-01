@@ -606,6 +606,23 @@ namespace Archipelago_Inscryption.Patches
         }
     }
     
+    [HarmonyPatch]
+    class RegionCompletionFix
+    {
+        // Never equal to a real node id, so the region-complete comparison cannot match.
+        static readonly NodeData neverMatchingNode = new NodeData { id = int.MinValue };
+
+        // Later acts keep Act 1's finished run in RunState, so a run that ended on its map's last
+        // node still satisfies GameFlowManager's region-complete check and calls into PaperGameMap,
+        // which only exists in Act 1. Every other EndNode caller is Act 1 only, so this is inert there.
+        [HarmonyPatch(typeof(MapData), "EndNode", MethodType.Getter)]
+        [HarmonyPostfix]
+        static void OnlyCompleteRegionsInAct1(ref NodeData __result)
+        {
+            if (__result != null && PaperGameMap.Instance == null) __result = neverMatchingNode;
+        }
+    }
+
     class ZioPathFixPatch
     {
         static bool Prepare()

@@ -1,4 +1,4 @@
-﻿using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
@@ -1131,7 +1131,9 @@ namespace Archipelago_Inscryption.Patches
                 }
                 if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
                 {
+                    string oldBottleName = bottle.Data.name;
                     bottle.Data.name = "CheckBottle_" + check.ToString();
+                    RandomizerHelper.RenameItemInSaveData(__instance, oldBottleName, bottle.Data.name);
                     bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
                     var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
                     info.name = bottle.cardInfo.name;
@@ -1183,16 +1185,67 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool ReplaceCabinTarotCardWithCheck(CabinSecretCardEvent __instance)
         {
-            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && SaveManager.saveFile.IsPart1) {
-                __instance.gameObject.SetActive(true);
-                DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(__instance.pickupInteractable.gameObject, APCheck.CabinTarotCardBelowFigurines, true);
-                __instance.card.gameObject.SetActive(false);
-                if (!checkCard) return true;
-                checkCard.transform.eulerAngles = new Vector3(70f, 100f, 0f);
-                checkCard.transform.localScale = Vector3.one * 0.7114f;
-                return false;
+            if (ArchipelagoOptions.randomizeChallenges == RandomizeChallenges.Disable || !SaveManager.saveFile.IsPart1)
+                return true;
+
+            __instance.gameObject.SetActive(true);
+
+            // Resolve the zoom first: the original pickup is the only handle on it, and creating
+            // the check card destroys it.
+            GenericMainInputInteractable originalPickup = __instance.pickupInteractable;
+            ZoomInteractable owningZoom = FindZoomEnabling(originalPickup);
+
+            DiscoverableCheckInteractable checkCard = RandomizerHelper.CreateDiscoverableCardCheck(
+                originalPickup.gameObject, APCheck.CabinTarotCardBelowFigurines, true);
+            __instance.card.gameObject.SetActive(false);
+            if (!checkCard) return true;
+
+            PoseTarotCheckCard(checkCard);
+            GateTarotCheckCardBehindZoom(checkCard, owningZoom, originalPickup);
+            return false;
+        }
+
+        // A zoom exposes its contents by listing them in enableWhenZoomed, so that list is what
+        // identifies the one owning a given interactable.
+        static ZoomInteractable FindZoomEnabling(MainInputInteractable interactable)
+        {
+            foreach (ZoomInteractable zoom in UnityEngine.Object.FindObjectsOfType<ZoomInteractable>())
+            {
+                if (zoom.enableWhenZoomed.Contains(interactable)) return zoom;
             }
-            return true;
+            return null;
+        }
+
+        // Matches the vanilla card's resting pose. The pullback keeps the close-up clear of the
+        // shelf the card would otherwise clip through.
+        static void PoseTarotCheckCard(DiscoverableCheckInteractable checkCard)
+        {
+            checkCard.transform.eulerAngles = new Vector3(70f, 100f, 0f);
+            checkCard.transform.localScale = Vector3.one * 0.7114f;
+            checkCard.closeUpPullback = 0.8f;
+        }
+
+        // Vanilla only allows the pickup while the box is zoomed in. Inherit that by taking the
+        // original's place in the list, and stay in sync with the zoom's current state.
+        static void GateTarotCheckCardBehindZoom(DiscoverableCheckInteractable checkCard,
+            ZoomInteractable owningZoom, GenericMainInputInteractable originalPickup)
+        {
+            if (owningZoom == null)
+            {
+                ArchipelagoModPlugin.Log.LogWarning(
+                    "Tarot check card: no ZoomInteractable lists the original pickup, so it stays clickable unzoomed.");
+                return;
+            }
+
+            owningZoom.enableWhenZoomed.Remove(originalPickup);
+            owningZoom.enableWhenZoomed.Add(checkCard);
+            // The prefab's SelectableCard is a separate interactable with its own collider, so gate
+            // it too or it keeps the pickup cursor and eats the box's zoom click.
+            owningZoom.enableWhenZoomed.Add(checkCard.card);
+            owningZoom.discoverableObjectChild = checkCard;
+
+            checkCard.SetEnabled(owningZoom.Zoomed);
+            checkCard.card.SetEnabled(owningZoom.Zoomed);
         }
 
         [HarmonyPatch(typeof(FreeTeethSkull), "Start")]

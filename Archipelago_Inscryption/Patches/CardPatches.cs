@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
@@ -158,7 +159,7 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerable<CodeInstruction> RandomizeCostTribeChoiceSigils(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
         {
             var found = false;
-            foreach(var instruction in instructions)
+            foreach (var instruction in instructions)
             {
                 if (instruction.Calls(typeof(Card).GetMethod("SetInfo")))
                 {
@@ -179,7 +180,7 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerable<CodeInstruction> RandomizeBoulderRewardSigils(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
         {
             var found = false;
-            foreach(var instruction in instructions)
+            foreach (var instruction in instructions)
             {
                 if (instruction.Calls(typeof(SelectableCard).GetMethod("Initialize", [typeof(CardInfo), typeof(Action<SelectableCard>), typeof(Action<SelectableCard>), typeof(bool), typeof(Action<SelectableCard>)])))
                 {
@@ -253,6 +254,102 @@ namespace Archipelago_Inscryption.Patches
             __instance.defaultIconGroups.Add(four);
         }
 
+        static readonly FieldInfo activatedButtonIconRendererField = AccessTools.Field(typeof(PixelActivatedAbilityButton), "iconRenderer");
+
+        const float ConduitCompanionIconShrink = 0.7f;
+        const float ConduitCompanionIconMargin = 0.2f;
+
+        [HarmonyPatch(typeof(PixelCardAbilityIcons), "DisplayAbilities", [typeof(List<Ability>), typeof(PlayableCard)])]
+        [HarmonyPostfix]
+        static void NormalizeAct2IconSizesAndOverlays(List<Ability> abilities, List<GameObject> ___abilityIconGroups,
+            PixelActivatedAbilityButton ___activatedAbilityButton, GameObject ___conduitIcon)
+        {
+            if (abilities.Count <= 0 || abilities.Count - 1 >= ___abilityIconGroups.Count) return;
+
+            var icons = ___abilityIconGroups[abilities.Count - 1].GetComponentsInChildren<SpriteRenderer>();
+            int count = Math.Min(abilities.Count, icons.Length);
+            if (count <= 1) return;
+
+            // The smallest gap between any two of the layout's fixed icon slots is a hard ceiling
+            // no icon should exceed, regardless of how many sigils turn out to be oversized.
+            float cellWidth = float.MaxValue;
+            for (int i = 0; i < count; i++)
+            {
+                for (int j = i + 1; j < count; j++)
+                {
+                    float dx = Mathf.Abs(icons[i].transform.localPosition.x - icons[j].transform.localPosition.x);
+                    if (dx > 0.0001f && dx < cellWidth) cellWidth = dx;
+                }
+            }
+            if (cellWidth == float.MaxValue) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (icons[i].sprite == null) continue;
+                float nativeWidth = icons[i].sprite.bounds.size.x;
+                if (nativeWidth <= 0f) continue;
+                float scale = Mathf.Min(1f, cellWidth / nativeWidth);
+                icons[i].transform.localScale = new Vector3(scale, scale, scale);
+            }
+
+            // Move sigils down if there's a conduit companion, so the conduit icon can sit above
+            // them without overlapping.
+            int conduitIndex = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).conduit);
+            if (conduitIndex >= 0 && conduitIndex < count)
+            {
+                var conduitRenderer = ___conduitIcon.GetComponentInChildren<SpriteRenderer>();
+                if (conduitRenderer != null && conduitRenderer.sprite != null)
+                {
+                    float conduitBottomY = conduitRenderer.bounds.min.y;
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (i == conduitIndex || icons[i].sprite == null) continue;
+
+                        icons[i].transform.localScale *= ConduitCompanionIconShrink;
+
+                        Vector3 pos = icons[i].transform.position;
+                        float clearedY = conduitBottomY - icons[i].bounds.extents.y;
+                        if (clearedY < pos.y)
+                        {
+                            pos.y = clearedY + ConduitCompanionIconMargin * icons[i].bounds.size.y;
+                        }
+                        icons[i].transform.position = pos;
+                    }
+                }
+            }
+
+
+            // Move the activated-ability button to match the position of the activated sigil icon.
+            int activatedIndex = abilities.FindIndex(a => AbilitiesUtil.GetInfo(a).activated);
+            if (activatedIndex >= 0 && activatedIndex < count)
+            {
+                var iconRenderer = (SpriteRenderer)activatedButtonIconRendererField.GetValue(___activatedAbilityButton);
+                RepositionOverlay(___activatedAbilityButton.transform, icons[activatedIndex], iconRenderer);
+            }
+        }
+
+        // Reverted back to 1 (exact icon-size match, no extra shrink): a smaller margin here made
+        // the button's pixel art too small to render legibly.
+        const float ActivatedAbilityButtonScaleMargin = 1f;
+
+        // Scale is computed from stateless reference points, not a cached baseline, since this
+        // pooled UI element can be reused across different cards later.
+        static void RepositionOverlay(Transform overlay, SpriteRenderer targetIcon, SpriteRenderer overlayIconRenderer)
+        {
+            overlay.localPosition = targetIcon.transform.localPosition;
+
+            if (overlayIconRenderer == null || overlayIconRenderer.sprite == null) return;
+
+            float nativeWidth = overlayIconRenderer.sprite.bounds.size.x;
+            if (nativeWidth <= 0f) return;
+
+            float parentScaleX = overlay.parent != null ? overlay.parent.lossyScale.x : 1f;
+            if (parentScaleX == 0f) return;
+
+            float uniformScale = ActivatedAbilityButtonScaleMargin * targetIcon.bounds.size.x / (nativeWidth * parentScaleX);
+            overlay.localScale = new Vector3(uniformScale, uniformScale, uniformScale);
+        }
+
         [HarmonyPatch(typeof(ItemSlot), "CreateItem", [typeof(ItemData), typeof(bool)])]
         [HarmonyPrefix]
         static void DontModifyItemTemplates(ref ItemData data)
@@ -283,7 +380,9 @@ namespace Archipelago_Inscryption.Patches
                     var mod = info.mods.Find(m => m is SigilReplacementInfo);
                     if (mod is not null)
                     {
+                        string oldName = data.name;
                         data.name += "$" + mod.abilities[0].ToString();
+                        RandomizerHelper.RenameItemInSaveData(__instance, oldName, data.name);
                     }
                 }
                 bottle.cardInfo = info;
@@ -330,20 +429,6 @@ namespace Archipelago_Inscryption.Patches
         {
             __result = UnityEngine.Object.Instantiate(__result);
             __result.name = __state;
-        }
-
-        [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
-        [HarmonyPostfix]
-        static void FixBottlesInSaveFile(ref ItemsManager __instance)
-        {
-            __instance.SaveDataItemsList.Clear();
-            foreach (var slot in __instance.consumableSlots)
-            {
-                if (slot.Item is not null)
-                {
-                    __instance.SaveDataItemsList.Add(slot.Item.Data.name);
-                }
-            }
         }
 
         [HarmonyPatch(typeof(CardCollectionInfo), "LoadCards")]
@@ -424,6 +509,24 @@ namespace Archipelago_Inscryption.Patches
             info.name = card.name;
             RandomizeSigilsAct2(info);
             card = info;
+        }
+
+        // Act 2 picks its background from Trait.Terrain and ignores appearance behaviours, so
+        // apply TerrainBackground here rather than tagging check cards as real terrain.
+        [HarmonyPatch(typeof(PixelCardDisplayer), "UpdateBackground")]
+        [HarmonyPostfix]
+        static void ApplyTerrainAppearanceToArchipelagoCards(CardInfo info, PixelCardDisplayer __instance,
+            Sprite ___terrainCardBackground, Sprite ___rareTerrainCardBackground)
+        {
+            if (info?.name == null || !info.name.StartsWith("Archipelago")) return;
+            if (!info.appearanceBehaviour.Contains(CardAppearanceBehaviour.Appearance.TerrainBackground)) return;
+
+            SpriteRenderer renderer = __instance.GetComponent<SpriteRenderer>();
+            if (renderer == null) return;
+
+            renderer.sprite = info.metaCategories.Contains(CardMetaCategory.Rare)
+                ? ___rareTerrainCardBackground
+                : ___terrainCardBackground;
         }
 
         [HarmonyPatch(typeof(MagnificusBattleSequencer), "RemoveCardAbilities")]

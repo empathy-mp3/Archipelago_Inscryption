@@ -4,6 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <LangVersion>preview</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -109,7 +110,10 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(TargetDir)$(ProjectName).dll&quot; &quot;%25appdata%25\r2modmanPlus-local\Inscryption\profiles\Default\BepInEx\plugins\Ballin_Inc-ArchipelagoMod&quot;&#xD;&#xA;" />
+    <ItemGroup>
+      <PluginOutputFiles Include="$(TargetDir)$(ProjectName).dll;$(TargetDir)Archipelago.MultiClient.Net.dll;$(TargetDir)Newtonsoft.Json.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginOutputFiles)" DestinationFolder="$(APPDATA)\r2modmanPlus-local\Inscryption\profiles\Default\BepInEx\plugins\Ballin_Inc-ArchipelagoMod" SkipUnchangedFiles="false" />
   </Target>
 
 </Project>

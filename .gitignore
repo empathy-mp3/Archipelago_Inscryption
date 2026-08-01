@@ -1,5 +1,15 @@
-/Archipelago_Inscryption/[Oo]bj/
-/Archipelago_Inscryption/[Bb]in/
+# Build output
+[Oo]bj/
+[Bb]in/
+
+# Local-only, copied from a game install
 /Dependencies/
 /packages/
-/.vs/
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
