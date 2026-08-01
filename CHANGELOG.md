@@ -15,6 +15,7 @@
    - It could be picked up without zooming in on the box first, unlike the vanilla card, and rendered completely black when taken that way because the close-up lighting only applies to the zoomed-in view. It's now gated behind the zoom like the original.
    - Even while correctly locked, it still showed a "pick up" cursor and swallowed clicks meant for the box, so clicking it did nothing at all instead of zooming in.
    - The card clipped through the shelf while being held up for inspection. The camera and card now pull back together during the close-up so it clears the shelf, keeping the original framing.
+ - Fixed a bug where the player could become permanently unable to leave the game table in Act 3. Act 1's finished run data stays in memory during Act 3, and if that run ended on the last node of its map, the game's "region completed" check still matched there and tried to use the Act 1 paper map, which doesn't exist in Act 3. The resulting error killed the state transition halfway through, so the game stayed permanently mid-transition and never allowed standing up again. Reloading the save fixed it only until the next time the player sat back down.
 
 ### 1.4.4
  - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
