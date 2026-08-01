@@ -417,6 +417,16 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        // Vanilla only preloads challenge data in the Kaycee's Mod menu, which an Act 1 run never
+        // visits, so showing the challenge array below would otherwise load it on first pause.
+        [HarmonyPatch(typeof(Part1GameFlowManager), "Awake")]
+        [HarmonyPostfix]
+        static void PreloadKayceeChallengeData()
+        {
+            if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
+                ScriptableObjectLoader<AscensionChallengeInfo>.LoadData(AscensionChallengesUtil.DATA_PATH);
+        }
+
         [HarmonyPatch(typeof(PauseMenu3D), "Start")]
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
