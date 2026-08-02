@@ -63,6 +63,48 @@ namespace Archipelago_Inscryption.Helpers
             return inputField;
         }
 
+        // The act cards are built once when the start screen loads, so resetting an act from the
+        // options menu leaves them reading "Continue". Only their label and art can change here:
+        // locked state depends on act completion and items, which a reset does not touch.
+        internal static void RefreshActCards()
+        {
+            MenuController menu = MenuController.Instance;
+            if (menu == null || menu.cards == null) return;
+
+            foreach (MenuCard card in menu.cards)
+            {
+                if (card == null || card.permanentlyLocked) continue;
+
+                switch (card.name)
+                {
+                    case "MenuCard_Act1":
+                        SetActCardVisuals(card, 1, StoryEvent.BasicTutorialCompleted, ArchipelagoData.Data.act1Completed,
+                            AssetsManager.menuCardAct1NewRun, AssetsManager.menuCardAct1Continue, AssetsManager.menuCardAct1Complete);
+                        break;
+                    case "MenuCard_Act2":
+                        SetActCardVisuals(card, 2, StoryEvent.GBCIntroCompleted, ArchipelagoData.Data.act2Completed,
+                            AssetsManager.menuCardAct2Start, AssetsManager.menuCardAct2Continue, AssetsManager.menuCardAct2Complete);
+                        break;
+                    case "MenuCard_Act3":
+                        SetActCardVisuals(card, 3, StoryEvent.Part3Intro, ArchipelagoData.Data.act3Completed,
+                            AssetsManager.menuCardAct3Start, AssetsManager.menuCardAct3Continue, AssetsManager.menuCardAct3Complete);
+                        break;
+                }
+            }
+        }
+
+        private static void SetActCardVisuals(MenuCard card, int act, StoryEvent startedEvent, bool completed,
+            Sprite notStarted, Sprite inProgress, Sprite complete)
+        {
+            bool started = SaveManager.SaveFile.storyEvents.completedEvents.Contains(startedEvent)
+                && !(act == 1 && ArchipelagoData.Data.act1RunFresh);
+
+            card.titleText = started
+                ? (completed ? $"Continue Act {act} (Complete!)" : $"Continue Act {act}")
+                : $"Start Act {act}";
+            card.GetComponent<SpriteRenderer>().sprite = started ? (completed ? complete : inProgress) : notStarted;
+        }
+
         internal static void LoadSelectedChapter(int chapter, bool act1NewRun = true)
         {
             SaveManager.LoadFromFile();
@@ -81,6 +123,7 @@ namespace Archipelago_Inscryption.Helpers
                 case 1:
                     ScriptableObjectLoader<CardInfo>.AllData.Find(x => x.name == "Hrokkall").temple = CardTemple.Tech;
                     SaveManager.SaveFile.currentScene = "Part1_Cabin";
+                    ArchipelagoData.Data.act1RunFresh = false;
                     if (act1NewRun)
                     {
                         SaveManager.SaveFile.NewPart1Run();

@@ -146,7 +146,8 @@ namespace Archipelago_Inscryption.Patches
 
             if (ArchipelagoData.Data.enableAct1)
             {
-                var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted);
+                var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted)
+                    && !ArchipelagoData.Data.act1RunFresh;
                 var completedAct1 = ArchipelagoData.Data.act1Completed;
                 if (items) 
                 {
@@ -154,25 +155,21 @@ namespace Archipelago_Inscryption.Patches
                     else locked = false;
                 }
 
-                act1NewRun.SetEnabled(true);
-                act1NewRun.gameObject.SetActive(true);
-                menu.cards.Add(act1NewRun);
-                act1NewRun.titleText = startedAct1 ? "New Act 1 Run" : "Start Act 1";
-                act1NewRun.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1NewRun;
-
-                if (startedAct1 && !locked)
-                {
-                    act1.SetEnabled(true);
-                    act1.gameObject.SetActive(true);
-                    menu.cards.Add(act1);
-                    act1.titleText = completedAct1 ? "Continue Act 1 (Complete!)" : "Continue Act 1";
-                    act1.GetComponent<SpriteRenderer>().sprite = completedAct1 ? AssetsManager.menuCardAct1Complete : AssetsManager.menuCardAct1Continue;
-                }
+                act1.SetEnabled(true);
+                act1.gameObject.SetActive(true);
+                menu.cards.Add(act1);
                 if (locked)
                 {
-                    act1NewRun.permanentlyLocked = true;
-                    act1NewRun.titleText = "Locked";
-                    act1NewRun.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1Locked;
+                    act1.permanentlyLocked = true;
+                    act1.titleText = "Locked";
+                    act1.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1Locked;
+                }
+                else
+                {
+                    act1.titleText = startedAct1 ? (completedAct1 ? "Continue Act 1 (Complete!)" : "Continue Act 1") : "Start Act 1";
+                    act1.GetComponent<SpriteRenderer>().sprite = startedAct1
+                        ? (completedAct1 ? AssetsManager.menuCardAct1Complete : AssetsManager.menuCardAct1Continue)
+                        : AssetsManager.menuCardAct1NewRun;
                 }
 
                 if (inOrder && !completedAct1) locked = true;
@@ -263,9 +260,6 @@ namespace Archipelago_Inscryption.Patches
         {
             switch (Singleton<MenuController>.Instance.slottedCard.name)
             {
-                case "MenuCard_Act1NewRun":
-                    UIHelper.LoadSelectedChapter(1, true);
-                    break;
                 case "MenuCard_Act1":
                     UIHelper.LoadSelectedChapter(1, false);
                     break;
