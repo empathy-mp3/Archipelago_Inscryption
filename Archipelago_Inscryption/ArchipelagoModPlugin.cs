@@ -1,4 +1,4 @@
-﻿using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Utils;
 using BepInEx;
@@ -16,7 +16,7 @@ namespace Archipelago_Inscryption
     {
         internal const string PluginGuid = "ballininc.inscryption.archipelagomod";
         internal const string PluginName = "ArchipelagoMod";
-        internal const string PluginVersion = "1.4.5";
+        internal const string PluginVersion = "1.5.0";
 
         internal static ManualLogSource Log;
         internal static string SavePath => savePathConfig.Value;
