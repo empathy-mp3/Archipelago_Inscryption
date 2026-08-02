@@ -86,13 +86,15 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonIgnore]
         internal CardModificationInfo mycoCardMod = null;
 
+        // Each act has its own pool, so resetting one act can restore its packs by counting
+        // what it was sent without disturbing what the other two have spent.
         [JsonProperty("availableCardPacks")]
-        internal int availableCardPacks = 0;
+        internal int[] availableCardPacks = new int[3];
 
-        // availableCardPacks is a single pool spent from all three acts, so track where each
-        // pack went. Resetting an act refunds only the packs that act opened.
-        [JsonProperty("packsOpenedPerAct")]
-        internal int[] packsOpenedPerAct = new int[3];
+        internal int PacksAvailable(int act) => availableCardPacks[act - 1];
+        internal void GrantPack(int act) => availableCardPacks[act - 1]++;
+        internal void SpendPack(int act) => availableCardPacks[act - 1]--;
+        internal void SetPacks(int act, int count) => availableCardPacks[act - 1] = count;
 
         [JsonProperty("cabinSafeCode")]
         internal List<int> cabinSafeCode = new List<int>();

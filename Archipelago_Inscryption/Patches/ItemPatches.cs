@@ -28,15 +28,34 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        // Act 1 teeth live on the current run, so currency granted during an earlier run
+        // would be lost on death. A new run starts with the full amount the act was sent.
+        [HarmonyPatch(typeof(SaveFile), "NewPart1Run")]
+        [HarmonyPostfix]
+        static void InitializeAct1Currency()
+        {
+            if (ArchipelagoData.Data == null || RunState.Run == null) return;
+
+            RunState.Run.currency = ArchipelagoManager.CountReceived(APItem.Act1Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+        }
+
+        // Neither Initialize zeroes currency, so these postfixes are what establish it.
+        [HarmonyPatch(typeof(Part3SaveData), "Initialize")]
+        [HarmonyPostfix]
+        static void InitializeAct3Currency(Part3SaveData __instance)
+        {
+            if (ArchipelagoData.Data == null) return;
+
+            __instance.currency = ArchipelagoManager.CountReceived(APItem.Act3Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+        }
+
         [HarmonyPatch(typeof(SaveData), "Initialize")]
         [HarmonyPostfix]
         static void InitializeItemNewGame(SaveData __instance)
         {
             if (ArchipelagoData.Data == null) return;
 
-            List<InscryptionItemInfo> receivedItem = ArchipelagoData.Data.receivedItems;
-            int countCurrency = receivedItem.Count(item => item.Item == APItem.Currency);
-            __instance.currency = countCurrency;
+            __instance.currency = ArchipelagoManager.CountReceived(APItem.Act2Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
 
             int pieceCount = 0;
 
@@ -125,18 +144,18 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void SpawnCardPackPile(DeckReviewSequencer __instance)
         {
-            if (ArchipelagoData.Data.availableCardPacks <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map || !Singleton<GameMap>.Instance.FullyUnrolled) return;
+            if (ArchipelagoData.Data.PacksAvailable(1) <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map || !Singleton<GameMap>.Instance.FullyUnrolled) return;
 
-            RandomizerHelper.SpawnPackPile(__instance);
+            RandomizerHelper.SpawnPackPile(__instance, 1);
         }
 
         [HarmonyPatch(typeof(Part3DeckReviewSequencer), "OnEnterDeckView")]
         [HarmonyPostfix]
         static void SpawnCardPackPile(Part3DeckReviewSequencer __instance)
         {
-            if (!StoryEventsData.EventCompleted(StoryEvent.GemsModuleFetched) || ArchipelagoData.Data.availableCardPacks <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map) return;
+            if (!StoryEventsData.EventCompleted(StoryEvent.GemsModuleFetched) || ArchipelagoData.Data.PacksAvailable(3) <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map) return;
 
-            RandomizerHelper.SpawnPackPile(__instance);
+            RandomizerHelper.SpawnPackPile(__instance, 3);
         }
 
         [HarmonyPatch(typeof(DeckReviewSequencer), "OnExitDeckView")]

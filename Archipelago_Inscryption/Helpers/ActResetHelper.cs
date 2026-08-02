@@ -52,7 +52,7 @@ namespace Archipelago_Inscryption.Helpers
 
             // Puts the act where a brand new save lands once its items arrive. Erasing above is
             // deliberately broad because this restores anything Archipelago had already granted.
-            RestoreSpentItems(act);
+            RestorePacks(act);
             ArchipelagoManager.ReapplyReceivedItems();
 
             SaveManager.SaveToFile(false);
@@ -61,30 +61,15 @@ namespace Archipelago_Inscryption.Helpers
             UIHelper.RefreshActCards();
         }
 
-        // Currency and card packs are counters, and VerifyItem cannot tell "spent" from "never
-        // applied", so the re-apply pass leaves both behind.
-        private static void RestoreSpentItems(int act)
+        // Packs are a counter, and VerifyItem cannot tell "spent" from "never applied", so
+        // the re-apply pass leaves them behind. Currency needs nothing here: each act restores
+        // its own when the reset above reinitialises it.
+        private static void RestorePacks(int act)
         {
-            // Each act keeps its own currency, so a fresh one holds every Currency item received.
-            int currency = ArchipelagoData.Data.receivedItems.Count(item => item.Item == APItem.Currency);
+            APItem packItem = act == 1 ? APItem.Act1CardPack
+                : act == 2 ? APItem.Act2CardPack : APItem.Act3CardPack;
 
-            switch (act)
-            {
-                case 1:
-                    RunState.Run.currency = currency;
-                    break;
-                case 2:
-                    SaveData.Data.currency = currency;
-                    break;
-                case 3:
-                    Part3SaveData.Data.currency = currency;
-                    break;
-            }
-
-            // Packs come from one pool shared by all three acts, so refund only this act's.
-            // Packs opened in another act keep their cards and must stay spent.
-            ArchipelagoData.Data.availableCardPacks += ArchipelagoData.Data.packsOpenedPerAct[act - 1];
-            ArchipelagoData.Data.packsOpenedPerAct[act - 1] = 0;
+            ArchipelagoData.Data.SetPacks(act, ArchipelagoManager.CountReceived(packItem));
             RandomizerHelper.UpdatePackButtonEnabled();
         }
 

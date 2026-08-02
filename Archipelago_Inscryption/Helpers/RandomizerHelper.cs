@@ -395,11 +395,11 @@ namespace Archipelago_Inscryption.Helpers
 
             bool result = false;
             TextBox.Prompt prompt = new TextBox.Prompt("Open a pack", "Cancel", option => result = (option == 0));
-            yield return Singleton<TextBox>.Instance.ShowUntilInput($"You have {ArchipelagoData.Data.availableCardPacks} card pack{(ArchipelagoData.Data.availableCardPacks > 1 ? "s" : "")} available.", TextBox.Style.Neutral, null, TextBox.ScreenPosition.ForceTop, 0, true, false, prompt);
+            int packsAvailable = ArchipelagoData.Data.PacksAvailable(2);
+            yield return Singleton<TextBox>.Instance.ShowUntilInput($"You have {packsAvailable} card pack{(packsAvailable > 1 ? "s" : "")} available.", TextBox.Style.Neutral, null, TextBox.ScreenPosition.ForceTop, 0, true, false, prompt);
             if (result)
             {
-                ArchipelagoData.Data.availableCardPacks--;
-                RecordPackOpened(2);
+                ArchipelagoData.Data.SpendPack(2);
                 yield return PackOpeningUI.instance.OpenPack((CardTemple)UnityEngine.Random.Range(0, (int)CardTemple.NUM_TEMPLES));
             }
 
@@ -415,19 +415,14 @@ namespace Archipelago_Inscryption.Helpers
             PauseMenu.pausingDisabled = false;
         }
 
-        internal static void RecordPackOpened(int act)
-        {
-            ArchipelagoData.Data.packsOpenedPerAct[act - 1]++;
-        }
-
         internal static void UpdatePackButtonEnabled()
         {
             if (packButton == null) return;
 
-            packButton.SetEnabled(ArchipelagoData.Data.availableCardPacks > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
+            packButton.SetEnabled(ArchipelagoData.Data.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
         }
 
-        internal static void SpawnPackPile(DeckReviewSequencer instance)
+        internal static void SpawnPackPile(DeckReviewSequencer instance, int act)
         {
             packPile = new GameObject("PackPile");
             packPile.transform.SetParent(instance.transform);
@@ -435,7 +430,7 @@ namespace Archipelago_Inscryption.Helpers
             packPile.transform.localEulerAngles = new Vector3(0, 90, 0);
             packPile.AddComponent<BoxCollider>().size = new Vector3(1.2f, 0.1f, 2.2f);
 
-            for (int i = 0; i < ArchipelagoData.Data.availableCardPacks; i++)
+            for (int i = 0; i < ArchipelagoData.Data.PacksAvailable(act); i++)
             {
                 GameObject pack = GameObject.Instantiate(AssetsManager.cardPackPrefab, packPile.transform);
                 pack.transform.localPosition = new Vector3(-10, 0.1f * i, 0);
@@ -444,7 +439,7 @@ namespace Archipelago_Inscryption.Helpers
             }
 
             CardPackPile pileScript = packPile.AddComponent<CardPackPile>();
-            pileScript.topPackBasePosition = new Vector3(0, 0.1f * (ArchipelagoData.Data.availableCardPacks - 1), 0);
+            pileScript.topPackBasePosition = new Vector3(0, 0.1f * (ArchipelagoData.Data.PacksAvailable(act) - 1), 0);
             pileScript.pileTop = packs.Last();
             pileScript.enabled = false;
         }

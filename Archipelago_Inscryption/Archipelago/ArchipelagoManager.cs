@@ -21,6 +21,10 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal const int ID_OFFSET = 147000;
 
+        // Currency was one item paying all three acts at once. Splitting it per act would
+        // have cut each act's income to a third, so one item is worth three to keep it level.
+        internal const int CURRENCY_PER_ITEM = 3;
+
         // When one of the following events is completed, send the associated check.
         private static readonly Dictionary<StoryEvent, APCheck> storyCheckPairs = new Dictionary<StoryEvent, APCheck>()
         {
@@ -195,16 +199,30 @@ namespace Archipelago_Inscryption.Archipelago
                 }
             }
 
-            if (receivedItem == APItem.Currency)
+            if (receivedItem == APItem.Act1Currency)
             {
-                RunState.Run.currency++;
-                SaveData.Data.currency++;
-                Part3SaveData.Data.currency++;
+                RunState.Run.currency += CURRENCY_PER_ITEM;
             }
-            else if (receivedItem == APItem.CardPack)
+            else if (receivedItem == APItem.Act2Currency)
             {
-                ArchipelagoData.Data.availableCardPacks++;
+                SaveData.Data.currency += CURRENCY_PER_ITEM;
+            }
+            else if (receivedItem == APItem.Act3Currency)
+            {
+                Part3SaveData.Data.currency += CURRENCY_PER_ITEM;
+            }
+            else if (receivedItem == APItem.Act1CardPack)
+            {
+                ArchipelagoData.Data.GrantPack(1);
+            }
+            else if (receivedItem == APItem.Act2CardPack)
+            {
+                ArchipelagoData.Data.GrantPack(2);
                 RandomizerHelper.UpdatePackButtonEnabled();
+            }
+            else if (receivedItem == APItem.Act3CardPack)
+            {
+                ArchipelagoData.Data.GrantPack(3);
             }
             else if (receivedItem == APItem.TrashTrap)
             {
@@ -691,6 +709,11 @@ namespace Archipelago_Inscryption.Archipelago
         // Re-runs the connect-time item pass: everything already received is re-checked and
         // anything whose effect is now missing gets applied again. Used after resetting an act, so
         // the act comes back in the state a brand new save would reach once its items arrive.
+        internal static int CountReceived(APItem item)
+        {
+            return ArchipelagoData.Data.receivedItems.Count(i => i.Item == item);
+        }
+
         internal static void ReapplyReceivedItems()
         {
             foreach (InscryptionItemInfo item in ArchipelagoData.Data.receivedItems)
