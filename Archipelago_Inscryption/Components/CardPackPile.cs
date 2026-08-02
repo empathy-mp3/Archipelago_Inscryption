@@ -93,6 +93,7 @@ namespace Archipelago_Inscryption.Components
 
             SaveManager.SaveFile.gbcData.packsOpened++;
             ArchipelagoData.Data.availableCardPacks--;
+            RandomizerHelper.RecordPackOpened(SaveManager.SaveFile.IsPart3 ? 3 : 1);
 
             RandomizerHelper.DestroyPackPile();
 

@@ -688,6 +688,19 @@ namespace Archipelago_Inscryption.Archipelago
             }
         }
 
+        // Re-runs the connect-time item pass: everything already received is re-checked and
+        // anything whose effect is now missing gets applied again. Used after resetting an act, so
+        // the act comes back in the state a brand new save would reach once its items arrive.
+        internal static void ReapplyReceivedItems()
+        {
+            foreach (InscryptionItemInfo item in ArchipelagoData.Data.receivedItems)
+            {
+                itemsToVerifyQueue.Enqueue(item);
+            }
+
+            VerifyAllItems();
+        }
+
         internal static void SendStoryCheckIfApplicable(StoryEvent storyEvent)
         {
             if (storyCheckPairs.TryGetValue(storyEvent, out APCheck check))

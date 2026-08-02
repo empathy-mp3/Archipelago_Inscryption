@@ -89,6 +89,11 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("availableCardPacks")]
         internal int availableCardPacks = 0;
 
+        // availableCardPacks is a single pool spent from all three acts, so track where each
+        // pack went. Resetting an act refunds only the packs that act opened.
+        [JsonProperty("packsOpenedPerAct")]
+        internal int[] packsOpenedPerAct = new int[3];
+
         [JsonProperty("cabinSafeCode")]
         internal List<int> cabinSafeCode = new List<int>();
         [JsonProperty("cabinClockCode")]

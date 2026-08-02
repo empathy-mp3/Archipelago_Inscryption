@@ -399,6 +399,7 @@ namespace Archipelago_Inscryption.Helpers
             if (result)
             {
                 ArchipelagoData.Data.availableCardPacks--;
+                RecordPackOpened(2);
                 yield return PackOpeningUI.instance.OpenPack((CardTemple)UnityEngine.Random.Range(0, (int)CardTemple.NUM_TEMPLES));
             }
 
@@ -412,6 +413,11 @@ namespace Archipelago_Inscryption.Helpers
             PauseMenu.instance.SetPaused(true);
             PauseMenu.instance.menuController.PlayMenuCardImmediate((PauseMenu.instance as GBCPauseMenu).modifyDeckCard);
             PauseMenu.pausingDisabled = false;
+        }
+
+        internal static void RecordPackOpened(int act)
+        {
+            ArchipelagoData.Data.packsOpenedPerAct[act - 1]++;
         }
 
         internal static void UpdatePackButtonEnabled()
