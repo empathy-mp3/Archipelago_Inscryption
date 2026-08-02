@@ -682,7 +682,7 @@ namespace Archipelago_Inscryption.Helpers
             Singleton<ArchipelagoUI>.Instance.StartCoroutine(LoadAppropriateSceneAfterAct3());
         }
 
-        private static void GoToMainMenu()
+        internal static void GoToMainMenu()
         {
             StartScreenController.startedGame = true;
             MenuController.ReturnToStartScreen();

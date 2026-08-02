@@ -1,6 +1,8 @@
-﻿using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
+using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
+using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
@@ -606,6 +608,27 @@ namespace Archipelago_Inscryption.Patches
         }
     }
     
+    [HarmonyPatch]
+    class ActTransitionPatches
+    {
+        // Act 2's finale always loads Act 3, stranding the player there when Act 3 is turned off
+        // or still locked behind its item. Sequential unlocks are fine: Act 2 opens Act 3.
+        [HarmonyPatch(typeof(SceneLoader), "StartAsyncLoad")]
+        [HarmonyPrefix]
+        static bool ReturnToMenuWhenAct3Unavailable(string sceneName, ref AsyncOperation __result)
+        {
+            if (sceneName != "Part3_Cabin" || CanEnterAct3()) return true;
+
+            __result = null;
+            RandomizerHelper.GoToMainMenu();
+            return false;
+        }
+
+        static bool CanEnterAct3()
+            => ArchipelagoOptions.enableAct3
+            && (ArchipelagoOptions.actUnlocks != ActUnlocks.Items || ArchipelagoManager.HasItem(APItem.Act3));
+    }
+
     [HarmonyPatch]
     class RegionCompletionFix
     {
