@@ -1,4 +1,4 @@
-﻿using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
@@ -120,6 +120,11 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 slotData = ((LoginSuccessful)result).SlotData;
                 isConnected = true;
+
+                ArchipelagoModPlugin.LastHostName = ArchipelagoData.Data.hostName;
+                ArchipelagoModPlugin.LastPort = ArchipelagoData.Data.port;
+                ArchipelagoModPlugin.LastSlotName = ArchipelagoData.Data.slotName;
+                ArchipelagoModPlugin.LastPassword = ArchipelagoData.Data.password;
             }
             else
             {

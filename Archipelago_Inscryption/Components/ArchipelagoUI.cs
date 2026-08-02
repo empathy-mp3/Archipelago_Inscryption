@@ -387,7 +387,13 @@ namespace Archipelago_Inscryption.Components
             saveNameScreen.SetActive(false);
             connectScreen.SetActive(true);
 
-            UpdateConnectScreenTexts(new ArchipelagoData());
+            UpdateConnectScreenTexts(new ArchipelagoData
+            {
+                hostName = ArchipelagoModPlugin.LastHostName,
+                port = ArchipelagoModPlugin.LastPort,
+                slotName = ArchipelagoModPlugin.LastSlotName,
+                password = ArchipelagoModPlugin.LastPassword,
+            });
 
             string saveName = saveNameInputField.text;
             string savePath = Path.Combine(ArchipelagoModPlugin.SavePath, saveName);
