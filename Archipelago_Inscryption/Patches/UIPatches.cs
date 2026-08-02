@@ -1,4 +1,4 @@
-﻿using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
@@ -7,6 +7,7 @@ using DiskCardGame;
 using GBC;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
@@ -58,6 +59,35 @@ namespace Archipelago_Inscryption.Patches
                 return false;
             }
             return true;
+        }
+
+        // Vanilla's reset only deletes the save file, leaving the slot's Archipelago data and the
+        // live connection behind. Runs on the click that resets: the index is incremented first.
+        [HarmonyPatch(typeof(OptionsUI), "OnResetSaveButtonPressed")]
+        [HarmonyPrefix]
+        static void ClearArchipelagoDataOnReset(OptionsUI __instance)
+        {
+            if (__instance.resetSaveButtonMessageIndex != 3 || ArchipelagoData.saveName == "") return;
+
+            ArchipelagoClient.Disconnect();
+
+            // Recreated empty rather than left deleted: the mod's save paths still point inside it,
+            // so a stray write would otherwise throw. An empty slot is skipped by the save list.
+            string savePath = Path.Combine(ArchipelagoModPlugin.SavePath, ArchipelagoData.saveName);
+            if (FileSystem.DirectoryExists(savePath))
+            {
+                FileSystem.DeleteDirectory(savePath);
+                FileSystem.CreateDirectory(savePath);
+            }
+
+            // The Archipelago menu only builds itself when no UI exists yet, which otherwise only
+            // happens once per launch. Tear it down so the start screen rebuilds it.
+            ArchipelagoUI ui = Singleton<ArchipelagoUI>.Instance;
+            if (ui != null)
+            {
+                ArchipelagoUI.exists = false;
+                Object.Destroy(ui.gameObject);
+            }
         }
 
         [HarmonyPatch(typeof(StartScreenController), "Start")]

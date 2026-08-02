@@ -138,6 +138,9 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal static void SaveToFile()
         {
+            // No path means no save slot is active, e.g. right after a save data reset.
+            if (dataFilePath == "") return;
+
             string json = JsonConvert.SerializeObject(Data);
             FileSystem.WriteAllText(dataFilePath, json);
         }
