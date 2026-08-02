@@ -444,6 +444,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void SetChallengesOnStartup(RunState __instance)
         {
+            // SaveFile.Initialize reaches RunState.Initialize before it creates ascensionData, and
+            // runs before a save slot is picked, so throwing here would abort building the save.
+            if (AscensionSaveData.Data == null || ArchipelagoData.Data == null) return;
+
             if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
             {
                 AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
