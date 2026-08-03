@@ -214,6 +214,7 @@ namespace Archipelago_Inscryption.Archipelago
             else if (receivedItem == APItem.Act1CardPack)
             {
                 ArchipelagoData.Data.GrantPack(1);
+                RandomizerHelper.RefreshAct1PackPile();
             }
             else if (receivedItem == APItem.Act2CardPack)
             {

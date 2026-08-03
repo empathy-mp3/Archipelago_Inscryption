@@ -422,6 +422,47 @@ namespace Archipelago_Inscryption.Helpers
             packButton.SetEnabled(ArchipelagoData.Data.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
         }
 
+        // Uses vanilla's own Act 1 choice generator, so a pack offers what a card choice node
+        // would have. It can yield fewer than asked, so reroll with a fresh seed until full.
+        internal static List<CardInfo> RollAct1PackCards(int count)
+        {
+            List<CardInfo> cards = new List<CardInfo>();
+            if (RunState.Run == null || RunState.CurrentMapRegion == null) return cards;
+
+            Part1CardChoiceGenerator generator = new Part1CardChoiceGenerator();
+            CardChoicesNodeData data = new CardChoicesNodeData { choicesType = CardChoicesType.Random };
+
+            // The run seed only moves when the player changes map node, so packs opened in one
+            // spot would all roll the same cards. Packs already opened supplies that variation,
+            // and comes from saved state, so a reload cannot reroll a pack. Starting a new run --
+            // which an act reset does -- moves the run seed itself through pastRuns.Count, so a
+            // reset deals fresh packs the same way it deals a fresh starting deck.
+            int packsOpened = ArchipelagoManager.CountReceived(APItem.Act1CardPack)
+                - ArchipelagoData.Data.PacksAvailable(1);
+            int seed = SaveManager.SaveFile.GetCurrentRandomSeed() + packsOpened * 7919;
+
+            for (int attempt = 0; attempt < 8 && cards.Count < count; attempt++)
+            {
+                foreach (CardChoice choice in generator.GenerateChoices(data, seed))
+                {
+                    if (choice.CardInfo == null) continue;
+                    if (cards.Exists(existing => existing.name == choice.CardInfo.name)) continue;
+
+                    cards.Add(choice.CardInfo);
+                    if (cards.Count == count) break;
+                }
+
+                seed *= 2;
+            }
+
+            return cards;
+        }
+
+        internal static void RefreshAct1PackPile()
+        {
+            if (CabinPackPile.instance != null) CabinPackPile.instance.Rebuild();
+        }
+
         internal static void SpawnPackPile(DeckReviewSequencer instance, int act)
         {
             packPile = new GameObject("PackPile");

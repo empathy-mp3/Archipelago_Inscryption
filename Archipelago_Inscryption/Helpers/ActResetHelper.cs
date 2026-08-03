@@ -56,6 +56,7 @@ namespace Archipelago_Inscryption.Helpers
             ArchipelagoManager.ReapplyReceivedItems();
 
             SaveManager.SaveToFile(false);
+            ArchipelagoData.SaveToFile();
 
             // Act cards are built once on start screen load, so refresh their labels in place.
             UIHelper.RefreshActCards();

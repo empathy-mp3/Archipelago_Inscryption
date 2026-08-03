@@ -1,6 +1,7 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
+using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
@@ -140,13 +141,15 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
-        [HarmonyPatch(typeof(DeckReviewSequencer), "OnEnterDeckView")]
+        // Act 1's pile lives beside the cabin rulebook and persists with the room, so it is
+        // built once here instead of on entering the deck view.
+        [HarmonyPatch(typeof(CabinRulebookInteractable), "Start")]
         [HarmonyPostfix]
-        static void SpawnCardPackPile(DeckReviewSequencer __instance)
+        static void CreateCabinPackPile(CabinRulebookInteractable __instance)
         {
-            if (ArchipelagoData.Data.PacksAvailable(1) <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map || !Singleton<GameMap>.Instance.FullyUnrolled) return;
+            if (ArchipelagoData.Data == null || SaveManager.SaveFile.IsPart3) return;
 
-            RandomizerHelper.SpawnPackPile(__instance, 1);
+            CabinPackPile.Create(__instance.transform);
         }
 
         [HarmonyPatch(typeof(Part3DeckReviewSequencer), "OnEnterDeckView")]
@@ -156,13 +159,6 @@ namespace Archipelago_Inscryption.Patches
             if (!StoryEventsData.EventCompleted(StoryEvent.GemsModuleFetched) || ArchipelagoData.Data.PacksAvailable(3) <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map) return;
 
             RandomizerHelper.SpawnPackPile(__instance, 3);
-        }
-
-        [HarmonyPatch(typeof(DeckReviewSequencer), "OnExitDeckView")]
-        [HarmonyPostfix]
-        static void DestroyCardPackPile(DeckReviewSequencer __instance)
-        {
-            RandomizerHelper.DestroyPackPile();
         }
 
         [HarmonyPatch(typeof(Part3DeckReviewSequencer), "OnExitDeckView")]
