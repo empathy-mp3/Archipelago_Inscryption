@@ -52,7 +52,6 @@ namespace Archipelago_Inscryption.Helpers
 
             // Puts the act where a brand new save lands once its items arrive. Erasing above is
             // deliberately broad because this restores anything Archipelago had already granted.
-            RestorePacks(act);
             ArchipelagoManager.ReapplyReceivedItems();
 
             SaveManager.SaveToFile(false);
@@ -60,18 +59,7 @@ namespace Archipelago_Inscryption.Helpers
 
             // Act cards are built once on start screen load, so refresh their labels in place.
             UIHelper.RefreshActCards();
-        }
 
-        // Packs are a counter, and VerifyItem cannot tell "spent" from "never applied", so
-        // the re-apply pass leaves them behind. Currency needs nothing here: each act restores
-        // its own when the reset above reinitialises it.
-        private static void RestorePacks(int act)
-        {
-            APItem packItem = act == 1 ? APItem.Act1CardPack
-                : act == 2 ? APItem.Act2CardPack : APItem.Act3CardPack;
-
-            ArchipelagoData.Data.SetPacks(act, ArchipelagoManager.CountReceived(packItem));
-            RandomizerHelper.UpdatePackButtonEnabled();
         }
 
         private static void EraseActEvents(int act)

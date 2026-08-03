@@ -29,25 +29,34 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
-        // Act 1 teeth live on the current run, so currency granted during an earlier run
-        // would be lost on death. A new run starts with the full amount the act was sent.
+        // Act 1 spends both of these within a run, so a new run restores them to everything the
+        // act has been sent -- the same state an act reset produces. Without this a death takes
+        // the run's teeth and any unopened packs with it.
         [HarmonyPatch(typeof(SaveFile), "NewPart1Run")]
         [HarmonyPostfix]
-        static void InitializeAct1Currency()
+        static void InitializeAct1RunItems()
         {
             if (ArchipelagoData.Data == null || RunState.Run == null) return;
 
             RunState.Run.currency = ArchipelagoManager.CountReceived(APItem.Act1Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            ArchipelagoData.Data.SetPacks(1, ArchipelagoManager.CountReceived(APItem.Act1CardPack));
+
+            RandomizerHelper.RefreshPackPile();
+            ArchipelagoData.SaveToFile();
         }
 
-        // Neither Initialize zeroes currency, so these postfixes are what establish it.
+        // Neither Initialize zeroes currency, so these postfixes are what establish it. They
+        // restore the act's card packs alongside it, so an act reset needs no step of its own.
         [HarmonyPatch(typeof(Part3SaveData), "Initialize")]
         [HarmonyPostfix]
-        static void InitializeAct3Currency(Part3SaveData __instance)
+        static void InitializeAct3Items(Part3SaveData __instance)
         {
             if (ArchipelagoData.Data == null) return;
 
             __instance.currency = ArchipelagoManager.CountReceived(APItem.Act3Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            ArchipelagoData.Data.SetPacks(3, ArchipelagoManager.CountReceived(APItem.Act3CardPack));
+
+            RandomizerHelper.RefreshPackPile();
         }
 
         [HarmonyPatch(typeof(SaveData), "Initialize")]
@@ -57,6 +66,9 @@ namespace Archipelago_Inscryption.Patches
             if (ArchipelagoData.Data == null) return;
 
             __instance.currency = ArchipelagoManager.CountReceived(APItem.Act2Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            ArchipelagoData.Data.SetPacks(2, ArchipelagoManager.CountReceived(APItem.Act2CardPack));
+
+            RandomizerHelper.UpdatePackButtonEnabled();
 
             int pieceCount = 0;
 
