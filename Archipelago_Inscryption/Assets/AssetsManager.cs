@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using DiskCardGame;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Archipelago_Inscryption.Assets
@@ -37,6 +38,7 @@ namespace Archipelago_Inscryption.Assets
         internal static List<Texture2D> lockedNodeFrames;
 
         internal static GameObject cardPackPrefab;
+        internal static GameObject diskCardPilePrefab;
         internal static GameObject selectableCardPrefab;
         internal static GameObject selectableDiskCardPrefab;
         internal static GameObject archipelagoUIPrefab;
@@ -90,6 +92,9 @@ namespace Archipelago_Inscryption.Assets
             }
 
             cardPackPrefab = ResourceBank.Get<GameObject>("prefabs/cards/specificcardmodels/CardPack");
+            // Act 3 has no card pack model of its own, so its pile is Part 3's own card pile,
+            // which stacks disk cards with the game's spacing, rotation variance and sounds.
+            diskCardPilePrefab = ResourceBank.Get<GameObject>("Prefabs/Cards/CardPile_Part3");
             selectableCardPrefab = ResourceBank.Get<GameObject>("prefabs/cards/SelectableCard");
             selectableDiskCardPrefab = ResourceBank.Get<GameObject>("prefabs/cards/SelectableCard_Part3");
             cardChoiceHoloNodePrefab = ResourceBank.Get<GameObject>("prefabs/map/mapnodespart3/CardChoiceNode3D");

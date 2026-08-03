@@ -214,7 +214,7 @@ namespace Archipelago_Inscryption.Archipelago
             else if (receivedItem == APItem.Act1CardPack)
             {
                 ArchipelagoData.Data.GrantPack(1);
-                RandomizerHelper.RefreshAct1PackPile();
+                RandomizerHelper.RefreshPackPile();
             }
             else if (receivedItem == APItem.Act2CardPack)
             {
@@ -224,6 +224,7 @@ namespace Archipelago_Inscryption.Archipelago
             else if (receivedItem == APItem.Act3CardPack)
             {
                 ArchipelagoData.Data.GrantPack(3);
+                RandomizerHelper.RefreshPackPile();
             }
             else if (receivedItem == APItem.TrashTrap)
             {

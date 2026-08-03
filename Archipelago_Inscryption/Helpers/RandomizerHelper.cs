@@ -107,8 +107,6 @@ namespace Archipelago_Inscryption.Helpers
 
         internal static GenericUIButton packButton;
 
-        internal static GameObject packPile;
-        private static List<GameObject> packs = new List<GameObject>();
         private static bool doDeathCard = true;
 
         internal static DiscoverableCheckInteractable CreateDiscoverableCardCheck(GameObject originalObject, APCheck check, bool destroyOriginal, StoryEvent activeStoryFlag = StoryEvent.NUM_EVENTS)
@@ -424,12 +422,22 @@ namespace Archipelago_Inscryption.Helpers
 
         // Uses vanilla's own Act 1 choice generator, so a pack offers what a card choice node
         // would have. It can yield fewer than asked, so reroll with a fresh seed until full.
-        internal static List<CardInfo> RollAct1PackCards(int count)
+        internal static List<CardInfo> RollPackCards(int act, int count)
         {
             List<CardInfo> cards = new List<CardInfo>();
-            if (RunState.Run == null || RunState.CurrentMapRegion == null) return cards;
 
-            Part1CardChoiceGenerator generator = new Part1CardChoiceGenerator();
+            CardChoiceGenerator generator;
+            if (act == 3)
+            {
+                if (Singleton<HoloMapAreaManager>.Instance == null) return cards;
+                generator = new Part3CardChoiceGenerator();
+            }
+            else
+            {
+                if (RunState.Run == null || RunState.CurrentMapRegion == null) return cards;
+                generator = new Part1CardChoiceGenerator();
+            }
+
             CardChoicesNodeData data = new CardChoicesNodeData { choicesType = CardChoicesType.Random };
 
             // The run seed only moves when the player changes map node, so packs opened in one
@@ -437,8 +445,9 @@ namespace Archipelago_Inscryption.Helpers
             // and comes from saved state, so a reload cannot reroll a pack. Starting a new run --
             // which an act reset does -- moves the run seed itself through pastRuns.Count, so a
             // reset deals fresh packs the same way it deals a fresh starting deck.
-            int packsOpened = ArchipelagoManager.CountReceived(APItem.Act1CardPack)
-                - ArchipelagoData.Data.PacksAvailable(1);
+            int packsOpened = ArchipelagoManager.CountReceived(
+                    act == 3 ? APItem.Act3CardPack : APItem.Act1CardPack)
+                - ArchipelagoData.Data.PacksAvailable(act);
             int seed = SaveManager.SaveFile.GetCurrentRandomSeed() + packsOpened * 7919;
 
             for (int attempt = 0; attempt < 8 && cards.Count < count; attempt++)
@@ -458,48 +467,9 @@ namespace Archipelago_Inscryption.Helpers
             return cards;
         }
 
-        internal static void RefreshAct1PackPile()
+        internal static void RefreshPackPile()
         {
             if (CabinPackPile.instance != null) CabinPackPile.instance.Rebuild();
-        }
-
-        internal static void SpawnPackPile(DeckReviewSequencer instance, int act)
-        {
-            packPile = new GameObject("PackPile");
-            packPile.transform.SetParent(instance.transform);
-            packPile.transform.localPosition = new Vector3(0f, 0f, -2.5f);
-            packPile.transform.localEulerAngles = new Vector3(0, 90, 0);
-            packPile.AddComponent<BoxCollider>().size = new Vector3(1.2f, 0.1f, 2.2f);
-
-            for (int i = 0; i < ArchipelagoData.Data.PacksAvailable(act); i++)
-            {
-                GameObject pack = GameObject.Instantiate(AssetsManager.cardPackPrefab, packPile.transform);
-                pack.transform.localPosition = new Vector3(-10, 0.1f * i, 0);
-                Tween.LocalPosition(pack.transform, new Vector3(0, 0.1f * i, 0), 0.20f, 0.02f * i, Tween.EaseOut);
-                packs.Add(pack);
-            }
-
-            CardPackPile pileScript = packPile.AddComponent<CardPackPile>();
-            pileScript.topPackBasePosition = new Vector3(0, 0.1f * (ArchipelagoData.Data.PacksAvailable(act) - 1), 0);
-            pileScript.pileTop = packs.Last();
-            pileScript.enabled = false;
-        }
-
-        internal static void DestroyPackPile()
-        {
-            if (packPile == null) return;
-            packPile.GetComponent<CardPackPile>().enabled = false;
-            int i = 0;
-            int packsCount = packs.Count;
-            foreach (GameObject pack in packs)
-            {
-                Tween.LocalPosition(pack.transform, new Vector3(-10, 0.1f * i, 0), 0.20f, 0.02f * (packsCount - i - 1), Tween.EaseIn, Tween.LoopType.None, null, () => GameObject.Destroy(pack));
-
-                i++;
-            }
-            packs.Clear();
-            GameObject.Destroy(packPile, 1);
-            packPile = null;
         }
 
         internal static IEnumerator PrePlayerDeathSequence(Part1GameFlowManager manager)

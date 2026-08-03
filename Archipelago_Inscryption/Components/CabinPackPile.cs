@@ -10,17 +10,19 @@ using UnityEngine;
 
 namespace Archipelago_Inscryption.Components
 {
-    // The Act 1 pack pile, sitting on the cabin shelf beside the rulebook. Unlike the table pile
-    // this is a permanent scene object: it is built once when the room loads and rebuilt in place
-    // as packs arrive and are spent, so there is no per-view spawn and teardown to get wrong.
+    // The pack pile, sitting beside the rulebook: Act 1's on the cabin shelf, Act 3's on the
+    // factory wall. Both hang off the object the game itself calls CabinRulebook. Unlike the old
+    // table pile this is a permanent scene object, built once when the room loads and rebuilt in
+    // place as packs arrive and are spent, so there is no per-view spawn and teardown to get wrong.
     internal class CabinPackPile : MainInputInteractable
     {
-        // Shelf placement, relative to the rulebook -- the one landmark with a known transform.
-        // Negative Z runs along the shelf away from the book, past the lantern.
-        internal static readonly Vector3 PILE_OFFSET = new Vector3(0f, -0.25f, -3.5f);
-        internal const float PILE_SCALE = 1f;
+        // Placement relative to the rulebook, the one landmark with a known transform in each
+        // room. For Act 1 negative Z runs along the shelf away from the book, past the lantern.
+        internal static readonly Vector3 PILE_OFFSET_ACT1 = new Vector3(0f, -0.25f, -3.5f);
+        internal static readonly Vector3 PILE_OFFSET_ACT3 = new Vector3(0f, 0f, -2.5f);
         internal const float PACK_SPACING = 0.06f;
         internal const float HOVER_RISE = 0.05f;
+
 
         // The opened cards are laid out in front of the camera rather than on the shelf, using the
         // same framing the vanilla close-up uses, so they read as cards being offered to you.
@@ -36,7 +38,11 @@ namespace Archipelago_Inscryption.Components
         // Mirrors the table pile's opening: the pack lifts and turns, plays its open animation,
         // and the cards come out of it rather than appearing where they land.
         internal static readonly Vector3 PACK_LIFT = new Vector3(0f, 0.25f, 0f);
-        internal static readonly Vector3 PACK_TURN = new Vector3(0f, -90f, 0f);
+        // Positive yaw turns the pack's face toward the player as it lifts. The old table pile
+        // used -90, but it hung off a parent already rotated 90, so the sign flips here. Act 3's
+        // packs are flat card backs, where the same turn is just a spin in place, so they only
+        // lift.
+        internal static readonly Vector3 PACK_TURN = new Vector3(0f, 90f, 0f);
         internal const float REVEAL_STAGGER = 0.1f;
         internal const float REVEAL_TIME = 0.3f;
 
@@ -55,26 +61,43 @@ namespace Archipelago_Inscryption.Components
         private readonly List<PackChoiceCard> choices = new List<PackChoiceCard>();
 
         private Transform rulebook;
+        private CabinInteractable rulebookInteractable;
+        private CardPile part3Pile;
+        private int act;
         private float handLightIntensity;
         private float handLightRange;
         private bool handLightBoosted;
         private bool opening;
 
-        internal static void Create(Transform cabinRulebook)
+        internal static void Create(Transform cabinRulebook, int act)
         {
             if (instance != null) return;
 
             GameObject pileObject = new GameObject("ArchipelagoPackPile");
             pileObject.transform.SetParent(cabinRulebook.parent);
-            pileObject.transform.localPosition = cabinRulebook.localPosition + PILE_OFFSET;
+            pileObject.transform.localPosition = cabinRulebook.localPosition
+                + (act == 3 ? PILE_OFFSET_ACT3 : PILE_OFFSET_ACT1);
             pileObject.transform.localRotation = cabinRulebook.localRotation;
-            pileObject.transform.localScale = cabinRulebook.localScale * PILE_SCALE;
+            pileObject.transform.localScale = cabinRulebook.localScale;
 
             BoxCollider collider = pileObject.AddComponent<BoxCollider>();
             collider.size = new Vector3(1.2f, 0.4f, 2.2f);
 
             instance = pileObject.AddComponent<CabinPackPile>();
             instance.rulebook = cabinRulebook;
+            instance.rulebookInteractable = cabinRulebook.GetComponent<CabinInteractable>();
+            instance.act = act;
+
+            if (act == 3)
+            {
+                GameObject pileModel = Instantiate(AssetsManager.diskCardPilePrefab, pileObject.transform);
+                pileModel.transform.ResetTransform();
+
+                instance.part3Pile = pileModel.GetComponent<CardPile>();
+                // The pile is an interactable in its own right; this object handles the cursor.
+                instance.part3Pile.SetEnabled(false);
+            }
+
             instance.Rebuild();
         }
 
@@ -88,14 +111,36 @@ namespace Archipelago_Inscryption.Components
             }
             packs.Clear();
 
-            int available = ArchipelagoData.Data.PacksAvailable(1);
+            int available = ArchipelagoData.Data.PacksAvailable(act);
 
-            for (int i = 0; i < available; i++)
+            if (act == 3)
             {
-                GameObject pack = Instantiate(AssetsManager.cardPackPrefab, transform);
-                pack.transform.localPosition = new Vector3(0f, PACK_SPACING * i, 0f);
-                pack.transform.localRotation = Quaternion.identity;
-                packs.Add(pack);
+                // Let the card pile build its own stack, then track the cards it made so hovering
+                // and opening work the same as they do for Act 1's packs.
+                part3Pile.DestroyCardsImmediate();
+                part3Pile.CreateCards(available, 0f);
+
+                foreach (Transform card in part3Pile.cards)
+                {
+                    packs.Add(card.gameObject);
+                }
+
+                // The pile and its cards carry their own colliders, which sit on top of this
+                // object's and would swallow the cursor before it ever reached the pile.
+                foreach (Collider collider in part3Pile.GetComponentsInChildren<Collider>(true))
+                {
+                    collider.enabled = false;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < available; i++)
+                {
+                    GameObject pack = Instantiate(AssetsManager.cardPackPrefab, transform);
+                    pack.transform.localPosition = new Vector3(0f, PACK_SPACING * i, 0f);
+                    pack.transform.localRotation = Quaternion.identity;
+                    packs.Add(pack);
+                }
             }
 
             GetComponent<BoxCollider>().enabled = available > 0 && !opening;
@@ -103,7 +148,7 @@ namespace Archipelago_Inscryption.Components
 
         public override void OnCursorEnter()
         {
-            if (opening || packs.Count == 0) return;
+            if (opening || packs.Count == 0 || !PlayerIsInFront()) return;
 
             Tween.LocalPosition(packs[packs.Count - 1].transform, TopPackBase() + Vector3.up * HOVER_RISE,
                 0.1f, 0, Tween.EaseOut);
@@ -118,42 +163,68 @@ namespace Archipelago_Inscryption.Components
 
         public override void OnCursorSelectEnd()
         {
-            if (opening || packs.Count == 0) return;
+            if (opening || packs.Count == 0 || !PlayerIsInFront()) return;
 
-            // Rolled before the pack is spent, so a generator that cannot offer anything (no run
-            // region yet) leaves the pack in the pile rather than consuming it for nothing.
-            List<CardInfo> cards = RandomizerHelper.RollAct1PackCards(3);
+            // Rolled before the pack is spent, so a generator that cannot offer anything leaves
+            // the pack in the pile rather than consuming it for nothing.
+            List<CardInfo> cards = RandomizerHelper.RollPackCards(act, 3);
             if (cards.Count == 0) return;
 
             opening = true;
             GetComponent<BoxCollider>().enabled = false;
             SetPlayerHeld(true);
-            ArchipelagoData.Data.SpendPack(1);
+            ArchipelagoData.Data.SpendPack(act);
 
             StartCoroutine(OpenPackSequence(cards));
         }
 
+        // The opened cards are placed relative to the camera, so opening the pile from off to the
+        // side lays them out through whatever the player is facing. The rulebook beside it already
+        // states which zones and look directions it may be used from, so the pile borrows those
+        // rather than inventing a distance and an angle.
+        private bool PlayerIsInFront()
+        {
+            return rulebookInteractable != null && rulebookInteractable.PrerequisitesMet;
+        }
+
+        private float PackSpacing => act == 3 ? part3Pile.cardYSpacing : PACK_SPACING;
+
         private Vector3 TopPackBase()
         {
-            return new Vector3(0f, PACK_SPACING * (packs.Count - 1), 0f);
+            return new Vector3(0f, PackSpacing * (packs.Count - 1), 0f);
         }
 
         private IEnumerator OpenPackSequence(List<CardInfo> cards)
         {
             GameObject topPack = packs[packs.Count - 1];
             packs.RemoveAt(packs.Count - 1);
+            // Also drop it from the pile's own list, so its next rebuild does not touch a
+            // destroyed card.
+            if (act == 3) part3Pile.cards.Remove(topPack.transform);
 
             Tween.LocalPosition(topPack.transform, topPack.transform.localPosition + PACK_LIFT,
                 0.2f, 0, Tween.EaseOut);
-            Tween.LocalRotation(topPack.transform, topPack.transform.localEulerAngles + PACK_TURN,
-                0.2f, 0, Tween.EaseOut);
+            if (act != 3)
+            {
+                Tween.LocalRotation(topPack.transform, topPack.transform.localEulerAngles + PACK_TURN,
+                    0.2f, 0, Tween.EaseOut);
+            }
 
-            yield return new WaitForSeconds(0.35f);
+            // Only the Act 1 pack model has an open animation, so Act 3 skips both the
+            // animation and the time set aside for it, and waits only for the lift.
+            if (act == 3)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.35f);
 
-            Animator animator = topPack.GetComponentInChildren<Animator>();
-            if (animator != null) animator.Play("open", 0, 0f);
+                Animator animator = topPack.GetComponentInChildren<Animator>();
+                if (animator != null) animator.Play("open", 0, 0f);
 
-            yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.5f);
+            }
 
             // Cards fly out of the pack to the spots they were built at.
             Vector3 origin = topPack.transform.position;
@@ -202,7 +273,9 @@ namespace Archipelago_Inscryption.Components
 
             holder.AddComponent<BoxCollider>().size = new Vector3(1.2f, 0.2f, 1.6f);
 
-            GameObject cardObject = Instantiate(AssetsManager.selectableCardPrefab, holder.transform);
+            GameObject cardObject = Instantiate(act == 3
+                ? AssetsManager.selectableDiskCardPrefab
+                : AssetsManager.selectableCardPrefab, holder.transform);
             cardObject.transform.ResetTransform();
             cardObject.GetComponent<SelectableCard>().SetInfo(info);
 
@@ -249,7 +322,7 @@ namespace Archipelago_Inscryption.Components
             ArchipelagoData.SaveToFile();
         }
 
-        // Brightens the cabin's hand light so the whole row reads, and puts it back afterwards.
+        // Brightens the room's hand light so the whole row reads, and puts it back afterwards.
         // The original values are captured on the way up so a restore cannot drift.
         private void SetChoiceLighting(bool boosted)
         {
