@@ -60,6 +60,17 @@ namespace Archipelago_Inscryption.Helpers
             // Act cards are built once on start screen load, so refresh their labels in place.
             UIHelper.RefreshActCards();
 
+            // Resetting the act being played would leave the scene running on wiped data, so
+            // hand the player back to the menu and make them load the act again. Mirrors what
+            // vanilla's own save reset does from this same menu.
+            if (ArchipelagoManager.CurrentAct != act) return;
+
+            Singleton<InteractionCursor>.Instance.SetEnabled(false);
+            CustomCoroutine.WaitThenExecute(0.1f, delegate
+            {
+                MenuController.ReturnToStartScreen();
+                StartScreenController.startedGame = false;
+            }, true);
         }
 
         private static void EraseActEvents(int act)
