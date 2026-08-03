@@ -561,6 +561,15 @@ namespace Archipelago_Inscryption.Archipelago
                 ArchipelagoOptions.act2RandomizeBridge = (Act2RandomizeBridge)Convert.ToInt32(act2RandomizeBridge);
             if (ArchipelagoClient.slotData.TryGetValue("act3_overhaul", out var act3Overhaul))
                 ArchipelagoOptions.act3Overhaul = Convert.ToInt32(act3Overhaul) != 0;
+            if (ArchipelagoClient.slotData.TryGetValue("release_on_act_completion", out var releaseOnActCompletion))
+                ArchipelagoOptions.releaseOnActCompletion = Convert.ToInt32(releaseOnActCompletion) != 0;
+            for (int act = 1; act <= 3; act++)
+            {
+                if (ArchipelagoClient.slotData.TryGetValue($"act{act}_location_start", out var locationStart))
+                    ArchipelagoOptions.actLocationStarts[act - 1] = Convert.ToInt32(locationStart);
+                if (ArchipelagoClient.slotData.TryGetValue($"act{act}_location_count", out var locationCount))
+                    ArchipelagoOptions.actLocationCounts[act - 1] = Convert.ToInt32(locationCount);
+            }
             if (ArchipelagoClient.slotData.TryGetValue("randomize_hammer", out var randomizeHammer))
                 ArchipelagoOptions.randomizeHammer = (RandomizeHammer)Convert.ToInt32(randomizeHammer);
             if (ArchipelagoClient.slotData.TryGetValue("randomize_shortcuts", out var randomizeShortcuts))
@@ -732,6 +741,35 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 SendCheck(check);
             }
+        }
+
+        // With release on act completion, finishing an act hands over everything still uncollected
+        // in it. Location ids run act 1, then 2, then 3, so an act is a contiguous run of APCheck;
+        // the counts come from the apworld so adding a location there cannot desync the range.
+        internal static void ReleaseAct(int act)
+        {
+            if (!ArchipelagoOptions.releaseOnActCompletion || ArchipelagoData.Data == null) return;
+
+            int start = ArchipelagoOptions.actLocationStarts[act - 1];
+            int count = ArchipelagoOptions.actLocationCounts[act - 1];
+            int released = 0;
+
+            for (int check = start; check < start + count; check++)
+            {
+                long checkID = ID_OFFSET + check;
+                if (ArchipelagoData.Data.completedChecks.Contains(checkID)) continue;
+
+                ArchipelagoData.Data.completedChecks.Add(checkID);
+                released++;
+            }
+
+            if (released == 0) return;
+
+            // Sent and saved once rather than per check, since a whole act goes at a time. No
+            // summary is logged: the items themselves are announced as the server hands them
+            // out, the same as any other release.
+            ArchipelagoClient.SendChecksToServerAsync();
+            Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
         }
 
         internal static void SendCheck(APCheck check)

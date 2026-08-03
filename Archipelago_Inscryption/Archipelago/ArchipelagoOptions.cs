@@ -20,6 +20,11 @@ namespace Archipelago_Inscryption.Archipelago
         internal static Act2RandomizeBridge act2RandomizeBridge = Act2RandomizeBridge.Disable;
         internal static RandomizeHammer randomizeHammer = RandomizeHammer.Vanilla;
         internal static bool act3Overhaul = false;
+        internal static bool releaseOnActCompletion = false;
+        // The span of location ids each act owns, worked out by the apworld that defines the
+        // ordering, so the mod never has to reconstruct it.
+        internal static int[] actLocationStarts = new int[3];
+        internal static int[] actLocationCounts = new int[3];
         internal static RandomizeShortcuts randomizeShortcuts = RandomizeShortcuts.Vanilla;
         internal static RandomizeVesselUpgrades randomizeVesselUpgrades = RandomizeVesselUpgrades.Vanilla;
         internal static ActUnlocks actUnlocks;

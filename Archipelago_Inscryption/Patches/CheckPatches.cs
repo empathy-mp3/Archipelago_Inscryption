@@ -34,16 +34,19 @@ namespace Archipelago_Inscryption.Patches
             {
                 ArchipelagoUI.Instance.LogImportant("Act 1 completed!");
                 ArchipelagoData.Data.act1Completed = true;
+                ArchipelagoManager.ReleaseAct(1);
             }
             else if (storyEvent == StoryEvent.Part2Completed && !ArchipelagoData.Data.act2Completed)
             {
                 ArchipelagoUI.Instance.LogImportant("Act 2 completed!");
                 ArchipelagoData.Data.act2Completed = true;
+                ArchipelagoManager.ReleaseAct(2);
             }
             else if (storyEvent == StoryEvent.Part3Completed && !ArchipelagoData.Data.act3Completed)
             {
                 ArchipelagoUI.Instance.LogImportant("Act 3 completed!");
                 ArchipelagoData.Data.act3Completed = true;
+                ArchipelagoManager.ReleaseAct(3);
             }
             else if (storyEvent == StoryEvent.FigurineFetched && !ProgressionData.LearnedMechanic(MechanicsConcept.FirstPersonNavigation))
             {
