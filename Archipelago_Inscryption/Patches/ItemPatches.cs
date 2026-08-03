@@ -653,6 +653,23 @@ namespace Archipelago_Inscryption.Patches
             || (StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked)
                 && !StoryEventsData.EventCompleted(StoryEvent.Part3MetScrybes));
 
+        // Vanilla cuffs the player to the table until the holomap loses power, a fixed beat in
+        // Act 3's intro. Act 1 does not hold the player through its intro, so Act 3 should not
+        // either. Marking the event early hands the cuff to vanilla's own handling: the first
+        // attempt plays the escape, later ones just stand up.
+        //
+        // Only safe with act3_overhaul, where GateMapScreenPower replaces PoweredOff with
+        // MapLockedOut and the event no longer decides whether the map works. It also skips
+        // PowerOutAreaSequencer's power-out cutscene, which is the intro beat being dropped.
+        [HarmonyPatch(typeof(Part3GameFlowManager), "TransitionToFirstPerson")]
+        [HarmonyPrefix]
+        static void AllowLeavingTableEarly()
+        {
+            if (!ArchipelagoOptions.act3Overhaul) return;
+
+            StoryEventsData.SetEventCompleted(StoryEvent.HoloMapOutOfPower);
+        }
+
         [HarmonyPatch(typeof(HoloGameMap), "PoweredOff", MethodType.Getter)]
         [HarmonyPrefix]
         static bool GateMapScreenPower(ref bool __result)
