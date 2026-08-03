@@ -111,8 +111,9 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("wizardCode3")]
         internal List<int> wizardCode3 = new List<int>();
 
-        // Act 1's reset deliberately keeps its story events, so BasicTutorialCompleted alone
-        // cannot tell a fresh run from one in progress. Cleared when Act 1 is next loaded.
+        // Act 1 has not been entered since it was last made fresh. BasicTutorialCompleted cannot
+        // tell that on its own: an act reset deliberately keeps Act 1's story events, and
+        // skip_tutorial sets that event on a save nobody has played yet. Cleared on loading Act 1.
         [JsonProperty("act1RunFresh")]
         internal bool act1RunFresh = false;
         [JsonProperty("act1Completed")]

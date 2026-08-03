@@ -130,6 +130,10 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal static void SkipTutorial()
         {
+            // Marking the tutorial done would otherwise make a brand new save read as an Act 1
+            // already in progress, since that is what the act card checks.
+            ArchipelagoData.Data.act1RunFresh = true;
+
             StoryEventsData.SetEventCompleted(StoryEvent.BasicTutorialCompleted, false, false);
             StoryEventsData.SetEventCompleted(StoryEvent.TutorialRunCompleted, false, false);
             StoryEventsData.SetEventCompleted(StoryEvent.TutorialRun2Completed, false, false);
