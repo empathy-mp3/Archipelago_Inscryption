@@ -71,10 +71,11 @@ namespace Archipelago_Inscryption.Patches
         }
 
         // The caller already ran RunState.Run.currency += excessDamage regardless of act; cancel
-        // it before this override's own animation/grant, closing the window before it opens.
+        // it before Act 2/3's own animation/grant runs, closing the window before it opens.
         [HarmonyPatch(typeof(Part3CombatPhaseManager), "VisualizeExcessLethalDamage")]
+        [HarmonyPatch(typeof(PixelCombatPhaseManager), "VisualizeExcessLethalDamage")]
         [HarmonyPrefix]
-        static void UndoAct1CurrencyLeakFromAct3Combat(int excessDamage)
+        static void UndoAct1CurrencyLeakFromNonAct1Combat(int excessDamage)
         {
             if (RunState.Run != null)
             {
