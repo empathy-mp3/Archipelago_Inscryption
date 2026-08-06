@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    Copy this file to "local.props" (same folder, next to the .csproj) and set PluginInstallDir
+    to your BepInEx plugins folder. local.props is machine-specific and gitignored — every
+    contributor sets their own.
+
+    If PluginInstallDir is left empty:
+      - On Windows, it falls back to the default r2modman path.
+      - On macOS/Linux, the PostBuild copy step is skipped entirely (no-op), since there's no
+        universal default plugins location without a mod manager.
+
+    Example (macOS, after installing BepInEx manually or via https://github.com/toebeann/gib):
+      <PluginInstallDir>/Users/you/Library/Application Support/Steam/steamapps/common/Inscryption/BepInEx/plugins/Ballin_Inc-ArchipelagoMod</PluginInstallDir>
+  -->
+  <PropertyGroup>
+    <PluginInstallDir></PluginInstallDir>
+  </PropertyGroup>
+</Project>

@@ -6,6 +6,9 @@
 /Dependencies/
 /packages/
 
+# Machine-local build overrides (see local.props.example)
+local.props
+
 # IDE
 .vs/
 .idea/
