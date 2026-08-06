@@ -6,6 +6,7 @@ using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,6 +30,20 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        // Safety net: logs instead of silently aborting the rest of SaveFile.Initialize() if any
+        // postfix on this method throws.
+        [HarmonyPatch(typeof(RunState), "Initialize")]
+        [HarmonyFinalizer]
+        static Exception LogInitializeFailure(Exception __exception)
+        {
+            if (__exception != null)
+            {
+                ArchipelagoModPlugin.Log.LogError($"RunState.Initialize threw: {__exception}");
+            }
+
+            return null;
+        }
+
         // Act 1 spends both of these within a run, so a new run restores them to everything the
         // act has been sent -- the same state an act reset produces. Without this a death takes
         // the run's teeth and any unopened packs with it.
@@ -36,13 +51,35 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void InitializeAct1RunItems()
         {
-            if (ArchipelagoData.Data == null || RunState.Run == null) return;
+            if (ArchipelagoData.Data == null || RunState.Run == null)
+            {
+                ArchipelagoModPlugin.Log.LogWarning($"InitializeAct1RunItems: skipped (ArchipelagoData.Data null: {ArchipelagoData.Data == null}, RunState.Run null: {RunState.Run == null})");
+                return;
+            }
 
-            RunState.Run.currency = ArchipelagoManager.CountReceived(APItem.Act1Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            int previousCurrency = RunState.Run.currency;
+            int receivedCount = ArchipelagoManager.CountReceived(APItem.Act1Currency);
+            int newCurrency = receivedCount * ArchipelagoManager.CURRENCY_PER_ITEM;
+
+            RunState.Run.currency = newCurrency;
             ArchipelagoData.Data.SetPacks(1, ArchipelagoManager.CountReceived(APItem.Act1CardPack));
 
             RandomizerHelper.RefreshPackPile();
             ArchipelagoData.SaveToFile();
+
+            ArchipelagoModPlugin.Log.LogInfo($"InitializeAct1RunItems: ran. Act1Currency items received: {receivedCount}. Currency {previousCurrency} -> {RunState.Run.currency} (expected {newCurrency}).");
+        }
+
+        // The caller already ran RunState.Run.currency += excessDamage regardless of act; cancel
+        // it before this override's own animation/grant, closing the window before it opens.
+        [HarmonyPatch(typeof(Part3CombatPhaseManager), "VisualizeExcessLethalDamage")]
+        [HarmonyPrefix]
+        static void UndoAct1CurrencyLeakFromAct3Combat(int excessDamage)
+        {
+            if (RunState.Run != null)
+            {
+                RunState.Run.currency -= excessDamage;
+            }
         }
 
         // Neither Initialize zeroes currency, so these postfixes are what establish it. They

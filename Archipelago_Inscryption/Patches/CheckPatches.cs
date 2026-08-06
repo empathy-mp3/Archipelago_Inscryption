@@ -1025,6 +1025,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void ResetAct1Battles(RunState __instance)
         {
+            // RunState.Initialize also runs before a save slot is picked (see the same guard on
+            // SetChallengesOnStartup in ItemPatches.cs).
+            if (ArchipelagoData.Data == null) return;
+
             ArchipelagoData.Data.act1BattlesThisRun = 0;
         }
 
