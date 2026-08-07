@@ -90,6 +90,13 @@ namespace Archipelago_Inscryption.Archipelago
             return session;
         }
 
+        // Large rooms (many games) can take longer than the library's hardcoded 4s login
+        // timeout to finish transferring datapackages, causing spurious "Connection timed
+        // out" failures even though the server would have connected successfully. Retrying
+        // LoginAsync on the same socket lets the transfer keep progressing between attempts
+        // instead of tearing the connection down after a single 4s window.
+        private const int MaxLoginAttempts = 5;
+
         private static void Connect(OnConnectAttempt attempt)
         {
             LoginResult result;
@@ -97,13 +104,15 @@ namespace Archipelago_Inscryption.Archipelago
             try
             {
                 session = CreateSession();
-                result = session.TryConnectAndLogin(
-                    "Inscryption Beta",
-                    ArchipelagoData.Data.slotName,
-                    ItemsHandlingFlags.AllItems,
-                    new Version(ArchipelagoVersion),
-                    password: ArchipelagoData.Data.password == "" ? null : ArchipelagoData.Data.password
-                );
+
+                var roomInfoTask = session.ConnectAsync();
+                if (!roomInfoTask.Wait(TimeSpan.FromSeconds(10)) || roomInfoTask.IsFaulted)
+                {
+                    attempt(new LoginFailure("Timed out waiting for room info from the server."));
+                    return;
+                }
+
+                result = LoginWithRetries();
             }
             catch (Exception e)
             {
@@ -112,6 +121,33 @@ namespace Archipelago_Inscryption.Archipelago
             }
 
             attempt(result);
+        }
+
+        private static LoginResult LoginWithRetries()
+        {
+            LoginResult result = new LoginFailure("Login was never attempted.");
+
+            for (int attemptNumber = 1; attemptNumber <= MaxLoginAttempts; attemptNumber++)
+            {
+                result = session.LoginAsync(
+                    "Inscryption Beta",
+                    ArchipelagoData.Data.slotName,
+                    ItemsHandlingFlags.AllItems,
+                    new Version(ArchipelagoVersion),
+                    password: ArchipelagoData.Data.password == "" ? null : ArchipelagoData.Data.password
+                ).Result;
+
+                if (result.Successful) break;
+
+                bool isTimeout = ((LoginFailure)result).Errors.Any(e => e.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!isTimeout || attemptNumber == MaxLoginAttempts) break;
+
+                string message = $"Still waiting on the server (large room?), retrying login... ({attemptNumber}/{MaxLoginAttempts})";
+                ArchipelagoModPlugin.Log.LogInfo(message);
+                Singleton<ArchipelagoUI>.Instance.LogMessage(message);
+            }
+
+            return result;
         }
 
         private static void OnConnected(LoginResult result)

@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0" />
+    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.1" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
   </ItemGroup>
 
