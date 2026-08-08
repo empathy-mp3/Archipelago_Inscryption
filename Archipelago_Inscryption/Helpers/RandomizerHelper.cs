@@ -436,7 +436,21 @@ namespace Archipelago_Inscryption.Helpers
             if (result)
             {
                 ArchipelagoData.Data.SpendPack(2);
-                yield return PackOpeningUI.instance.OpenPack((CardTemple)UnityEngine.Random.Range(0, (int)CardTemple.NUM_TEMPLES));
+
+                // Advances the seed AssignInfoToCards reads, so successive packs differ and a
+                // reload cannot reroll one. Also shifts Act 1 and 3's; see AddOpenedPacksToSeed.
+                SaveManager.SaveFile.gbcData.packsOpened++;
+
+                // Vanilla picks the pack's cards from the save's seed but nothing chose its temple,
+                // so it was rolled fresh on every open and the contents moved with it.
+                CardTemple temple = (CardTemple)SeededRandom.Range(0, (int)CardTemple.NUM_TEMPLES,
+                    SaveManager.SaveFile.GetCurrentRandomSeed());
+
+                yield return PackOpeningUI.instance.OpenPack(temple);
+
+                // The spend, the counter and the cards the pack added all land together, rather
+                // than waiting on a later save that leaving the act would discard.
+                SaveManager.SaveToFile(false);
             }
 
             yield return new WaitForSeconds(0.05f);
