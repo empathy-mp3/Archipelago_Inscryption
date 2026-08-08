@@ -74,6 +74,18 @@ namespace Archipelago_Inscryption.Patches
             ArchipelagoData.SaveToFile();
         }
 
+        // Only entering an act reloaded the save, so leaving one mid-fight left RunState in memory
+        // pointing at an unfinished node, which the next save from the menu would then commit.
+        [HarmonyPatch(typeof(MenuController), "ReturnToStartScreen")]
+        [HarmonyPostfix]
+        static void RevertUnsavedProgressOnReturnToStartScreen()
+        {
+            // No slot means no Archipelago save path yet, so this would read the vanilla save.
+            if (ArchipelagoData.saveName == "") return;
+
+            ArchipelagoManager.RevertUnsavedProgressAndReplayItems();
+        }
+
         [HarmonyPatch(typeof(SaveFile), "GetCurrentRandomSeed")]
         [HarmonyPostfix]
         static void AddOpenedPacksToSeed(SaveFile __instance, ref int __result)

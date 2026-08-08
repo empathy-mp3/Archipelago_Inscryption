@@ -1,6 +1,7 @@
 ﻿using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace Archipelago_Inscryption.Archipelago
@@ -155,6 +156,75 @@ namespace Archipelago_Inscryption.Archipelago
 
             string json = JsonConvert.SerializeObject(Data);
             FileSystem.WriteAllText(dataFilePath, json);
+        }
+
+        // Returns null if the file can't be read or is corrupted, leaving the caller to report it
+        // with whatever context it has. The result is not assigned to Data; that is the caller's.
+        internal static ArchipelagoData LoadFromFile(string path)
+        {
+            string content;
+
+            try
+            {
+                content = FileSystem.ReadAllText(path);
+            }
+            catch (Exception e)
+            {
+                ArchipelagoModPlugin.Log.LogError("Failed to read Archipelago data from " + path + ": " + e.Message);
+                return null;
+            }
+
+            ArchipelagoData loaded;
+
+            try
+            {
+                loaded = JsonConvert.DeserializeObject<ArchipelagoData>(content);
+            }
+            catch
+            {
+                loaded = null;
+            }
+
+            loaded?.RebuildRuntimeState();
+
+            return loaded;
+        }
+
+        // The [JsonIgnore] fields that are derived from serialized data rather than stored, so they
+        // have to be rebuilt on every load. Clears first so it is safe to re-run on live data.
+        private void RebuildRuntimeState()
+        {
+            itemsUnaccountedFor = new List<InscryptionItemInfo>(receivedItems);
+
+            customCardsModsAct3.Clear();
+
+            foreach (var cI in customCardInfos)
+            {
+                CardModificationInfo customCardMod = new CardModificationInfo();
+                customCardMod.singletonId = cI.SingletonId;
+                customCardMod.nameReplacement = cI.NameReplacement;
+                customCardMod.attackAdjustment = cI.AttackAdjustment;
+                customCardMod.healthAdjustment = cI.HealthAdjustment;
+                customCardMod.energyCostAdjustment = cI.EnergyCostAdjustment;
+                customCardMod.abilities = cI.Abilities;
+                BuildACardPortraitInfo portraitInfo = new BuildACardPortraitInfo();
+                portraitInfo.spriteIndices = cI.SpriteIndices;
+                customCardMod.buildACardPortraitInfo = portraitInfo;
+                customCardsModsAct3.Add(customCardMod);
+            }
+
+            mycoCardMod = null;
+
+            if (mycoCardInfo.Abilities != null && mycoCardInfo.Abilities.Count > 0)
+            {
+                CardModificationInfo mod = new CardModificationInfo();
+                mod.singletonId = mycoCardInfo.SingletonId;
+                mod.attackAdjustment = mycoCardInfo.AttackAdjustment;
+                mod.healthAdjustment = mycoCardInfo.HealthAdjustment;
+                mod.energyCostAdjustment = mycoCardInfo.EnergyCostAdjustment;
+                mod.abilities = mycoCardInfo.Abilities;
+                mycoCardMod = mod;
+            }
         }
     }
 

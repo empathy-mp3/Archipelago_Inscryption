@@ -162,6 +162,60 @@ namespace Archipelago_Inscryption.Archipelago
             return false;
         }
 
+        // Reproduces closing and reopening the game: everything unsaved is dropped, then every item
+        // the server has sent is replayed, so what Archipelago granted survives and the rest does not.
+        internal static void RevertUnsavedProgressAndReplayItems()
+        {
+            SaveManager.LoadFromFile();
+
+            ArchipelagoData reloaded = ArchipelagoData.LoadFromFile(ArchipelagoData.dataFilePath);
+
+            if (reloaded == null)
+            {
+                ArchipelagoModPlugin.Log.LogWarning("Reverted the game save, but Archipelago data could not be reloaded, so received items were left alone.");
+                return;
+            }
+
+            ArchipelagoData.Data = reloaded;
+
+            // Offline there is nothing to replay from, so the next connect's item pass recovers
+            // whatever the revert dropped, exactly as it does after the game has been closed.
+            if (!ArchipelagoClient.IsConnected) return;
+
+            // The replay rebuilds the full set from the server, so anything still queued from before
+            // the revert would be granted twice.
+            itemQueue.Clear();
+            itemsToVerifyQueue.Clear();
+
+            var received = ArchipelagoClient.session.Items.AllItemsReceived;
+
+            foreach (ItemInfo item in received)
+                ArchipelagoClient.ProcessItem(item);
+
+            ArchipelagoData.Data.index = (uint)received.Count;
+
+            // Items the reloaded data already accounts for land in the verify queue and are only
+            // reapplied if their effect is missing; ones the revert dropped are treated as new.
+            VerifyAllItems();
+
+            if (ApplyQueuedItemsSilently() > 0) SaveManager.SaveToFile(false);
+        }
+
+        // A replay restores items the player already watched arrive, so it skips the sound, the
+        // on-screen log and the per-item delay that ProcessNextItem gives genuinely new ones.
+        private static int ApplyQueuedItemsSilently()
+        {
+            int applied = 0;
+
+            while (itemQueue.Count > 0)
+            {
+                ApplyItemReceived(itemQueue.Dequeue().Item);
+                applied++;
+            }
+
+            return applied;
+        }
+
         internal static void ApplyItemReceived(APItem receivedItem)
         {
             if (itemStoryPairs.TryGetValue(receivedItem, out StoryEvent storyEvent))

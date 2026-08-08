@@ -223,14 +223,20 @@ namespace Archipelago_Inscryption.Archipelago
 
             ArchipelagoData.Data.index++;
 
-            ItemInfo nextItem = helper.DequeueItem();
-            InscryptionItemInfo matchedItem = ArchipelagoData.Data.itemsUnaccountedFor.FirstOrDefault(x => IsSameItem(x, nextItem));
+            ProcessItem(helper.DequeueItem());
+        }
+
+        // Split from the handler above so the same routing can be replayed over a list of items
+        // rather than the helper's queue, which only yields each item once per session.
+        internal static void ProcessItem(ItemInfo item)
+        {
+            InscryptionItemInfo matchedItem = ArchipelagoData.Data.itemsUnaccountedFor.FirstOrDefault(x => IsSameItem(x, item));
 
             if (matchedItem == null)
             {
                 // This item is new
-                InscryptionItemInfo newItemInfo = new InscryptionItemInfo((APItem)(nextItem.ItemId - ArchipelagoManager.ID_OFFSET), nextItem.ItemName, nextItem.ItemId, nextItem.LocationId, nextItem.Player.Slot, nextItem.Player.Name);
-                
+                InscryptionItemInfo newItemInfo = new InscryptionItemInfo((APItem)(item.ItemId - ArchipelagoManager.ID_OFFSET), item.ItemName, item.ItemId, item.LocationId, item.Player.Slot, item.Player.Name);
+
                 ArchipelagoData.Data.receivedItems.Add(newItemInfo);
 
                 onNewItemReceived?.Invoke(newItemInfo);
