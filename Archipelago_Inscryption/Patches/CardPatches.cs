@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -404,7 +405,20 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerator GiveCardWithBottleSigil(IEnumerator __result, CardBottleItem __instance)
         {
             __instance.PlayExitAnimation();
-            yield return __instance.StartCoroutine(Singleton<CardSpawner>.Instance.SpawnCardToHand(__instance.cardInfo));
+
+            // Bottles randomized into AP checks carry a synthetic cardInfo that isn't a real
+            // card - send the check instead of granting it.
+            if (__instance.cardInfo.name.Contains("ArchipelagoCheck"))
+            {
+                string cardName = __instance.cardInfo.name;
+                string checkName = cardName.Substring(cardName.IndexOf('_') + 1);
+                APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
+                ArchipelagoManager.SendCheck(check);
+            }
+            else
+            {
+                yield return __instance.StartCoroutine(Singleton<CardSpawner>.Instance.SpawnCardToHand(__instance.cardInfo));
+            }
             yield return new WaitForSeconds(0.25f);
         }
 

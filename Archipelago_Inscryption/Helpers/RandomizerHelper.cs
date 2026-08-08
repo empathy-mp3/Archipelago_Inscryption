@@ -5,6 +5,7 @@ using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using GBC;
+using HarmonyLib;
 using Pixelplacement;
 using System;
 using System.Collections;
@@ -17,6 +18,7 @@ using static GBC.DialogueSpeaker;
 
 namespace Archipelago_Inscryption.Helpers
 {
+    [HarmonyPatch]
     internal static class RandomizerHelper
     {
         private static DiscoverableCheckInteractable[] paintingChecks;
@@ -281,8 +283,28 @@ namespace Archipelago_Inscryption.Helpers
             return info;
         }
 
-        // A bottle's rolled sigil (or check id) is encoded into the live ItemData's name, so the
-        // saved list still holds the pre-rename name. Correct it here, where both names are known.
+        // RenameItemInSaveData only queues; ApplyPendingRenames is the sole writer, since
+        // UpdateItems calls CreateItem (which triggers renames) from inside its own list iteration.
+        private static bool updatingItems = false;
+        private static readonly List<(string oldName, string newName)> pendingRenames = new();
+
+        [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
+        [HarmonyPrefix]
+        static void MarkUpdateItemsInProgress()
+        {
+            updatingItems = true;
+        }
+
+        [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
+        [HarmonyFinalizer]
+        static void UnmarkUpdateItemsInProgress()
+        {
+            updatingItems = false;
+            ApplyPendingRenames();
+        }
+
+        // A bottle's rolled sigil (or check id) is encoded into the live ItemData's name; the
+        // saved list needs the same rename, queued here and applied once it's safe.
         internal static void RenameItemInSaveData(ItemSlot slot, string oldName, string newName)
         {
             if (oldName == newName) return;
@@ -293,8 +315,24 @@ namespace Archipelago_Inscryption.Helpers
             if (manager == null || !(slot is ConsumableItemSlot consumableSlot)) return;
             if (!manager.consumableSlots.Contains(consumableSlot)) return;
 
-            int index = manager.SaveDataItemsList.IndexOf(oldName);
-            if (index >= 0) manager.SaveDataItemsList[index] = newName;
+            pendingRenames.Add((oldName, newName));
+            if (!updatingItems) ApplyPendingRenames();
+        }
+
+        private static void ApplyPendingRenames()
+        {
+            if (pendingRenames.Count == 0) return;
+
+            ItemsManager manager = Singleton<ItemsManager>.Instance;
+            if (manager == null) return;
+
+            var toApply = new List<(string oldName, string newName)>(pendingRenames);
+            pendingRenames.Clear();
+            foreach (var rename in toApply)
+            {
+                int index = manager.SaveDataItemsList.IndexOf(rename.oldName);
+                if (index >= 0) manager.SaveDataItemsList[index] = rename.newName;
+            }
         }
 
         internal static CardInfo GenerateCardInfoWithName(string name, string description)

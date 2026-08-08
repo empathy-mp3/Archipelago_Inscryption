@@ -1159,24 +1159,8 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
-        [HarmonyPatch(typeof(CardBottleItem), "ActivateSequence")]
-        [HarmonyPostfix]
-        static IEnumerator SendCheckInsteadOfAddingCard(IEnumerator __result, CardBottleItem __instance)
-        {
-            if (__instance.cardInfo.name.Contains("ArchipelagoCheck"))
-            {
-                __instance.PlayExitAnimation();
-                string cardName = __instance.cardInfo.name;
-                string checkName = cardName.Substring(cardName.IndexOf('_') + 1);
-                APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
-                ArchipelagoManager.SendCheck(check);
-                yield return new WaitForSeconds(0.25f);
-            }
-            else {
-                while (__result.MoveNext())
-                    yield return __result.Current;
-            }
-        }
+        // AP-check handling for bottles now lives in CardPatches.GiveCardWithBottleSigil,
+        // alongside the sigil-randomization postfix on the same method.
 
         [HarmonyPatch(typeof(ActiveAfterAmountOfRuns), "ConditionIsMet")]
         [HarmonyPostfix]
