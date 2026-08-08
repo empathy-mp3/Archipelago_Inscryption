@@ -28,7 +28,10 @@ namespace Archipelago_Inscryption.Components
         // same framing the vanilla close-up uses, so they read as cards being offered to you.
         internal const float CHOICE_DISTANCE = 2.4f;
         internal const float CHOICE_HEIGHT = 0f;
-        internal const float CHOICE_SPACING = 1.15f;
+        internal const float CHOICE_SPACING = 1.0f;
+        // A choice card stands facing the player, so its clickable box is the card face: wide in
+        // X, tall in Y, thin in Z. It previously used the flat pile's shape, catching only a band.
+        internal static readonly Vector3 CHOICE_COLLIDER = new Vector3(1.2f, 1.6f, 0.2f);
         // The card prefab's own 90 degree X rotation is what makes a card lie flat, and
         // ResetTransform strips it, so in holder space the card's face normal is -Z. Facing the
         // player therefore means pointing the holder away from the camera, with no tilt term.
@@ -271,17 +274,21 @@ namespace Archipelago_Inscryption.Components
             holder.transform.rotation = Quaternion.LookRotation(awayFromCamera, Vector3.up)
                 * Quaternion.Euler(CHOICE_LEAN, 0f, 0f);
 
-            holder.AddComponent<BoxCollider>().size = new Vector3(1.2f, 0.2f, 1.6f);
+            holder.AddComponent<BoxCollider>().size = CHOICE_COLLIDER;
 
             GameObject cardObject = Instantiate(act == 3
                 ? AssetsManager.selectableDiskCardPrefab
                 : AssetsManager.selectableCardPrefab, holder.transform);
             cardObject.transform.ResetTransform();
-            cardObject.GetComponent<SelectableCard>().SetInfo(info);
 
+            SelectableCard card = cardObject.GetComponent<SelectableCard>();
+            card.SetInfo(info);
+            // The card carries its own collider, sitting in front of the holder's and swallowing
+            // the cursor over most of the face, the same way the Act 3 pile's cards do.
+            card.SetEnabled(false);
 
             PackChoiceCard choice = holder.AddComponent<PackChoiceCard>();
-            choice.SetCard(info);
+            choice.SetCard(card, info);
             // Enabled once the cards have finished flying out, so a click cannot land mid-reveal.
             choice.choosable = false;
             choice.closeUpDistance = CHOICE_DISTANCE;
