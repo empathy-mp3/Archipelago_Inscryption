@@ -254,6 +254,9 @@ namespace Archipelago_Inscryption.Components
             }
         }
 
+        // Handing off to CardSingleChoicesSequencer, as the old table pile did, is what gave packs
+        // a clover reroll. Dropped on purpose: vanilla scopes the clover to one reroll per node.
+
         // Cards are placed in world space in front of the camera, unparented, so the close-up that
         // DiscoverableObjectInteractable runs on click starts from the same framing.
         private PackChoiceCard CreateChoiceCard(CardInfo info, int index, int total)
