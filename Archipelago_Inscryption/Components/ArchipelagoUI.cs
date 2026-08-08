@@ -224,7 +224,7 @@ namespace Archipelago_Inscryption.Components
         internal IEnumerator QueueSave()
         {
             TurnManager turnManager = Singleton<TurnManager>.Instance;
-            if (turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded)
+            if (ArchipelagoManager.IsBattleUnresolved(turnManager))
             {
                 yield return new WaitUntil(() => turnManager == null || turnManager.GameEnding);
 

@@ -162,6 +162,11 @@ namespace Archipelago_Inscryption.Archipelago
             return false;
         }
 
+        // A battle that has not reached its end sequence yet. Saving now would record its node as
+        // beaten, and leaving the act now abandons it, so both paths gate on the same condition.
+        internal static bool IsBattleUnresolved(TurnManager turnManager)
+            => turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded;
+
         // Reproduces closing and reopening the game: everything unsaved is dropped, then every item
         // the server has sent is replayed, so what Archipelago granted survives and the rest does not.
         internal static void RevertUnsavedProgressAndReplayItems()

@@ -6,6 +6,7 @@ using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,7 +84,36 @@ namespace Archipelago_Inscryption.Patches
             // No slot means no Archipelago save path yet, so this would read the vanilla save.
             if (ArchipelagoData.saveName == "") return;
 
-            ArchipelagoManager.RevertUnsavedProgressAndReplayItems();
+            // This is a plain navigation method, also used by paths that are finishing an act
+            // rather than abandoning one. Only an unresolved fight has anything to revert.
+            if (!ArchipelagoManager.IsBattleUnresolved(Singleton<TurnManager>.Instance)) return;
+
+            // The scene load is already queued by this point, so a throw here would break leaving
+            // the act on top of failing to revert. Losing the revert alone is the smaller failure.
+            try
+            {
+                ArchipelagoManager.RevertUnsavedProgressAndReplayItems();
+            }
+            catch (Exception e)
+            {
+                ArchipelagoModPlugin.Log.LogError("Failed to revert unsaved progress on leaving an act: " + e);
+            }
+        }
+
+        // The revert above assumes disk only ever holds a resolved game state. Nothing should save
+        // during an Act 1 fight; if something starts to, say so rather than silently skip a node.
+        [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
+        [HarmonyPrefix]
+        static void WarnWhenSavingMidBattle()
+        {
+            if (SaveManager.savingDisabled || !SaveManager.SaveFile.IsPart1) return;
+
+            // Also gate on being in the battle state: a freshly loaded run sitting on the map has
+            // GameEnded unset too, and only Act 1 ties a node to the fight being resolved.
+            if (!GameFlowManager.IsCardBattle) return;
+            if (!ArchipelagoManager.IsBattleUnresolved(Singleton<TurnManager>.Instance)) return;
+
+            ArchipelagoModPlugin.Log.LogWarning("Saving during an unresolved Act 1 fight; that node will read back as already beaten. Called from:\n" + Environment.StackTrace);
         }
 
         [HarmonyPatch(typeof(SaveFile), "GetCurrentRandomSeed")]
