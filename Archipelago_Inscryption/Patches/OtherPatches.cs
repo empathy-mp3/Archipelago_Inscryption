@@ -84,10 +84,6 @@ namespace Archipelago_Inscryption.Patches
             // No slot means no Archipelago save path yet, so this would read the vanilla save.
             if (ArchipelagoData.saveName == "") return;
 
-            // This is a plain navigation method, also used by paths that are finishing an act
-            // rather than abandoning one. Only an unresolved fight has anything to revert.
-            if (!ArchipelagoManager.IsBattleUnresolved(Singleton<TurnManager>.Instance)) return;
-
             // The scene load is already queued by this point, so a throw here would break leaving
             // the act on top of failing to revert. Losing the revert alone is the smaller failure.
             try

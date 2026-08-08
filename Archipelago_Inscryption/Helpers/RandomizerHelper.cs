@@ -732,8 +732,12 @@ namespace Archipelago_Inscryption.Helpers
             Singleton<ArchipelagoUI>.Instance.StartCoroutine(LoadAppropriateSceneAfterAct3());
         }
 
+        // Both callers arrive here having just finished an act rather than abandoning one, so that
+        // is committed first: leaving discards whatever is still unsaved.
         internal static void GoToMainMenu()
         {
+            SaveManager.SaveToFile(false);
+
             StartScreenController.startedGame = true;
             MenuController.ReturnToStartScreen();
         }

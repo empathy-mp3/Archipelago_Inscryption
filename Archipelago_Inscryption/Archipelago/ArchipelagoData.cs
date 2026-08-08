@@ -162,6 +162,10 @@ namespace Archipelago_Inscryption.Archipelago
         // with whatever context it has. The result is not assigned to Data; that is the caller's.
         internal static ArchipelagoData LoadFromFile(string path)
         {
+            // A missing file is an ordinary outcome, e.g. a slot whose data was just reset, so it
+            // returns quietly. Only a file that exists and cannot be read is worth reporting.
+            if (!FileSystem.FileExists(path)) return null;
+
             string content;
 
             try

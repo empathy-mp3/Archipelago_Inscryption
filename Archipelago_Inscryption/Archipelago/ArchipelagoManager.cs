@@ -162,8 +162,8 @@ namespace Archipelago_Inscryption.Archipelago
             return false;
         }
 
-        // A battle that has not reached its end sequence yet. Saving now would record its node as
-        // beaten, and leaving the act now abandons it, so both paths gate on the same condition.
+        // A battle that has not reached its end sequence yet, so a save taken now would record its
+        // Act 1 node as beaten. Gates both the deferred save and the warning that guards it.
         internal static bool IsBattleUnresolved(TurnManager turnManager)
             => turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded;
 
@@ -203,7 +203,11 @@ namespace Archipelago_Inscryption.Archipelago
             // reapplied if their effect is missing; ones the revert dropped are treated as new.
             VerifyAllItems();
 
-            if (ApplyQueuedItemsSilently() > 0) SaveManager.SaveToFile(false);
+            int reapplied = ApplyQueuedItemsSilently();
+            if (reapplied > 0) SaveManager.SaveToFile(false);
+
+            // The replay is deliberately silent, so this is the only trace it leaves.
+            ArchipelagoModPlugin.Log.LogInfo($"Reverted unsaved progress. Replayed {received.Count} items, reapplied {reapplied}.");
         }
 
         // A replay restores items the player already watched arrive, so it skips the sound, the
