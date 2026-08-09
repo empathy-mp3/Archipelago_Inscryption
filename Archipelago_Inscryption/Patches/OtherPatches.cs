@@ -649,25 +649,21 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     class ActTransitionPatches
     {
-        // Act 2's finale always loads Act 3, stranding the player there when Act 3 is turned off
-        // or still locked behind its item. Sequential unlocks are fine: Act 2 opens Act 3. Open
-        // (any-order) unlocks always redirect to the act select menu instead, even when Act 3 is
-        // available, since nothing about finishing Act 2 should decide which act comes next there.
+        // Act 2's finale always loads Act 3, stranding the player there when Act 3 is turned off.
+        // Only sequential unlocks go straight on, since finishing Act 2 is what opens Act 3 there.
+        // Open and item unlocks both return to the act select menu even when Act 3 is available:
+        // with several acts already playable, finishing one shouldn't choose the next.
         [HarmonyPatch(typeof(SceneLoader), "StartAsyncLoad")]
         [HarmonyPrefix]
         static bool ReturnToMenuWhenAct3Unavailable(string sceneName, ref AsyncOperation __result)
         {
             if (sceneName != "Part3_Cabin") return true;
-            if (ArchipelagoOptions.actUnlocks != ActUnlocks.Open && CanEnterAct3()) return true;
+            if (ArchipelagoOptions.actUnlocks == ActUnlocks.Sequential && ArchipelagoOptions.enableAct3) return true;
 
             __result = null;
             RandomizerHelper.GoToMainMenu();
             return false;
         }
-
-        static bool CanEnterAct3()
-            => ArchipelagoOptions.enableAct3
-            && (ArchipelagoOptions.actUnlocks != ActUnlocks.Items || ArchipelagoManager.HasItem(APItem.Act3));
     }
 
     [HarmonyPatch]
