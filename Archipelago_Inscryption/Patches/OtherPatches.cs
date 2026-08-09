@@ -653,17 +653,25 @@ namespace Archipelago_Inscryption.Patches
         // Only sequential unlocks go straight on, since finishing Act 2 is what opens Act 3 there.
         // Open and item unlocks both return to the act select menu even when Act 3 is available:
         // with several acts already playable, finishing one shouldn't choose the next.
+        //
+        // Act 2's finale is the only Act 3 load worth redirecting, and it runs in Act 2's own
+        // scene. Every other one -- picking Act 3 from the menu, a deathlink reloading it --
+        // comes by way of the loading screen, whose caller keeps the AsyncOperation this
+        // returns, so intercepting those would both strand the player and hand back a null.
         [HarmonyPatch(typeof(SceneLoader), "StartAsyncLoad")]
         [HarmonyPrefix]
         static bool ReturnToMenuWhenAct3Unavailable(string sceneName, ref AsyncOperation __result)
         {
             if (sceneName != "Part3_Cabin") return true;
+            if (SceneLoader.ActiveSceneName != Act2FinaleScene) return true;
             if (ArchipelagoOptions.actUnlocks == ActUnlocks.Sequential && ArchipelagoOptions.enableAct3) return true;
 
             __result = null;
             RandomizerHelper.GoToMainMenu();
             return false;
         }
+
+        const string Act2FinaleScene = "GBC_Starting_Island";
     }
 
     [HarmonyPatch]
