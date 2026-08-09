@@ -131,10 +131,27 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonIgnore]
         internal uint index = 0;
 
+        // Both settings belong to one save, so they are stored per save. They used to be static
+        // fields, which Newtonsoft still serializes when they carry [JsonProperty]: every load wrote
+        // them process-wide, and the save select screen loads every save to list them, so whichever
+        // was listed last decided these for the session. The accessors below keep the JSON keys.
         [JsonProperty("itemLogMode")]
-        internal static ItemLogMode itemLogMode = ItemLogMode.AllItems;
+        private ItemLogMode itemLogModeSetting = ItemLogMode.AllItems;
         [JsonProperty("deathLinkOverride")]
-        internal static DeathLinkOverride deathLinkOverride = DeathLinkOverride.Default;
+        private DeathLinkOverride deathLinkOverrideSetting = DeathLinkOverride.Default;
+
+        internal static ItemLogMode itemLogMode
+        {
+            get => Data?.itemLogModeSetting ?? ItemLogMode.AllItems;
+            set { if (Data != null) Data.itemLogModeSetting = value; }
+        }
+
+        internal static DeathLinkOverride deathLinkOverride
+        {
+            get => Data?.deathLinkOverrideSetting ?? DeathLinkOverride.Default;
+            set { if (Data != null) Data.deathLinkOverrideSetting = value; }
+        }
+
         public static bool DeathLink => deathLinkOverride switch
         {
             DeathLinkOverride.Disabled => false,
