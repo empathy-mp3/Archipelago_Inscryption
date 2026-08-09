@@ -687,18 +687,53 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal static void VerifyAllItems()
         {
+            // Nothing this pass queues is applied until the pass is over, so a shortfall in a
+            // spendable item would otherwise read the same for every copy of it and requeue them all.
+            int peltsRequeued = 0;
+
             while (itemsToVerifyQueue.Count() > 0)
             {
                 InscryptionItemInfo nextItem = itemsToVerifyQueue.Dequeue();
 
-                if (!VerifyItem(nextItem))
+                bool alreadyApplied;
+
+                if (nextItem.Item == APItem.HoloPelt)
                 {
-                    ArchipelagoModPlugin.Log.LogWarning($"Item ID {nextItem.ItemId} ({nextItem.ItemName}) didn't apply properly. Retrying...");
-                    itemQueue.Enqueue(nextItem);
+                    // Spent pelts leave nothing behind to look for, so the most that can be told is
+                    // whether the set as a whole is short, and this one only counts if it still is.
+                    int stillNeeded = CountReceived(APItem.HoloPelt) - PeltsAccountedFor() - peltsRequeued;
+
+                    alreadyApplied = stillNeeded <= 0;
+
+                    if (!alreadyApplied)
+                    {
+                        peltsRequeued++;
+                    }
                 }
+                else
+                {
+                    alreadyApplied = VerifyItem(nextItem);
+                }
+
+                if (alreadyApplied)
+                {
+                    continue;
+                }
+
+                ArchipelagoModPlugin.Log.LogWarning($"Item ID {nextItem.ItemId} ({nextItem.ItemName}) didn't apply properly. Retrying...");
+                itemQueue.Enqueue(nextItem);
             }
         }
 
+        // A pelt leaves Part3SaveData.pelts when the trader takes it and the trade records a tarot in
+        // exchange, so the two together are how many received pelts the save still accounts for.
+        private static int PeltsAccountedFor()
+        {
+            return Part3SaveData.Data.pelts + Part3SaveData.Data.collectedTarots.Count;
+        }
+
+        // Only for items whose effect one copy either has or has not left behind. Spendable ones can
+        // only be checked as a group, so their shortfall is worked out in the caller instead.
         internal static bool VerifyItem(InscryptionItemInfo item)
         {
             APItem receivedItem = item.Item;
@@ -748,10 +783,6 @@ namespace Archipelago_Inscryption.Archipelago
                 return false;
             }
             else if (receivedItem == APItem.Quill && !Part3SaveData.Data.foundUndeadTempleQuill)
-            {
-                return false;
-            }
-            else if (receivedItem == APItem.HoloPelt && Part3SaveData.Data.pelts + Part3SaveData.Data.collectedTarots.Count < ArchipelagoData.Data.receivedItems.Count(i => i.Item == APItem.HoloPelt))
             {
                 return false;
             }
