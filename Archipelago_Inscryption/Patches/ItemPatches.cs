@@ -160,6 +160,29 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        // A new run rebuilds its deck's discovered cards from their story events, but only the three
+        // vanilla knows about: the caged wolf, the talking wolf and the stinkbug. Nothing reads the
+        // skink or ant events, so those cards were granted once and lost to the next run.
+        [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
+        [HarmonyPostfix]
+        static void AddGrantedAct1CardsIfNeeded(RunState __instance)
+        {
+            if (ArchipelagoData.Data == null || !ArchipelagoManager.DeckKeepsItsCards()) return;
+
+            // Granting adds every card the item covers at once, so one of them standing in for the
+            // rest keeps a second Ant Queen out of a deck that already has its pair.
+            if (ArchipelagoManager.HasItem(APItem.SkinkCard) && !DeckHasCard(__instance.playerDeck, "Skink"))
+                ArchipelagoManager.ApplyItemReceived(APItem.SkinkCard);
+
+            if (ArchipelagoManager.HasItem(APItem.AntCards) && !DeckHasCard(__instance.playerDeck, "Ant"))
+                ArchipelagoManager.ApplyItemReceived(APItem.AntCards);
+        }
+
+        private static bool DeckHasCard(DeckInfo deck, string cardName)
+        {
+            return deck != null && deck.Cards.Exists(card => card.name == cardName);
+        }
+
         [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
         [HarmonyPostfix]
         static void AddInsectTotemHeadIfNeeded(RunState __instance)
