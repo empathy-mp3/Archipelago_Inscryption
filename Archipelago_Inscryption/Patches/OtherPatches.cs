@@ -68,10 +68,18 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
+        // Written before the game save rather than after it. Both land in the same call, so only a crash
+        // or a failed write can separate them -- but which one is already on disk decides what the next
+        // connect does. Archipelago data behind the game save reads as an item never received, and
+        // granting it again duplicates whatever it gave; ahead of it, the item's effect is merely
+        // missing, which is the case the connect-time pass exists to repair.
         [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         static void SaveArchipelagoDataToFile()
         {
+            // Mirrors the guard the game save itself returns on, so a suppressed save stays suppressed.
+            if (SaveManager.savingDisabled) return;
+
             ArchipelagoData.SaveToFile();
         }
 
