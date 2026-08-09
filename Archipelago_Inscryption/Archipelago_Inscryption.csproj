@@ -5,6 +5,11 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <LangVersion>preview</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- CS8509 is a switch expression missing a declared enum value. ArchipelagoManager.RecoveryOf
+         relies on that being fatal, so adding an APItem without classifying it fails the build.
+         CS8524 is the same check complaining about values no one declared, which is noise here. -->
+    <WarningsAsErrors>CS8509</WarningsAsErrors>
+    <NoWarn>CS8524</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
