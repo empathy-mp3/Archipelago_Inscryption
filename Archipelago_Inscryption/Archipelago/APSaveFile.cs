@@ -1,0 +1,115 @@
+using System;
+
+namespace Archipelago_Inscryption.Archipelago
+{
+    // Odin writes the game save from the object's runtime type and records that type in the file, so
+    // a subclass is how Archipelago gets state of its own into the same file the game writes.
+    //
+    // Only worth doing for state that has to be lost and restored in lockstep with something the game
+    // save already holds. Everything else belongs in ArchipelagoData, which is smaller and portable.
+    internal class APSaveFile : SaveFile
+    {
+        // What each act has already been given, indexed by act, so index 0 is unused.
+        //
+        // A spendable resource cannot be checked the way a card or a story event can: spent and never
+        // granted read the same. These are the records that tell them apart, and they live here rather
+        // than in ArchipelagoData because that file is written first and would survive a failed game
+        // save, leaving the balance gone with nothing to notice it by.
+        public int[] currencyItemsGranted = new int[4];
+        public int[] cardPackItemsGranted = new int[4];
+
+        // Unopened packs. Here rather than in ArchipelagoData so that spending one and the cards it
+        // deals land in the same write: a save that loses the cards has not spent the pack either.
+        public int[] cardPacksAvailable = new int[4];
+
+        // Traps waiting for battle code to spend them. Both effects last only the battle they are
+        // spent on, so a pending count kept anywhere else would outlive the battle that used it.
+        public int bleachTrapsPending;
+        public int reinforcementsTrapsPending;
+
+        // Traps handed over. A spent trap leaves nothing behind, so these are what tell a trap that
+        // was applied from one that never arrived.
+        public int bleachTrapsGranted;
+        public int reinforcementsTrapsGranted;
+        public int trashTrapsGranted;
+
+        private static APSaveFile Current => SaveManager.SaveFile as APSaveFile;
+
+        internal static int BleachTrapsPending
+        {
+            get => Current?.bleachTrapsPending ?? 0;
+            set { if (Current != null) Current.bleachTrapsPending = value; }
+        }
+
+        internal static int ReinforcementsTrapsPending
+        {
+            get => Current?.reinforcementsTrapsPending ?? 0;
+            set { if (Current != null) Current.reinforcementsTrapsPending = value; }
+        }
+
+        // As with the other ledgers, a save that has none reads as fully granted and is left alone.
+        internal static int BleachTrapsGranted
+        {
+            get => Current?.bleachTrapsGranted ?? int.MaxValue;
+            set { if (Current != null) Current.bleachTrapsGranted = value; }
+        }
+
+        internal static int ReinforcementsTrapsGranted
+        {
+            get => Current?.reinforcementsTrapsGranted ?? int.MaxValue;
+            set { if (Current != null) Current.reinforcementsTrapsGranted = value; }
+        }
+
+        internal static int TrashTrapsGranted
+        {
+            get => Current?.trashTrapsGranted ?? int.MaxValue;
+            set { if (Current != null) Current.trashTrapsGranted = value; }
+        }
+
+        private static int[] LedgerFor(Func<APSaveFile, int[]> field)
+        {
+            return SaveManager.SaveFile is APSaveFile save ? field(save) : null;
+        }
+
+        private static int Read(Func<APSaveFile, int[]> field, int act, int fallback)
+        {
+            int[] values = LedgerFor(field);
+
+            return values != null && act < values.Length ? values[act] : fallback;
+        }
+
+        private static void Write(Func<APSaveFile, int[]> field, int act, int value)
+        {
+            int[] values = LedgerFor(field);
+
+            if (values != null && act < values.Length) values[act] = value;
+        }
+
+        // A save from before this class has no record to repair from, so its ledgers read as fully
+        // granted: the verify pass then leaves them alone rather than handing out a second copy.
+        internal static int CurrencyGranted(int act) => Read(save => save.currencyItemsGranted, act, int.MaxValue);
+        internal static void SetCurrencyGranted(int act, int count) => Write(save => save.currencyItemsGranted, act, count);
+
+        internal static int PacksGranted(int act) => Read(save => save.cardPackItemsGranted, act, int.MaxValue);
+        internal static void SetPacksGranted(int act, int count) => Write(save => save.cardPackItemsGranted, act, count);
+
+        // A live count rather than a ledger, so a save without one simply has no packs to open.
+        internal static int PacksAvailable(int act) => Read(save => save.cardPacksAvailable, act, 0);
+        internal static void SetPacksAvailable(int act, int count) => Write(save => save.cardPacksAvailable, act, count);
+
+        internal static void GrantPack(int act)
+        {
+            SetPacksAvailable(act, PacksAvailable(act) + 1);
+            SetPacksGranted(act, PacksGranted(act) + 1);
+        }
+
+        internal static void SpendPack(int act) => SetPacksAvailable(act, PacksAvailable(act) - 1);
+
+        // Both records move together when an act starts, since it hands the act everything it was sent.
+        internal static void ResetPacksForAct(int act, int count)
+        {
+            SetPacksAvailable(act, count);
+            SetPacksGranted(act, count);
+        }
+    }
+}

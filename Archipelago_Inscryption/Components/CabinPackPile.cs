@@ -114,7 +114,7 @@ namespace Archipelago_Inscryption.Components
             }
             packs.Clear();
 
-            int available = ArchipelagoData.Data.PacksAvailable(act);
+            int available = APSaveFile.PacksAvailable(act);
 
             if (act == 3)
             {
@@ -176,7 +176,7 @@ namespace Archipelago_Inscryption.Components
             opening = true;
             GetComponent<BoxCollider>().enabled = false;
             SetPlayerHeld(true);
-            ArchipelagoData.Data.SpendPack(act);
+            APSaveFile.SpendPack(act);
 
             StartCoroutine(OpenPackSequence(cards));
         }

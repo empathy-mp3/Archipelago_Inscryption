@@ -69,6 +69,9 @@ namespace Archipelago_Inscryption.Archipelago
             { APItem.GBCCloverPlant,                    StoryEvent.GBCCloverFound },
             { APItem.FishbotCard,                       StoryEvent.TalkingAnglerCardDiscovered },
             { APItem.LonelyWizbotCard,                  StoryEvent.TalkingBlueMageCardDiscovered },
+            // Vanilla's own event for the cabin's Ourobot card, which only that scene ever set. It
+            // records that the item was granted, which the deck cannot: Act 3 lets you spend a card.
+            { APItem.Ourobot,                           StoryEvent.OurobotCardDiscovered },
             { APItem.FoulBackwaterShortcut,             StoryEvent.NatureHoloShortcut},
             { APItem.FilthyCorpseWorldShortcut,         StoryEvent.UndeadHoloShortcut},
             { APItem.GaudyGemLandShortcut,              StoryEvent.WizardHoloShortcut},
@@ -104,12 +107,64 @@ namespace Archipelago_Inscryption.Archipelago
         {
             // The trader turns each pelt into exactly one tarot, so the two together are the tally.
             { APItem.HoloPelt,       () => Part3SaveData.Data.pelts + Part3SaveData.Data.collectedTarots.Count },
+            // Currency and packs are spent, so what is left of them says nothing. These count what
+            // was handed over instead, which spending does not touch.
+            { APItem.Act1Currency,   () => APSaveFile.CurrencyGranted(1) },
+            { APItem.Act2Currency,   () => APSaveFile.CurrencyGranted(2) },
+            { APItem.Act3Currency,   () => APSaveFile.CurrencyGranted(3) },
+            { APItem.Act1CardPack,   () => APSaveFile.PacksGranted(1) },
+            { APItem.Act2CardPack,   () => APSaveFile.PacksGranted(2) },
+            { APItem.Act3CardPack,   () => APSaveFile.PacksGranted(3) },
+            // Taking a challenge off the run's list is the whole effect, and nothing puts one back
+            // mid-run, so what is left of a challenge is the copies still owed.
+            { APItem.SmallerBackpackChallenge,  ChallengeTally(AscensionChallenge.LessConsumables, 1) },
+            { APItem.PriceyPeltsChallenge,      ChallengeTally(AscensionChallenge.ExpensivePelts, 1) },
+            { APItem.BossTotemsChallenge,       ChallengeTally(AscensionChallenge.BossTotems, 1) },
+            { APItem.AllTotemBattlesChallenge,  ChallengeTally(AscensionChallenge.AllTotems, 1) },
+            { APItem.TippedScalesChallenge,     ChallengeTally(AscensionChallenge.StartingDamage, 3) },
+            { APItem.MoreDifficultChallenge,    ChallengeTally(AscensionChallenge.BaseDifficulty, 2) },
+            { APItem.ProgressiveGrizzlies,      ChallengeTally(AscensionChallenge.GrizzlyMode, 3) },
+            // Two copies with unlike effects: the first takes its challenge off the run, the second
+            // stands in for the cabin item this mode leaves out of the pool. One half of the tally each.
+            { APItem.ProgressiveCandle,         LadderTally(AscensionChallenge.LessLives, StoryEvent.CandleArmFound) },
+            { APItem.ProgressiveSquirrel,       LadderTally(AscensionChallenge.SubmergeSquirrels, StoryEvent.BeeFigurineFound) },
+            // A spent trap leaves only a battle behind, and battles are not saved, so these count what
+            // was handed over. Pending counts sit beside them and revert with the battle they were spent on.
+            { APItem.BleachTrap,                () => APSaveFile.BleachTrapsGranted },
+            { APItem.ReinforcementsTrap,        () => APSaveFile.ReinforcementsTrapsGranted },
+            { APItem.TrashTrap,                 () => APSaveFile.TrashTrapsGranted },
             // Both upgrades append to the same list, so they are told apart by what they append. A
             // null list reads as nothing accounted for, which reapplying would then throw on, so it
             // reads as everything accounted for instead and leaves the upgrades alone.
             { APItem.VesselUpgrade,  () => Part3SaveData.Data.sideDeckAbilities?.Count(a => a != Ability.ConduitNull) ?? int.MaxValue },
             { APItem.ConduitUpgrade, () => Part3SaveData.Data.sideDeckAbilities?.Count(a => a == Ability.ConduitNull) ?? int.MaxValue }
         };
+
+        // How many copies of a challenge item a run has already had applied, counted by what is
+        // missing from the list a run start builds. A list that does not exist yet reads as fully
+        // applied, since a run that has not been set up has nothing to repair.
+        private static Func<int> ChallengeTally(AscensionChallenge challenge, int countAtRunStart)
+        {
+            return () =>
+            {
+                List<AscensionChallenge> active = AscensionSaveData.Data?.activeChallenges;
+
+                if (active == null) return int.MaxValue;
+
+                return countAtRunStart - active.Count(entry => entry == challenge);
+            };
+        }
+
+        private static Func<int> LadderTally(AscensionChallenge challenge, StoryEvent secondCopyEvent)
+        {
+            return () =>
+            {
+                if (AscensionSaveData.Data?.activeChallenges == null) return int.MaxValue;
+
+                return (AscensionSaveData.Data.activeChallenges.Contains(challenge) ? 0 : 1)
+                    + (StoryEventsData.EventCompleted(secondCopyEvent) ? 1 : 0);
+            };
+        }
 
         private static Dictionary<APCheck, CheckInfo> checkInfos = new Dictionary<APCheck, CheckInfo>();
 
@@ -269,6 +324,102 @@ namespace Archipelago_Inscryption.Archipelago
             return applied;
         }
 
+        // Sigils are randomized on the way in, before the deck sees the card, so a granted card is
+        // no more vanilla than one the run was dealt.
+        private static void AddCardToDeck(CardInfo card, int act, DeckInfo deck)
+        {
+            receivingCardForAct = act;
+            try {
+                CardPatches.RandomizeSigils(card);
+                deck.AddCard(card);
+            } finally {
+                receivingCardForAct = 0;
+            }
+        }
+
+        private static void AddUnlockedCard(string cardName, int act, DeckInfo deck)
+        {
+            AddCardToDeck(CardLoader.GetCardByName(cardName), act, deck);
+        }
+
+        // The two cards a randomized deck is never asked to roll for: one is what the logic expects
+        // to find when it hands out its item, the other is the whole point of its own.
+        private static bool CardIsGuaranteed(APItem item)
+        {
+            return item == APItem.CagedWolfCard || item == APItem.Ourobot;
+        }
+
+        // A card arriving part way through an act is the one card a randomized deck did not roll
+        // for, so it is spent on a roll instead, from the pool that deck would have been built from.
+        private static CardInfo RollReplacementCard(APItem item, int act, DeckInfo deck)
+        {
+            if (CardIsGuaranteed(item) || ArchipelagoOptions.randomizeDeck == RandomizeDeck.Disable) return null;
+
+            List<CardInfo> pool = act == 3
+                ? RandomizerHelper.GenerateStarterPoolAct3()
+                : RandomizerHelper.GenerateCardPoolAct1();
+
+            if (pool.Count == 0) return null;
+
+            // The deck grows with every card granted, so two cards from one item cannot roll alike.
+            int seed = SaveManager.SaveFile.GetCurrentRandomSeed() + deck.Cards.Count * 7919;
+            CardInfo rolled = pool[SeededRandom.Range(0, pool.Count, seed)];
+
+            // Cloning empties a card's mods, which for a death card is everything it is.
+            return rolled.Mods.Any(mod => mod.deathCardInfo != null) ? rolled : CardLoader.Clone(rolled);
+        }
+
+        // Cards a fresh deck has to be handed, because nothing else puts them back. Act 1 rebuilds
+        // its deck on every death, Act 3 only on an act reset, and neither reads these items' events.
+        //
+        // Deliberately not here: the caged wolf, talking wolf and stinkbug, which vanilla itself
+        // rebuilds an Act 1 deck from, and Ourobot, which is guaranteed rather than rolled.
+        private static readonly Dictionary<int, APItem[]> runStartCards = new Dictionary<int, APItem[]>()
+        {
+            { 1, new APItem[] { APItem.SkinkCard, APItem.AntCards } },
+            { 3, new APItem[] { APItem.FishbotCard, APItem.LonelyWizbotCard } }
+        };
+
+        // Per card, not per item: a deck that already holds an Ant keeps the one it has and is still
+        // given the Ant Queen it does not.
+        private static void GrantMissingCards(APItem item, int act, DeckInfo deck)
+        {
+            if (!HasItem(item) || !itemCardPair.TryGetValue(item, out UnlockableCardInfo info)) return;
+
+            foreach (string cardName in info.cardsToUnlock)
+            {
+                if (!deck.Cards.Exists(card => card.name == cardName))
+                    AddUnlockedCard(cardName, act, deck);
+            }
+        }
+
+        internal static void GrantRunStartCards(int act, DeckInfo deck)
+        {
+            foreach (APItem item in runStartCards[act]) GrantMissingCards(item, act, deck);
+        }
+
+        // Ourobot exists to make Act 3 easier, so it is the one card that act guarantees -- present
+        // in every deck the way the caged wolf is, and never left to a roll.
+        internal static void GrantOurobotIfReceived(DeckInfo deck)
+        {
+            GrantMissingCards(APItem.Ourobot, 3, deck);
+        }
+
+        // What a randomized starter deals as extra slots instead of as themselves, so an item widens
+        // the deck without guaranteeing a card the roll did not pick.
+        internal static List<string> RunStartCardNames(int act)
+        {
+            List<string> names = new List<string>();
+
+            foreach (APItem item in runStartCards[act])
+            {
+                if (HasItem(item) && itemCardPair.TryGetValue(item, out UnlockableCardInfo info))
+                    names.AddRange(info.cardsToUnlock);
+            }
+
+            return names;
+        }
+
         internal static void ApplyItemReceived(APItem receivedItem)
         {
             if (itemStoryPairs.TryGetValue(receivedItem, out StoryEvent storyEvent))
@@ -278,16 +429,17 @@ namespace Archipelago_Inscryption.Archipelago
 
             if (itemCardPair.TryGetValue(receivedItem, out UnlockableCardInfo info))
             {
+                DeckInfo deck = info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck;
+                int act = info.isPart3 ? 3 : 1;
+
                 for (int i = 0; i < info.cardsToUnlock.Length; i++)
                 {
-                    var card = CardLoader.GetCardByName(info.cardsToUnlock[i]);
-                    receivingCardForAct = info.isPart3 ? 3 : 1;
-                    try {
-                        CardPatches.RandomizeSigils(card);
-                        (info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck).AddCard(card);
-                    } finally {
-                        receivingCardForAct = 0;
-                    }
+                    CardInfo rolled = RollReplacementCard(receivedItem, act, deck);
+
+                    if (rolled != null)
+                        AddCardToDeck(rolled, act, deck);
+                    else
+                        AddUnlockedCard(info.cardsToUnlock[i], act, deck);
                 }
 
                 for (int i = 0; i < info.rigDraws.Length; i++)
@@ -306,35 +458,44 @@ namespace Archipelago_Inscryption.Archipelago
                 }
             }
 
+            // The ledger moves with the balance and is written to the same file, so whichever of the
+            // two a failed save loses, it loses both, and the next connect can see the shortfall.
             if (receivedItem == APItem.Act1Currency)
             {
                 RunState.Run.currency += CURRENCY_PER_ITEM;
+                APSaveFile.SetCurrencyGranted(1, APSaveFile.CurrencyGranted(1) + 1);
             }
             else if (receivedItem == APItem.Act2Currency)
             {
                 SaveData.Data.currency += CURRENCY_PER_ITEM;
+                APSaveFile.SetCurrencyGranted(2, APSaveFile.CurrencyGranted(2) + 1);
             }
             else if (receivedItem == APItem.Act3Currency)
             {
                 Part3SaveData.Data.currency += CURRENCY_PER_ITEM;
+                APSaveFile.SetCurrencyGranted(3, APSaveFile.CurrencyGranted(3) + 1);
             }
             else if (receivedItem == APItem.Act1CardPack)
             {
-                ArchipelagoData.Data.GrantPack(1);
+                APSaveFile.GrantPack(1);
                 RandomizerHelper.RefreshPackPile();
             }
             else if (receivedItem == APItem.Act2CardPack)
             {
-                ArchipelagoData.Data.GrantPack(2);
+                APSaveFile.GrantPack(2);
                 RandomizerHelper.UpdatePackButtonEnabled();
             }
             else if (receivedItem == APItem.Act3CardPack)
             {
-                ArchipelagoData.Data.GrantPack(3);
+                APSaveFile.GrantPack(3);
                 RandomizerHelper.RefreshPackPile();
             }
             else if (receivedItem == APItem.TrashTrap)
             {
+                // Counted even when no scene matches and no card is dealt, so a trap that arrives
+                // between acts stays dropped rather than landing in whichever act is opened next.
+                APSaveFile.TrashTrapsGranted++;
+
                 if (SaveManager.SaveFile.currentScene.Contains("Part1"))
                     RunState.Run.playerDeck.AddCard(CardLoader.GetCardByName("BrokenEgg"));
                 else if (SaveManager.SaveFile.currentScene.Contains("GBC"))
@@ -349,19 +510,21 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (receivedItem == APItem.BleachTrap)
             {
+                APSaveFile.BleachTrapsGranted++;
+
                 if (TurnManager.Instance == null)
                 {
-                    ArchipelagoData.Data.bleachTrapCount++;
+                    APSaveFile.BleachTrapsPending++;
                 }
                 else if (TurnManager.Instance.IsPlayerTurn) {
                     if (!RandomizerHelper.BleachTrapRemoveSigils())
                         {
-                            ArchipelagoData.Data.bleachTrapCount++;
+                            APSaveFile.BleachTrapsPending++;
                         }
                 }
                 else
                 {
-                    ArchipelagoData.Data.bleachTrapCount++;
+                    APSaveFile.BleachTrapsPending++;
                 }
             }
             else if (receivedItem == APItem.DeckSizeTrap)
@@ -375,7 +538,8 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (receivedItem == APItem.ReinforcementsTrap)
             {
-                ArchipelagoData.Data.reinforcementsTrapCount++;
+                APSaveFile.ReinforcementsTrapsPending++;
+                APSaveFile.ReinforcementsTrapsGranted++;
             }
             else if (receivedItem == APItem.SquirrelTotemHead && !RunState.Run.totemTops.Contains(Tribe.Squirrel))
             {
@@ -545,7 +709,9 @@ namespace Archipelago_Inscryption.Archipelago
             }
 			else if (receivedItem == APItem.MoreDifficultChallenge)
             {
-			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.HarderDeckTrials);
+                // BaseDifficulty is what a run start adds for this item. HarderDeckTrials was never
+                // added by anything, so removing it left the challenge up until the next run.
+			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.BaseDifficulty);
             }
 			else if (receivedItem == APItem.ProgressiveCandle)
             {
@@ -769,9 +935,8 @@ namespace Archipelago_Inscryption.Archipelago
         // How the recovery pass gets an item's effect back when the save no longer shows it.
         private enum Recovery
         {
-            // Cannot be lost on its own. Either the item writes no state and its effect is read from the
-            // received list wherever it is needed, or its state is Archipelago's own data, which is
-            // reverted and reloaded as one piece with the record of having received it.
+            // Cannot be lost on its own: the item writes no state, and its effect is read from the
+            // received list wherever it is needed.
             NoneNeeded,
             // One copy leaves no trace distinguishable from another's, so the shortfall is only visible
             // as a tally against how many were sent. Needs an entry in countedItemTallies.
@@ -781,7 +946,8 @@ namespace Archipelago_Inscryption.Archipelago
             // Game state kept out of VerifyItem deliberately, because starting a run or an act
             // recomputes it from the received count, or something reconciles it where it is used.
             RebuiltElsewhere,
-            // Granted once and deliberately never given back.
+            // Can go missing, and is deliberately left missing. Everything here is a penalty, so the
+            // only way it fails is one the player got away with.
             NotRecovered
         }
 
@@ -799,38 +965,40 @@ namespace Archipelago_Inscryption.Archipelago
                 or APItem.AncientObol or APItem.BoneLordFemur or APItem.GBCCloverPlant
                 or APItem.MycologistsHoloKey or APItem.BoneLordHoloKey or APItem.FoulBackwaterShortcut
                 or APItem.FilthyCorpseWorldShortcut or APItem.GaudyGemLandShortcut or APItem.GemsModule
-                or APItem.ResplendentBastionGate => Recovery.Checked,
-            // Act 2's collected pixel cards and Act 3's deck cards.
-            APItem.BoneLordHorn or APItem.GreatKrakenCard or APItem.DrownedSoulCard or APItem.SalmonCard
-                or APItem.LonelyWizbotCard or APItem.FishbotCard or APItem.Ourobot => Recovery.Checked,
+                or APItem.ResplendentBastionGate or APItem.LonelyWizbotCard or APItem.FishbotCard
+                or APItem.Ourobot => Recovery.Checked,
+            
+            // Act 2's collected pixel cards.
+            APItem.BoneLordHorn or APItem.GreatKrakenCard or APItem.DrownedSoulCard
+                or APItem.SalmonCard => Recovery.Checked,
+            
             // Flags on the save that VerifyItem reads one by one.
             APItem.EpitaphPiece or APItem.EpitaphPieces or APItem.CameraReplica or APItem.MrsBombRemote
                 or APItem.ExtraBattery or APItem.NanoArmorGenerator or APItem.Quill
-                or APItem.ProgressiveSquirrel => Recovery.Checked,
+                or APItem.MagnificusEye => Recovery.Checked,
 
-            APItem.HoloPelt or APItem.VesselUpgrade or APItem.ConduitUpgrade => Recovery.Counted,
+            APItem.HoloPelt or APItem.VesselUpgrade or APItem.ConduitUpgrade
+                or APItem.Act1Currency or APItem.Act2Currency or APItem.Act3Currency
+                or APItem.Act1CardPack or APItem.Act2CardPack or APItem.Act3CardPack
+                or APItem.SmallerBackpackChallenge or APItem.PriceyPeltsChallenge
+                or APItem.BossTotemsChallenge or APItem.AllTotemBattlesChallenge
+                or APItem.TippedScalesChallenge or APItem.MoreDifficultChallenge
+                or APItem.ProgressiveGrizzlies or APItem.ProgressiveCandle
+                or APItem.ProgressiveSquirrel or APItem.BleachTrap or APItem.ReinforcementsTrap
+                or APItem.TrashTrap => Recovery.Counted,
 
-            // Read from the received list where they are used, so there is nothing to put back. The two
-            // traps are counters in Archipelago's data that battle code spends as it applies them.
+            // Read from the received list at the point of use, so they hold no state of their own for a
+            // save to lose. COUNT rides along as the enum's sentinel, which is never received at all.
             APItem.WardrobeKey or APItem.WoodcarverNode or APItem.MycologistsNode or APItem.BoneAltarNode
                 or APItem.SacrificeStonesNode or APItem.BackpackNode or APItem.CampfireNode
                 or APItem.GoobertNode or APItem.GBCBridgeRepair or APItem.InspectometerBattery
                 or APItem.FactoryBridgeRepair or APItem.Hammer or APItem.Act1 or APItem.Act2 or APItem.Act3
-                or APItem.BleachTrap or APItem.ReinforcementsTrap or APItem.COUNT => Recovery.NoneNeeded,
+                or APItem.COUNT => Recovery.NoneNeeded,
 
-            // Currency and packs are set from the count when an act starts; the challenge items are
-            // rebuilt wholesale from the same counts, which is also what fixes the candle and the eye;
-            // the deck size trap tops its collection up to its counter in the deck building menu.
-            APItem.Act1Currency or APItem.Act2Currency or APItem.Act3Currency or APItem.Act1CardPack
-                or APItem.Act2CardPack or APItem.Act3CardPack or APItem.SmallerBackpackChallenge
-                or APItem.PriceyPeltsChallenge or APItem.BossTotemsChallenge or APItem.TippedScalesChallenge
-                or APItem.AllTotemBattlesChallenge or APItem.MoreDifficultChallenge
-                or APItem.ProgressiveCandle or APItem.ProgressiveGrizzlies or APItem.MagnificusEye
-                or APItem.DeckSizeTrap => Recovery.RebuiltElsewhere,
+            // Counts up in Archipelago's own data, which cannot come apart from the record of having
+            // received it, and tops its collection back up whenever the deck building menu is opened.
+            APItem.DeckSizeTrap => Recovery.RebuiltElsewhere,
 
-            // Whether the broken egg is still in the deck is not worth reasoning about, and a trap that
-            // fails to come back is a trap the player got away with.
-            APItem.TrashTrap => Recovery.NotRecovered
         };
 
         // The shortfall is shared by every copy, so the copies this pass has already queued are allowed
@@ -848,15 +1016,6 @@ namespace Archipelago_Inscryption.Archipelago
             return false;
         }
 
-        // Only the modes that leave a deck's cards as themselves. The other two rebuild the deck from a
-        // random pool on arriving at a node, and there the card items decide what that pool may hold
-        // rather than what the deck holds, so what is in the deck says nothing about them.
-        internal static bool DeckKeepsItsCards()
-        {
-            return ArchipelagoOptions.randomizeDeck == RandomizeDeck.Disable
-                || ArchipelagoOptions.randomizeDeck == RandomizeDeck.StarterOnly;
-        }
-
         // Only for items whose effect one copy either has or has not left behind. Counted ones can
         // only be checked as a group, so their shortfall is worked out in the caller instead.
         internal static bool VerifyItem(InscryptionItemInfo item)
@@ -871,19 +1030,6 @@ namespace Archipelago_Inscryption.Archipelago
             if (itemPixelCardPair.TryGetValue(receivedItem, out string cardName) && !SaveManager.SaveFile.gbcCardsCollected.Contains(cardName))
             {
                 return false;
-            }
-
-            // Nothing else takes cards back out of the Act 3 deck, so a card missing from it was never
-            // added. Ourobot has no story event of its own, making this the only trace it leaves; the
-            // other two are covered twice over.
-            if (DeckKeepsItsCards() && itemCardPair.TryGetValue(receivedItem, out UnlockableCardInfo part3Cards) && part3Cards.isPart3)
-            {
-                List<CardInfo> deck = Part3SaveData.Data.deck?.Cards;
-
-                foreach (string part3CardName in part3Cards.cardsToUnlock)
-                {
-                    if (deck == null || !deck.Exists(card => card.name == part3CardName)) return false;
-                }
             }
 
             if (receivedItem.ToString().Contains("Epitaph"))
@@ -924,11 +1070,15 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 return false;
             }
-            // The second squirrel is what stands in for the bee figurine, and reapplying either copy
-            // is harmless: the challenge removal, the event and the totem top are all guarded.
-            else if (receivedItem == APItem.ProgressiveSquirrel
-                && CountReceived(APItem.ProgressiveSquirrel) >= 2
-                && !StoryEventsData.EventCompleted(StoryEvent.BeeFigurineFound))
+            // Losing the eye to a failed save costs the run the clock's large compartment, while
+            // restoring one the player traded away costs almost nothing, so this repairs it.
+            //
+            // Except where the trade was deliberate: the dagger takes the eye and hands back the
+            // choice of a new one, and a goat eye chosen this run is an answer, not a shortfall.
+            else if (receivedItem == APItem.MagnificusEye
+                && RunState.Run != null
+                && RunState.Run.eyeState != EyeballState.Wizard
+                && !(RunState.Run.storyEventsCompleted?.Contains(StoryEvent.SpecialDaggerUsed) ?? false))
             {
                 return false;
             }

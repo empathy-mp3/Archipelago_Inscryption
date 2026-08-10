@@ -49,7 +49,7 @@ namespace Archipelago_Inscryption.Patches
         // the run's teeth and any unopened packs with it.
         [HarmonyPatch(typeof(SaveFile), "NewPart1Run")]
         [HarmonyPostfix]
-        static void InitializeAct1RunItems()
+        static void InitializeAct1Items()
         {
             if (ArchipelagoData.Data == null || RunState.Run == null)
             {
@@ -62,49 +62,24 @@ namespace Archipelago_Inscryption.Patches
             int newCurrency = receivedCount * ArchipelagoManager.CURRENCY_PER_ITEM;
 
             RunState.Run.currency = newCurrency;
-            ArchipelagoData.Data.SetPacks(1, ArchipelagoManager.CountReceived(APItem.Act1CardPack));
+            APSaveFile.SetCurrencyGranted(1, receivedCount);
+            APSaveFile.ResetPacksForAct(1, ArchipelagoManager.CountReceived(APItem.Act1CardPack));
 
             RandomizerHelper.RefreshPackPile();
             ArchipelagoData.SaveToFile();
 
             ArchipelagoModPlugin.Log.LogInfo($"InitializeAct1RunItems: ran. Act1Currency items received: {receivedCount}. Currency {previousCurrency} -> {RunState.Run.currency} (expected {newCurrency}).");
         }
-
-        // The caller already ran RunState.Run.currency += excessDamage regardless of act; cancel
-        // it before Act 2/3's own animation/grant runs, closing the window before it opens.
-        [HarmonyPatch(typeof(Part3CombatPhaseManager), "VisualizeExcessLethalDamage")]
-        [HarmonyPatch(typeof(PixelCombatPhaseManager), "VisualizeExcessLethalDamage")]
-        [HarmonyPrefix]
-        static void UndoAct1CurrencyLeakFromNonAct1Combat(int excessDamage)
-        {
-            if (RunState.Run != null)
-            {
-                RunState.Run.currency -= excessDamage;
-            }
-        }
-
-        // Neither Initialize zeroes currency, so these postfixes are what establish it. They
-        // restore the act's card packs alongside it, so an act reset needs no step of its own.
-        [HarmonyPatch(typeof(Part3SaveData), "Initialize")]
-        [HarmonyPostfix]
-        static void InitializeAct3Items(Part3SaveData __instance)
-        {
-            if (ArchipelagoData.Data == null) return;
-
-            __instance.currency = ArchipelagoManager.CountReceived(APItem.Act3Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
-            ArchipelagoData.Data.SetPacks(3, ArchipelagoManager.CountReceived(APItem.Act3CardPack));
-
-            RandomizerHelper.RefreshPackPile();
-        }
-
+        
         [HarmonyPatch(typeof(SaveData), "Initialize")]
         [HarmonyPostfix]
-        static void InitializeItemNewGame(SaveData __instance)
+        static void InitializeAct2Items(SaveData __instance)
         {
             if (ArchipelagoData.Data == null) return;
 
             __instance.currency = ArchipelagoManager.CountReceived(APItem.Act2Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
-            ArchipelagoData.Data.SetPacks(2, ArchipelagoManager.CountReceived(APItem.Act2CardPack));
+            APSaveFile.SetCurrencyGranted(2, ArchipelagoManager.CountReceived(APItem.Act2Currency));
+            APSaveFile.ResetPacksForAct(2, ArchipelagoManager.CountReceived(APItem.Act2CardPack));
 
             RandomizerHelper.UpdatePackButtonEnabled();
 
@@ -140,6 +115,35 @@ namespace Archipelago_Inscryption.Patches
             if (ArchipelagoManager.HasItem(APItem.BoneLordHorn))
                 ArchipelagoManager.ApplyItemReceived(APItem.BoneLordHorn);
         }
+        
+        
+        // Neither Initialize zeroes currency, so these postfixes are what establish it. They
+        // restore the act's card packs alongside it, so an act reset needs no step of its own.
+        [HarmonyPatch(typeof(Part3SaveData), "Initialize")]
+        [HarmonyPostfix]
+        static void InitializeAct3Items(Part3SaveData __instance)
+        {
+            if (ArchipelagoData.Data == null) return;
+
+            __instance.currency = ArchipelagoManager.CountReceived(APItem.Act3Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            APSaveFile.SetCurrencyGranted(3, ArchipelagoManager.CountReceived(APItem.Act3Currency));
+            APSaveFile.ResetPacksForAct(3, ArchipelagoManager.CountReceived(APItem.Act3CardPack));
+
+            RandomizerHelper.RefreshPackPile();
+        }
+
+        // The caller already ran RunState.Run.currency += excessDamage regardless of act; cancel
+        // it before Act 2/3's own animation/grant runs, closing the window before it opens.
+        [HarmonyPatch(typeof(Part3CombatPhaseManager), "VisualizeExcessLethalDamage")]
+        [HarmonyPatch(typeof(PixelCombatPhaseManager), "VisualizeExcessLethalDamage")]
+        [HarmonyPrefix]
+        static void UndoAct1CurrencyLeakFromNonAct1Combat(int excessDamage)
+        {
+            if (RunState.Run != null)
+            {
+                RunState.Run.currency -= excessDamage;
+            }
+        }
 
         [HarmonyPatch(typeof(SaveFile), "ResetGBCSaveData")]
         [HarmonyPostfix]
@@ -160,27 +164,20 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
-        // A new run rebuilds its deck's discovered cards from their story events, but only the three
-        // vanilla knows about: the caged wolf, the talking wolf and the stinkbug. Nothing reads the
-        // skink or ant events, so those cards were granted once and lost to the next run.
+        // Vanilla rebuilds the deck's discovered cards from their story events, but only the three it
+        // knows about: the caged wolf, the talking wolf and the stinkbug. The skink and the ants have
+        // no such reader, so they were granted once and lost to the next run.
+        //
+        // The two full randomizers reroll the deck on arriving at a node, which is after this, so
+        // there these cards survive only as the slots they add. StarterOnly gets that same widening
+        // from its own starter build, where the caged wolf is the one card it guarantees.
         [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
         [HarmonyPostfix]
         static void AddGrantedAct1CardsIfNeeded(RunState __instance)
         {
-            if (ArchipelagoData.Data == null || !ArchipelagoManager.DeckKeepsItsCards()) return;
+            if (ArchipelagoData.Data == null || ArchipelagoOptions.randomizeDeck == RandomizeDeck.StarterOnly) return;
 
-            // Granting adds every card the item covers at once, so one of them standing in for the
-            // rest keeps a second Ant Queen out of a deck that already has its pair.
-            if (ArchipelagoManager.HasItem(APItem.SkinkCard) && !DeckHasCard(__instance.playerDeck, "Skink"))
-                ArchipelagoManager.ApplyItemReceived(APItem.SkinkCard);
-
-            if (ArchipelagoManager.HasItem(APItem.AntCards) && !DeckHasCard(__instance.playerDeck, "Ant"))
-                ArchipelagoManager.ApplyItemReceived(APItem.AntCards);
-        }
-
-        private static bool DeckHasCard(DeckInfo deck, string cardName)
-        {
-            return deck != null && deck.Cards.Exists(card => card.name == cardName);
+            ArchipelagoManager.GrantRunStartCards(1, __instance.playerDeck);
         }
 
         [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
@@ -298,10 +295,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static void ProcessBleachTrapOnBellRing(TurnManager __instance)
         {
-            if (ArchipelagoData.Data.bleachTrapCount > 0)
+            if (APSaveFile.BleachTrapsPending > 0)
             {
                 if (RandomizerHelper.BleachTrapRemoveSigils())
-                    ArchipelagoData.Data.bleachTrapCount--;
+                    APSaveFile.BleachTrapsPending--;
             }
         }
 
@@ -311,7 +308,7 @@ namespace Archipelago_Inscryption.Patches
         {
             while (__result.MoveNext())
                 yield return __result.Current;
-            if (ArchipelagoData.Data.reinforcementsTrapCount > 0)
+            if (APSaveFile.ReinforcementsTrapsPending > 0)
             {
                 yield return new WaitForSeconds(0.5f);
                 List<CardSlot> opponentSlots = Singleton<BoardManager>.Instance.OpponentSlotsCopy;
@@ -330,7 +327,7 @@ namespace Archipelago_Inscryption.Patches
                             seed += seed2 * 23;
                             seed2++;
                         }
-                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                        APSaveFile.ReinforcementsTrapsPending--;
                     }
                     else if (SaveManager.SaveFile.IsPart2)
                     {
@@ -341,7 +338,7 @@ namespace Archipelago_Inscryption.Patches
                             seed += seed2 * 23;
                             seed2++;
                         }
-                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                        APSaveFile.ReinforcementsTrapsPending--;
                     }
                     else if (SaveManager.SaveFile.IsPart3)
                     {
@@ -352,7 +349,7 @@ namespace Archipelago_Inscryption.Patches
                             seed += seed2 * 23;
                             seed2++;
                         }
-                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                        APSaveFile.ReinforcementsTrapsPending--;
                     }
                     yield return new WaitForSeconds(0.5f);
                 }

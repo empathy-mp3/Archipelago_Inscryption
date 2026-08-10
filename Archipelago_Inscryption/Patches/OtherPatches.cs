@@ -55,6 +55,21 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
+        // The only place the game builds a save file, and Odin writes whatever type it finds here, so
+        // this one substitution is what gives every Archipelago save room for state of its own.
+        // Assigned before Initialize runs, as vanilla does, because the act initializers this triggers
+        // already write to the save through SaveManager.SaveFile.
+        [HarmonyPatch(typeof(SaveManager), "CreateNewSaveFile")]
+        [HarmonyPrefix]
+        static bool CreateArchipelagoSaveFile()
+        {
+            SaveManager.DeleteSaveFile();
+            SaveManager.saveFile = new APSaveFile();
+            SaveManager.saveFile.Initialize();
+
+            return false;
+        }
+
         [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> ReplaceBackUpSaveFileName(IEnumerable<CodeInstruction> instructions)

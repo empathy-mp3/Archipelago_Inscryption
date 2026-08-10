@@ -431,11 +431,11 @@ namespace Archipelago_Inscryption.Helpers
 
             bool result = false;
             TextBox.Prompt prompt = new TextBox.Prompt("Open a pack", "Cancel", option => result = (option == 0));
-            int packsAvailable = ArchipelagoData.Data.PacksAvailable(2);
+            int packsAvailable = APSaveFile.PacksAvailable(2);
             yield return Singleton<TextBox>.Instance.ShowUntilInput($"You have {packsAvailable} card pack{(packsAvailable > 1 ? "s" : "")} available.", TextBox.Style.Neutral, null, TextBox.ScreenPosition.ForceTop, 0, true, false, prompt);
             if (result)
             {
-                ArchipelagoData.Data.SpendPack(2);
+                APSaveFile.SpendPack(2);
 
                 // Advances the seed AssignInfoToCards reads, so successive packs differ and a
                 // reload cannot reroll one. Also shifts Act 1 and 3's; see AddOpenedPacksToSeed.
@@ -469,7 +469,7 @@ namespace Archipelago_Inscryption.Helpers
         {
             if (packButton == null) return;
 
-            packButton.SetEnabled(ArchipelagoData.Data.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
+            packButton.SetEnabled(APSaveFile.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
         }
 
         // Uses vanilla's own Act 1 choice generator, so a pack offers what a card choice node
@@ -499,7 +499,7 @@ namespace Archipelago_Inscryption.Helpers
             // reset deals fresh packs the same way it deals a fresh starting deck.
             int packsOpened = ArchipelagoManager.CountReceived(
                     act == 3 ? APItem.Act3CardPack : APItem.Act1CardPack)
-                - ArchipelagoData.Data.PacksAvailable(act);
+                - APSaveFile.PacksAvailable(act);
             int seed = SaveManager.SaveFile.GetCurrentRandomSeed() + packsOpened * 7919;
 
             for (int attempt = 0; attempt < 8 && cards.Count < count; attempt++)
@@ -823,6 +823,21 @@ namespace Archipelago_Inscryption.Helpers
             if (ArchipelagoManager.HasItem(APItem.StuntedWolfCard))
                 cardsInfoRandomPool.Add(CardLoader.GetCardByName("Wolf_Talking"));
             cardsInfoRandomPool.AddRange(GetAllDeathCards());
+
+            return cardsInfoRandomPool;
+        }
+
+        // What a randomized Act 3 deck is built from. The talking bots are not choosable cards, so
+        // holding their item is the only thing that puts them in; the node reroll builds its own
+        // wider pool, since it replaces cards vanilla never offers as choices either.
+        public static List<CardInfo> GenerateStarterPoolAct3()
+        {
+            List<CardInfo> cardsInfoRandomPool = CardLoader.GetUnlockedCards(CardMetaCategory.ChoiceNode, CardTemple.Tech);
+
+            foreach (string cardName in ArchipelagoManager.RunStartCardNames(3))
+            {
+                cardsInfoRandomPool.Add(CardLoader.GetCardByName(cardName));
+            }
 
             return cardsInfoRandomPool;
         }

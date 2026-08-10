@@ -348,6 +348,9 @@ namespace Archipelago_Inscryption.Patches
                                                      && x.name != "!BOUNTYHUNTER_BASE" && x.name != "Librarian" && !x.name.Contains("EmptyVessel")
                                                      && x.name != "!MYCOCARD_BASE" && x.name != "CaptiveFile" && x.name != "!BUILDACARD_BASE");
                 cardsInfoRandomPool.AddRange(RandomizerHelper.GetAllCustomCards());
+                // Ourobot's card is guaranteed and survives the reroll below, so dealing it here
+                // would only ever be a second copy of a card the deck already has.
+                cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3");
                 List<CardInfo> cardsInfoRandomGemPool = cardsInfoRandomPool;
                 List<CardInfo> cardsInfoRandomConduitPool = cardsInfoRandomPool;
                 if (ArchipelagoOptions.randomizeDeck == RandomizeDeck.RandomizeType)
@@ -367,11 +370,15 @@ namespace Archipelago_Inscryption.Patches
                     cardsInfoRandomPool.Add(CardLoader.GetCardByName("BlueMage_Talking"));
                 if (ArchipelagoManager.HasItem(APItem.FishbotCard))
                     cardsInfoRandomPool.Add(CardLoader.GetCardByName("Angler_Talking"));
-                if (!ArchipelagoManager.HasItem(APItem.Ourobot))
-                    cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3");
                 foreach (CardInfo c in Part3SaveData.Data.deck.Cards)
                 {
                     CardInfo card = c;
+                    if (c.name == "Ouroboros_Part3")
+                    {
+                        newCardsIds.Add(c.name);
+                        newCards.Add(c);
+                        continue;
+                    }
                     if (card.name == "!MYCOCARD_BASE" && card.mods.Count > 0)
                     {
                         card.mods.Remove(card.mods.First());
@@ -500,7 +507,9 @@ namespace Archipelago_Inscryption.Patches
             if (ArchipelagoOptions.randomizeDeck != RandomizeDeck.StarterOnly)
                 return true;
 
-            int nbCardsToAdd = 4;
+            // The cards these items would have added to a vanilla starter deck become extra rolls
+            // instead: the caged wolf is the only card this mode guarantees.
+            int nbCardsToAdd = 4 + ArchipelagoManager.RunStartCardNames(1).Count;
 
             if (StoryEventsData.EventCompleted(StoryEvent.CageCardDiscovered) && !StoryEventsData.EventCompleted(StoryEvent.WolfCageBroken))
             {
@@ -590,6 +599,10 @@ namespace Archipelago_Inscryption.Patches
 
             int randomSeed = SaveManager.SaveFile.GetCurrentRandomSeed();
 
+            // Act 3's deck is only ever rebuilt here, so this is where an act reset has to hand back
+            // what Archipelago granted -- the act's answer to a new Act 1 run.
+            List<string> runStartCards = ArchipelagoManager.RunStartCardNames(3);
+
             if (ArchipelagoOptions.randomizeDeck == RandomizeDeck.StarterOnly)
             {
                 Part3SaveData.Data.deck.RemoveCardByName("BatteryBot");
@@ -597,26 +610,35 @@ namespace Archipelago_Inscryption.Patches
                 Part3SaveData.Data.deck.RemoveCardByName("Sniper");
                 Part3SaveData.Data.deck.RemoveCardByName("CloserBot");
 
-                List<CardInfo> randomCards = new List<CardInfo>();
-                for (int i = 0; i < 4; i++)
+                // Ourobot aside, this mode guarantees nothing, so a card already granted goes back
+                // into the roll as a slot and takes its chances with everything else.
+                foreach (string cardName in runStartCards)
                 {
-                    CardInfo card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
-                    while (randomCards.Exists(x => x.name == card.name))
-                    {
-                        card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
-                    }
-
-                    randomCards.Add(card);
+                    Part3SaveData.Data.deck.RemoveCardByName(cardName);
                 }
 
-                foreach (CardInfo card in randomCards)
+                List<CardInfo> cardsRandomPool = RandomizerHelper.GenerateStarterPoolAct3();
+
+                for (int i = 0; i < 4 + runStartCards.Count && cardsRandomPool.Count > 0; i++)
                 {
+                    CardInfo card = cardsRandomPool[SeededRandom.Range(0, cardsRandomPool.Count, randomSeed++)];
+                    cardsRandomPool.Remove(card);
                     Part3SaveData.Data.deck.AddCard(card);
                 }
             }
+            else
+            {
+                ArchipelagoManager.GrantRunStartCards(3, Part3SaveData.Data.deck);
+            }
+
+            ArchipelagoManager.GrantOurobotIfReceived(Part3SaveData.Data.deck);
 
             foreach (CardInfo card in Part3SaveData.Data.deck.Cards)
             {
+                // A granted card was randomized as it was handed over. Doing it again stacks a second
+                // replacement, and the two sets of sigils are read together.
+                if (card.Mods.Exists(m => m is SigilReplacementInfo)) continue;
+
                 CardPatches.RandomizeSigils(card);
             }
             Part3SaveData.Data.deck.UpdateModDictionary();
