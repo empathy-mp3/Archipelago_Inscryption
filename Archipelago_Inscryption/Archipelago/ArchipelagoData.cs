@@ -98,9 +98,8 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("wizardCode3")]
         internal List<int> wizardCode3 = new List<int>();
 
-        // Act 1 has not been entered since it was last made fresh. BasicTutorialCompleted cannot
-        // tell that on its own: an act reset deliberately keeps Act 1's story events, and
-        // skip_tutorial sets that event on a save nobody has played yet. Cleared on loading Act 1.
+        // Act 1 has not been entered since it was last made fresh, which BasicTutorialCompleted
+        // cannot tell on its own: a reset keeps it, and skip_tutorial sets it on an unplayed save.
         [JsonProperty("act1RunFresh")]
         internal bool act1RunFresh = false;
         [JsonProperty("act1Completed")]
@@ -117,10 +116,8 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonIgnore]
         internal uint index = 0;
 
-        // Both settings belong to one save, so they are stored per save. They used to be static
-        // fields, which Newtonsoft still serializes when they carry [JsonProperty]: every load wrote
-        // them process-wide, and the save select screen loads every save to list them, so whichever
-        // was listed last decided these for the session. The accessors below keep the JSON keys.
+        // Per save, not static: as static fields Newtonsoft still deserialized them process-wide,
+        // so the last save listed by the select screen decided both for the session.
         [JsonProperty("itemLogMode")]
         private ItemLogMode itemLogModeSetting = ItemLogMode.AllItems;
         [JsonProperty("deathLinkOverride")]

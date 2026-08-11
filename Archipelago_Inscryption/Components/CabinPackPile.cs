@@ -10,10 +10,8 @@ using UnityEngine;
 
 namespace Archipelago_Inscryption.Components
 {
-    // The pack pile, sitting beside the rulebook: Act 1's on the cabin shelf, Act 3's on the
-    // factory wall. Both hang off the object the game itself calls CabinRulebook. Unlike the old
-    // table pile this is a permanent scene object, built once when the room loads and rebuilt in
-    // place as packs arrive and are spent, so there is no per-view spawn and teardown to get wrong.
+    // The pack pile beside the rulebook: Act 1's on the cabin shelf, Act 3's on the factory wall.
+    // A permanent scene object rebuilt in place, so there is no per-view spawn and teardown.
     internal class CabinPackPile : MainInputInteractable
     {
         // Placement relative to the rulebook, the one landmark with a known transform in each
@@ -32,27 +30,22 @@ namespace Archipelago_Inscryption.Components
         // A choice card stands facing the player, so its clickable box is the card face: wide in
         // X, tall in Y, thin in Z. It previously used the flat pile's shape, catching only a band.
         internal static readonly Vector3 CHOICE_COLLIDER = new Vector3(1.2f, 1.6f, 0.2f);
-        // The card prefab's own 90 degree X rotation is what makes a card lie flat, and
-        // ResetTransform strips it, so in holder space the card's face normal is -Z. Facing the
-        // player therefore means pointing the holder away from the camera, with no tilt term.
+        // ResetTransform strips the prefab's 90 degree X rotation, so in holder space the card's
+        // face normal is -Z: facing the player means pointing away from the camera, with no tilt.
         internal const float CHOICE_LEAN = 0f;
         internal const float CHOICE_SCALE = 0.7114f;
 
         // Mirrors the table pile's opening: the pack lifts and turns, plays its open animation,
         // and the cards come out of it rather than appearing where they land.
         internal static readonly Vector3 PACK_LIFT = new Vector3(0f, 0.25f, 0f);
-        // Positive yaw turns the pack's face toward the player as it lifts. The old table pile
-        // used -90, but it hung off a parent already rotated 90, so the sign flips here. Act 3's
-        // packs are flat card backs, where the same turn is just a spin in place, so they only
-        // lift.
+        // Positive yaw turns the pack's face toward the player as it lifts. Act 3's packs are flat
+        // card backs, where the same turn is only a spin in place, so those just lift.
         internal static readonly Vector3 PACK_TURN = new Vector3(0f, 90f, 0f);
         internal const float REVEAL_STAGGER = 0.1f;
         internal const float REVEAL_TIME = 0.3f;
 
-        // The shelf lantern only reaches part of the row, so the cabin's hand light is brightened
-        // while the cards are on offer, the way vanilla sequencers adjust it. Moving the cards to
-        // the FirstPersonLighting layer instead does not work: that layer has no light of its own
-        // (FirstPersonLight culls to everything), so it only costs them the room's lighting.
+        // The shelf lantern only reaches part of the row, so the hand light is brightened while the
+        // cards are on offer. The FirstPersonLighting layer cannot do it: it has no light of its own.
         internal const float HAND_LIGHT_INTENSITY_SCALE = 2f;
         internal const float HAND_LIGHT_RANGE_SCALE = 1.4f;
         internal const float HAND_LIGHT_FADE = 0.3f;
@@ -181,10 +174,8 @@ namespace Archipelago_Inscryption.Components
             StartCoroutine(OpenPackSequence(cards));
         }
 
-        // The opened cards are placed relative to the camera, so opening the pile from off to the
-        // side lays them out through whatever the player is facing. The rulebook beside it already
-        // states which zones and look directions it may be used from, so the pile borrows those
-        // rather than inventing a distance and an angle.
+        // Opened cards are placed relative to the camera, so the pile borrows the rulebook's own
+        // zone and look-direction prerequisites rather than inventing a distance and an angle.
         private bool PlayerIsInFront()
         {
             return rulebookInteractable != null && rulebookInteractable.PrerequisitesMet;
@@ -305,9 +296,8 @@ namespace Archipelago_Inscryption.Components
             return choice;
         }
 
-        // The losing cards go now, but the chosen one is left alone: its discovery sequence runs
-        // on that object and destroys it itself at the end, so removing it here would kill the
-        // coroutine mid-dialogue and strand the cursor disabled.
+        // The losing cards go now; the chosen one destroys itself at the end of its discovery
+        // sequence, so removing it here would kill that coroutine and strand the cursor disabled.
         private void OnChoiceSelected(PackChoiceCard taken)
         {
             foreach (PackChoiceCard choice in choices)

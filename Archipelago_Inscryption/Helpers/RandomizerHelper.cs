@@ -472,6 +472,13 @@ namespace Archipelago_Inscryption.Helpers
             packButton.SetEnabled(APSaveFile.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
         }
 
+        // The generator walks consecutive seeds up from the one it is given, so each pack and each
+        // retry needs a block of its own. Kept coprime, and MAX_PACK_ROLLS * RETRY_STRIDE < PACK_STRIDE
+        // so a pack's retries cannot reach into the next pack's block.
+        private const int PACK_SEED_STRIDE = 7919;
+        private const int RETRY_SEED_STRIDE = 251;
+        private const int MAX_PACK_ROLLS = 8;
+
         // Uses vanilla's own Act 1 choice generator, so a pack offers what a card choice node
         // would have. It can yield fewer than asked, so reroll with a fresh seed until full.
         internal static List<CardInfo> RollPackCards(int act, int count)
@@ -492,28 +499,28 @@ namespace Archipelago_Inscryption.Helpers
 
             CardChoicesNodeData data = new CardChoicesNodeData { choicesType = CardChoicesType.Random };
 
-            // The run seed only moves when the player changes map node, so packs opened in one
-            // spot would all roll the same cards. Packs already opened supplies that variation,
-            // and comes from saved state, so a reload cannot reroll a pack. Starting a new run --
-            // which an act reset does -- moves the run seed itself through pastRuns.Count, so a
-            // reset deals fresh packs the same way it deals a fresh starting deck.
+            // The run seed only moves between map nodes, so packs opened in one spot would roll
+            // alike. Packs opened is saved state, so it varies them without letting a reload reroll.
             int packsOpened = ArchipelagoManager.CountReceived(
                     act == 3 ? APItem.Act3CardPack : APItem.Act1CardPack)
                 - APSaveFile.PacksAvailable(act);
-            int seed = SaveManager.SaveFile.GetCurrentRandomSeed() + packsOpened * 7919;
+            int packSeed = SaveManager.SaveFile.GetCurrentRandomSeed() + packsOpened * PACK_SEED_STRIDE;
 
-            for (int attempt = 0; attempt < 8 && cards.Count < count; attempt++)
+            for (int attempt = 0; attempt < MAX_PACK_ROLLS && cards.Count < count; attempt++)
             {
+                int seed = packSeed + attempt * RETRY_SEED_STRIDE;
+
                 foreach (CardChoice choice in generator.GenerateChoices(data, seed))
                 {
                     if (choice.CardInfo == null) continue;
+                    // The generator reads vanilla's pool, which still holds the cards Archipelago
+                    // hands out as items, so a pack could deal one before its item arrived.
+                    if (ArchipelagoManager.CardIsWithheld(choice.CardInfo.name)) continue;
                     if (cards.Exists(existing => existing.name == choice.CardInfo.name)) continue;
 
                     cards.Add(choice.CardInfo);
                     if (cards.Count == count) break;
                 }
-
-                seed *= 2;
             }
 
             return cards;
@@ -714,7 +721,7 @@ namespace Archipelago_Inscryption.Helpers
         {
             List<CardInfo> cardsInfoRandomPool = ScriptableObjectLoader<CardInfo>.AllData.FindAll(x => (x.metaCategories.Contains(CardMetaCategory.Rare)
             && x.temple == CardTemple.Nature && x.portraitTex != null && !x.metaCategories.Contains(CardMetaCategory.AscensionUnlock) && ConceptProgressionTree.Tree.CardUnlocked(x, false)
-            && (ArchipelagoManager.HasItem(APItem.GreatKrakenCard) || x.name != "Kraken")) || x.name == "Ouroboros");
+            && !ArchipelagoManager.CardIsWithheld(x.name)) || x.name == "Ouroboros");
             return (CardInfo)cardsInfoRandomPool[SeededRandom.Range(0, cardsInfoRandomPool.Count, seed++)];
         }
 
@@ -804,42 +811,21 @@ namespace Archipelago_Inscryption.Helpers
                                       && !x.metaCategories.Contains(CardMetaCategory.Rare) && ConceptProgressionTree.Tree.CardUnlocked(x, false));
             }
 
-            if (!ArchipelagoManager.HasItem(APItem.GreatKrakenCard))
-            {
-                cardsInfoRandomPool.RemoveAll(c => c.name == "Kraken");
-            }
-            if (!ArchipelagoManager.HasItem(APItem.SkinkCard))
-            {
-                cardsInfoRandomPool.RemoveAll(c => c.name == "Skink");
-            }
-            if (!ArchipelagoManager.HasItem(APItem.AntCards))
-            {
-                cardsInfoRandomPool.RemoveAll(c => c.name == "Ant" || c.name == "AntQueen");
-            }
+            cardsInfoRandomPool.RemoveAll(c => ArchipelagoManager.CardIsWithheld(c.name));
 
+            // The talking cards this mod made choosable are in the base result above already; only
+            // the stoat, which Archipelago does not hand out, still has to be added by hand.
             cardsInfoRandomPool.Add(CardLoader.GetCardByName("Stoat_Talking"));
-            if (ArchipelagoManager.HasItem(APItem.StinkbugCard))
-                cardsInfoRandomPool.Add(CardLoader.GetCardByName("Stinkbug_Talking"));
-            if (ArchipelagoManager.HasItem(APItem.StuntedWolfCard))
-                cardsInfoRandomPool.Add(CardLoader.GetCardByName("Wolf_Talking"));
             cardsInfoRandomPool.AddRange(GetAllDeathCards());
 
             return cardsInfoRandomPool;
         }
 
-        // What a randomized Act 3 deck is built from. The talking bots are not choosable cards, so
-        // holding their item is the only thing that puts them in; the node reroll builds its own
-        // wider pool, since it replaces cards vanilla never offers as choices either.
+        // What a randomized Act 3 starter deck is built from. The bots and Ourobot are choosable now,
+        // so this pool already holds them, withheld until their item lands and capped at one copy.
         public static List<CardInfo> GenerateStarterPoolAct3()
         {
-            List<CardInfo> cardsInfoRandomPool = CardLoader.GetUnlockedCards(CardMetaCategory.ChoiceNode, CardTemple.Tech);
-
-            foreach (string cardName in ArchipelagoManager.RunStartCardNames(3))
-            {
-                cardsInfoRandomPool.Add(CardLoader.GetCardByName(cardName));
-            }
-
-            return cardsInfoRandomPool;
+            return CardLoader.GetUnlockedCards(CardMetaCategory.ChoiceNode, CardTemple.Tech);
         }
 
         public static bool BleachTrapRemoveSigils()

@@ -53,6 +53,9 @@ namespace Archipelago_Inscryption
 
             // To remove the lag spike when obtaining a card during the connection screen
             ScriptableObjectLoader<CardInfo>.LoadData();
+
+            // Needs the card data above, and only has to happen once per launch.
+            ArchipelagoManager.MakeGrantedCardsChoosable();
         }
     }
 }

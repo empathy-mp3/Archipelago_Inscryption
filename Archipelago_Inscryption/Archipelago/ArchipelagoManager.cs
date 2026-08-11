@@ -133,16 +133,14 @@ namespace Archipelago_Inscryption.Archipelago
             { APItem.BleachTrap,                () => APSaveFile.BleachTrapsGranted },
             { APItem.ReinforcementsTrap,        () => APSaveFile.ReinforcementsTrapsGranted },
             { APItem.TrashTrap,                 () => APSaveFile.TrashTrapsGranted },
-            // Both upgrades append to the same list, so they are told apart by what they append. A
-            // null list reads as nothing accounted for, which reapplying would then throw on, so it
-            // reads as everything accounted for instead and leaves the upgrades alone.
+            // Both upgrades append to one list, so they are told apart by what they append. A null
+            // list reads as fully accounted for, since reapplying against it would throw.
             { APItem.VesselUpgrade,  () => Part3SaveData.Data.sideDeckAbilities?.Count(a => a != Ability.ConduitNull) ?? int.MaxValue },
             { APItem.ConduitUpgrade, () => Part3SaveData.Data.sideDeckAbilities?.Count(a => a == Ability.ConduitNull) ?? int.MaxValue }
         };
 
-        // How many copies of a challenge item a run has already had applied, counted by what is
-        // missing from the list a run start builds. A list that does not exist yet reads as fully
-        // applied, since a run that has not been set up has nothing to repair.
+        // Copies already applied, counted by what is missing from the list a run start builds. No
+        // list yet reads as fully applied: a run that has not been set up has nothing to repair.
         private static Func<int> ChallengeTally(AscensionChallenge challenge, int countAtRunStart)
         {
             return () =>
@@ -190,6 +188,7 @@ namespace Archipelago_Inscryption.Archipelago
             ArchipelagoClient.onProcessedItemReceived += OnItemToVerifyReceived;
 
             ReportCountedItemsWithoutTallies();
+            StoryEventActMap.WarnAboutUnmappedEvents();
         }
 
         // The switch can force every item to be classified but not that a Counted one has something to
@@ -254,9 +253,7 @@ namespace Archipelago_Inscryption.Archipelago
             => turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded;
 
         // Reproduces closing and reopening the game: everything unsaved is dropped, then every item
-        // the server has sent is replayed, so what Archipelago granted survives and the rest does not.
-        // Two things deliberately do not come back with it: checks the server already holds, which
-        // cannot be unsent, and a DeathLink that arrived but has not been applied yet, which is owed.
+        // the server sent is replayed, so what Archipelago granted survives and the rest does not.
         internal static void RevertUnsavedProgressAndReplayItems()
         {
             SaveManager.LoadFromFile();
@@ -287,11 +284,16 @@ namespace Archipelago_Inscryption.Archipelago
 
             ArchipelagoData.Data.index = (uint)received.Count;
 
-            // Items the reloaded data already accounts for land in the verify queue and are only
-            // reapplied if their effect is missing; ones the revert dropped are treated as new.
-            VerifyAllItems();
+            // Ones the revert dropped were queued as new by the replay above. They are a replay too,
+            // so they are applied silently here rather than announced again by ProcessNextItem.
+            List<InscryptionItemInfo> toApply = new List<InscryptionItemInfo>();
+            while (itemQueue.Count > 0) toApply.Add(itemQueue.Dequeue());
 
-            int reapplied = ApplyQueuedItemsSilently();
+            // Items the reloaded data already accounts for went to the verify queue instead, and
+            // join them only if their effect is missing.
+            toApply.AddRange(TakeItemsNeedingReapply());
+
+            int reapplied = ApplyItemsSilently(toApply);
             if (reapplied > 0) SaveManager.SaveToFile(false);
 
             // The replay is deliberately silent, so this is the only trace it leaves.
@@ -300,16 +302,14 @@ namespace Archipelago_Inscryption.Archipelago
 
         // A replay restores items the player already watched arrive, so it skips the sound, the
         // on-screen log and the per-item delay that ProcessNextItem gives genuinely new ones.
-        private static int ApplyQueuedItemsSilently()
+        private static int ApplyItemsSilently(List<InscryptionItemInfo> items)
         {
             int applied = 0;
 
-            while (itemQueue.Count > 0)
+            foreach (InscryptionItemInfo item in items)
             {
-                InscryptionItemInfo item = itemQueue.Dequeue();
-
-                // The scene is already unwinding when the revert runs this, and applying an item
-                // reaches into live singletons, so one failure must not strand the rest of the queue.
+                // The scene may already be unwinding, and applying an item reaches into live
+                // singletons, so one failure must not strand the rest of the list.
                 try
                 {
                     ApplyItemReceived(item.Item);
@@ -342,43 +342,80 @@ namespace Archipelago_Inscryption.Archipelago
             AddCardToDeck(CardLoader.GetCardByName(cardName), act, deck);
         }
 
-        // The two cards a randomized deck is never asked to roll for: one is what the logic expects
-        // to find when it hands out its item, the other is the whole point of its own.
-        private static bool CardIsGuaranteed(APItem item)
-        {
-            return item == APItem.CagedWolfCard || item == APItem.Ourobot;
-        }
-
-        // A card arriving part way through an act is the one card a randomized deck did not roll
-        // for, so it is spent on a roll instead, from the pool that deck would have been built from.
-        private static CardInfo RollReplacementCard(APItem item, int act, DeckInfo deck)
-        {
-            if (CardIsGuaranteed(item) || ArchipelagoOptions.randomizeDeck == RandomizeDeck.Disable) return null;
-
-            List<CardInfo> pool = act == 3
-                ? RandomizerHelper.GenerateStarterPoolAct3()
-                : RandomizerHelper.GenerateCardPoolAct1();
-
-            if (pool.Count == 0) return null;
-
-            // The deck grows with every card granted, so two cards from one item cannot roll alike.
-            int seed = SaveManager.SaveFile.GetCurrentRandomSeed() + deck.Cards.Count * 7919;
-            CardInfo rolled = pool[SeededRandom.Range(0, pool.Count, seed)];
-
-            // Cloning empties a card's mods, which for a death card is everything it is.
-            return rolled.Mods.Any(mod => mod.deathCardInfo != null) ? rolled : CardLoader.Clone(rolled);
-        }
-
-        // Cards a fresh deck has to be handed, because nothing else puts them back. Act 1 rebuilds
-        // its deck on every death, Act 3 only on an act reset, and neither reads these items' events.
-        //
-        // Deliberately not here: the caged wolf, talking wolf and stinkbug, which vanilla itself
-        // rebuilds an Act 1 deck from, and Ourobot, which is guaranteed rather than rolled.
+        // Cards a fresh deck has to be handed, because nothing reads these items' events. Excluded:
+        // the wolf, talking wolf and stinkbug, which vanilla rebuilds, and Ourobot, which is guaranteed.
         private static readonly Dictionary<int, APItem[]> runStartCards = new Dictionary<int, APItem[]>()
         {
             { 1, new APItem[] { APItem.SkinkCard, APItem.AntCards } },
             { 3, new APItem[] { APItem.FishbotCard, APItem.LonelyWizbotCard } }
         };
+
+        // Every card Archipelago hands out that a vanilla pool can also reach. Withheld from those
+        // pools until the item arrives, or a choice node would give away what a check is paying for.
+        private static readonly Dictionary<string, APItem> gatedCards = new Dictionary<string, APItem>()
+        {
+            { "Kraken",           APItem.GreatKrakenCard },
+            { "BonelordHorn",     APItem.BoneLordHorn },
+            { "DrownedSoul",      APItem.DrownedSoulCard },
+            { "Salmon",           APItem.SalmonCard },
+            { "Skink",            APItem.SkinkCard },
+            { "Ant",              APItem.AntCards },
+            { "AntQueen",         APItem.AntCards },
+            { "Stinkbug_Talking", APItem.StinkbugCard },
+            { "Wolf_Talking",     APItem.StuntedWolfCard },
+            { "Angler_Talking",   APItem.FishbotCard },
+            { "BlueMage_Talking", APItem.LonelyWizbotCard },
+            { "Ouroboros_Part3",  APItem.Ourobot }
+        };
+
+        internal static bool CardIsWithheld(string cardName)
+            => gatedCards.TryGetValue(cardName, out APItem item) && !HasItem(item);
+
+        // Cards this mod makes choosable, keyed by the act whose deck they belong to. Vanilla has no
+        // one-per-deck rule for them, and its own check reads Act 1's deck whichever act you are in.
+        private static readonly Dictionary<string, int> uniqueGrantedCards = new Dictionary<string, int>()
+        {
+            { "Stinkbug_Talking", 1 },
+            { "Wolf_Talking",     1 },
+            { "Angler_Talking",   3 },
+            { "BlueMage_Talking", 3 },
+            { "Ouroboros_Part3",  3 }
+        };
+
+        internal static bool CardAlreadyInDeck(string cardName)
+        {
+            if (!uniqueGrantedCards.TryGetValue(cardName, out int act)) return false;
+
+            List<CardInfo> deck = act == 3
+                ? Part3SaveData.Data?.deck?.Cards
+                : RunState.Run?.playerDeck?.Cards;
+
+            return deck != null && deck.Exists(card => card.name == cardName);
+        }
+
+        // The base game never offers these at a choice node, so Archipelago's copies could only ever
+        // be handed over. Made choosable so they can be found too; the gate above keeps them honest.
+        internal static void MakeGrantedCardsChoosable()
+        {
+            foreach (string cardName in uniqueGrantedCards.Keys)
+            {
+                CardInfo card = ScriptableObjectLoader<CardInfo>.AllData.Find(c => c.name == cardName);
+
+                if (card == null)
+                {
+                    ArchipelagoModPlugin.Log.LogError($"Cannot make {cardName} choosable: no such card.");
+                    continue;
+                }
+
+                if (!card.metaCategories.Contains(CardMetaCategory.ChoiceNode))
+                    card.metaCategories.Add(CardMetaCategory.ChoiceNode);
+
+                // Vanilla's own singleton rule reads this, which covers every base-game pool at once.
+                card.onePerDeck = true;
+
+                ArchipelagoModPlugin.Log.LogInfo($"{cardName} is now choosable and unique (temple {card.temple}).");
+            }
+        }
 
         // Per card, not per item: a deck that already holds an Ant keeps the one it has and is still
         // given the Ant Queen it does not.
@@ -429,17 +466,22 @@ namespace Archipelago_Inscryption.Archipelago
 
             if (itemCardPair.TryGetValue(receivedItem, out UnlockableCardInfo info))
             {
-                DeckInfo deck = info.isPart3 ? SaveManager.SaveFile.part3Data.deck : RunState.Run.playerDeck;
-                int act = info.isPart3 ? 3 : 1;
+                DeckInfo deck = info.isPart3
+                    ? SaveManager.SaveFile.part3Data?.deck
+                    : RunState.Run?.playerDeck;
 
-                for (int i = 0; i < info.cardsToUnlock.Length; i++)
+                // Skipped while Act 3's build is pending, or when there is no deck to add to yet:
+                // either way the act's own start hands over every card item held by then.
+                if (deck != null && (!info.isPart3 || APSaveFile.Act3DeckBuilt))
                 {
-                    CardInfo rolled = RollReplacementCard(receivedItem, act, deck);
+                    int act = info.isPart3 ? 3 : 1;
 
-                    if (rolled != null)
-                        AddCardToDeck(rolled, act, deck);
-                    else
-                        AddUnlockedCard(info.cardsToUnlock[i], act, deck);
+                    // Finding a card hands you that card, as it does in the base game, whatever the
+                    // deck is randomized to. A run start still decides what a run opens holding.
+                    foreach (string cardName in info.cardsToUnlock)
+                    {
+                        if (!CardAlreadyInDeck(cardName)) AddUnlockedCard(cardName, act, deck);
+                    }
                 }
 
                 for (int i = 0; i < info.rigDraws.Length; i++)
@@ -897,39 +939,36 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal static void VerifyAllItems()
         {
-            // Nothing this pass queues is applied until the pass is over, so a shortfall in a counted
-            // item would otherwise read the same for every copy of it and requeue them all.
-            Dictionary<APItem, int> requeuedCounts = new Dictionary<APItem, int>();
+            foreach (InscryptionItemInfo item in TakeItemsNeedingReapply()) itemQueue.Enqueue(item);
+        }
 
-            while (itemsToVerifyQueue.Count() > 0)
+        // The items this pass found missing, left to the caller to apply. Nothing is applied until
+        // the pass is over, so a counted shortfall would otherwise read alike for every copy of it.
+        private static List<InscryptionItemInfo> TakeItemsNeedingReapply()
+        {
+            Dictionary<APItem, int> requeuedCounts = new Dictionary<APItem, int>();
+            List<InscryptionItemInfo> missing = new List<InscryptionItemInfo>();
+
+            while (itemsToVerifyQueue.Count > 0)
             {
                 InscryptionItemInfo nextItem = itemsToVerifyQueue.Dequeue();
 
-                bool alreadyApplied;
-
-                switch (RecoveryOf(nextItem.Item))
+                // Anything else leaves nothing to look for, leaves state the player spends -- where
+                // never granted and already spent read the same -- or gets rebuilt at an act start.
+                bool alreadyApplied = RecoveryOf(nextItem.Item) switch
                 {
-                    case Recovery.Counted:
-                        alreadyApplied = CountedItemAlreadyApplied(nextItem.Item, requeuedCounts);
-                        break;
-                    case Recovery.Checked:
-                        alreadyApplied = VerifyItem(nextItem);
-                        break;
-                    default:
-                        // The rest leave nothing to look for, or leave state the player spends, where
-                        // never granted and already spent read the same, or get rebuilt at an act start.
-                        alreadyApplied = true;
-                        break;
-                }
+                    Recovery.Counted => CountedItemAlreadyApplied(nextItem.Item, requeuedCounts),
+                    Recovery.Checked => VerifyItem(nextItem),
+                    _ => true
+                };
 
-                if (alreadyApplied)
-                {
-                    continue;
-                }
+                if (alreadyApplied) continue;
 
                 ArchipelagoModPlugin.Log.LogWarning($"Item ID {nextItem.ItemId} ({nextItem.ItemName}) didn't apply properly. Retrying...");
-                itemQueue.Enqueue(nextItem);
+                missing.Add(nextItem);
             }
+
+            return missing;
         }
 
         // How the recovery pass gets an item's effect back when the save no longer shows it.
@@ -945,15 +984,11 @@ namespace Archipelago_Inscryption.Archipelago
             Checked,
             // Game state kept out of VerifyItem deliberately, because starting a run or an act
             // recomputes it from the received count, or something reconciles it where it is used.
-            RebuiltElsewhere,
-            // Can go missing, and is deliberately left missing. Everything here is a penalty, so the
-            // only way it fails is one the player got away with.
-            NotRecovered
+            RebuiltElsewhere
         }
 
-        // Every item has to name one. This switch has no default arm and CS8509 is an error in this
-        // project, so a new APItem does not compile until somebody has decided which of these it is --
-        // which is the whole point, because the alternative is finding out from a player.
+        // Every item has to name one. No default arm, and CS8509 is an error in this project, so a
+        // new APItem does not compile until somebody has decided which of these it is.
         private static Recovery RecoveryOf(APItem item) => item switch
         {
             // Story events, which is what VerifyItem looks at for most of these. Several also grant a
@@ -1070,11 +1105,8 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 return false;
             }
-            // Losing the eye to a failed save costs the run the clock's large compartment, while
-            // restoring one the player traded away costs almost nothing, so this repairs it.
-            //
-            // Except where the trade was deliberate: the dagger takes the eye and hands back the
-            // choice of a new one, and a goat eye chosen this run is an answer, not a shortfall.
+            // Losing the eye costs the run the clock's large compartment, so it is repaired -- except
+            // after the dagger, which trades it for the choice of a new one, so a goat eye is an answer.
             else if (receivedItem == APItem.MagnificusEye
                 && RunState.Run != null
                 && RunState.Run.eyeState != EyeballState.Wizard
@@ -1107,14 +1139,13 @@ namespace Archipelago_Inscryption.Archipelago
             }
         }
 
-        // Re-runs the connect-time item pass: everything already received is re-checked and
-        // anything whose effect is now missing gets applied again. Used after resetting an act, so
-        // the act comes back in the state a brand new save would reach once its items arrive.
         internal static int CountReceived(APItem item)
         {
             return ArchipelagoData.Data.receivedItems.Count(i => i.Item == item);
         }
 
+        // Re-runs the connect-time item pass: everything already received is re-checked and
+        // anything whose effect is now missing is applied again, before the caller's save.
         internal static void ReapplyReceivedItems()
         {
             foreach (InscryptionItemInfo item in ArchipelagoData.Data.receivedItems)
@@ -1122,7 +1153,9 @@ namespace Archipelago_Inscryption.Archipelago
                 itemsToVerifyQueue.Enqueue(item);
             }
 
-            VerifyAllItems();
+            // Applied here rather than left on itemQueue, so the caller's save includes them. Only
+            // what this pass found missing: anything already queued is a new item still to announce.
+            ApplyItemsSilently(TakeItemsNeedingReapply());
         }
 
         internal static void SendStoryCheckIfApplicable(StoryEvent storyEvent)
@@ -1133,9 +1166,8 @@ namespace Archipelago_Inscryption.Archipelago
             }
         }
 
-        // With release on act completion, finishing an act hands over everything still uncollected
-        // in it. Location ids run act 1, then 2, then 3, so an act is a contiguous run of APCheck;
-        // the counts come from the apworld so adding a location there cannot desync the range.
+        // Finishing an act hands over everything still uncollected in it. Location ids run act 1,
+        // then 2, then 3, and the apworld supplies each act's span so it cannot desync.
         internal static void ReleaseAct(int act)
         {
             if (!ArchipelagoOptions.releaseOnActCompletion || ArchipelagoData.Data == null) return;
@@ -1155,9 +1187,8 @@ namespace Archipelago_Inscryption.Archipelago
 
             if (released == 0) return;
 
-            // Sent and saved once rather than per check, since a whole act goes at a time. No
-            // summary is logged: the items themselves are announced as the server hands them
-            // out, the same as any other release.
+            // Sent and saved once rather than per check, since a whole act goes at a time. The items
+            // are announced as the server hands them out, so no summary is logged here.
             ArchipelagoClient.SendChecksToServerAsync();
             Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
         }

@@ -1,20 +1,14 @@
+using DiskCardGame;
 using System;
 
 namespace Archipelago_Inscryption.Archipelago
 {
-    // Odin writes the game save from the object's runtime type and records that type in the file, so
-    // a subclass is how Archipelago gets state of its own into the same file the game writes.
-    //
-    // Only worth doing for state that has to be lost and restored in lockstep with something the game
-    // save already holds. Everything else belongs in ArchipelagoData, which is smaller and portable.
+    // Odin writes the game save from the object's runtime type, so a subclass is how Archipelago
+    // gets state into that file -- only for state that must be lost and restored in lockstep with it.
     internal class APSaveFile : SaveFile
     {
-        // What each act has already been given, indexed by act, so index 0 is unused.
-        //
-        // A spendable resource cannot be checked the way a card or a story event can: spent and never
-        // granted read the same. These are the records that tell them apart, and they live here rather
-        // than in ArchipelagoData because that file is written first and would survive a failed game
-        // save, leaving the balance gone with nothing to notice it by.
+        // What each act has been given, indexed by act, so index 0 is unused. Spent and never granted
+        // read the same, and these live here so a failed game save loses the ledger with the balance.
         public int[] currencyItemsGranted = new int[4];
         public int[] cardPackItemsGranted = new int[4];
 
@@ -32,6 +26,10 @@ namespace Archipelago_Inscryption.Archipelago
         public int bleachTrapsGranted;
         public int reinforcementsTrapsGranted;
         public int trashTrapsGranted;
+
+        // Whether Act 3's one-time deck build has run. That build hands over every card item held
+        // by then, so a grant arriving before it must leave the deck to it and not add its own.
+        public bool act3DeckBuilt;
 
         private static APSaveFile Current => SaveManager.SaveFile as APSaveFile;
 
@@ -64,6 +62,15 @@ namespace Archipelago_Inscryption.Archipelago
         {
             get => Current?.trashTrapsGranted ?? int.MaxValue;
             set { if (Current != null) Current.trashTrapsGranted = value; }
+        }
+
+        // A save from before this class, or one already past Act 3's intro, reads as built: either
+        // way the build has had its say, so a card item belongs in the deck now rather than to it.
+        internal static bool Act3DeckBuilt
+        {
+            get => Current == null || Current.act3DeckBuilt
+                || StoryEventsData.EventCompleted(StoryEvent.Part3Intro);
+            set { if (Current != null) Current.act3DeckBuilt = value; }
         }
 
         private static int[] LedgerFor(Func<APSaveFile, int[]> field)

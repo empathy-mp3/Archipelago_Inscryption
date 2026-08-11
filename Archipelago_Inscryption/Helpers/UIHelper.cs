@@ -63,9 +63,8 @@ namespace Archipelago_Inscryption.Helpers
             return inputField;
         }
 
-        // The act cards are built once when the start screen loads, so resetting an act from the
-        // options menu leaves them reading "Continue". Only their label and art can change here:
-        // locked state depends on act completion and items, which a reset does not touch.
+        // Act cards are built once on start screen load, so a reset leaves them reading "Continue".
+        // Only label and art change here; locked state depends on things a reset does not touch.
         internal static void RefreshActCards()
         {
             MenuController menu = MenuController.Instance;

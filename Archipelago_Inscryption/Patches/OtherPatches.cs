@@ -55,10 +55,8 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
-        // The only place the game builds a save file, and Odin writes whatever type it finds here, so
-        // this one substitution is what gives every Archipelago save room for state of its own.
-        // Assigned before Initialize runs, as vanilla does, because the act initializers this triggers
-        // already write to the save through SaveManager.SaveFile.
+        // The only place the game builds a save file, so this substitution is what gives every
+        // Archipelago save room for state of its own. Assigned before Initialize, as vanilla does.
         [HarmonyPatch(typeof(SaveManager), "CreateNewSaveFile")]
         [HarmonyPrefix]
         static bool CreateArchipelagoSaveFile()
@@ -83,11 +81,8 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
-        // Written before the game save rather than after it. Both land in the same call, so only a crash
-        // or a failed write can separate them -- but which one is already on disk decides what the next
-        // connect does. Archipelago data behind the game save reads as an item never received, and
-        // granting it again duplicates whatever it gave; ahead of it, the item's effect is merely
-        // missing, which is the case the connect-time pass exists to repair.
+        // Written before the game save: if a crash separates the two, an item's effect goes missing,
+        // which the connect-time pass repairs. The other order duplicates whatever the item gave.
         [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
         [HarmonyPrefix]
         static void SaveArchipelagoDataToFile()
@@ -672,15 +667,8 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     class ActTransitionPatches
     {
-        // Act 2's finale always loads Act 3, stranding the player there when Act 3 is turned off.
-        // Only sequential unlocks go straight on, since finishing Act 2 is what opens Act 3 there.
-        // Open and item unlocks both return to the act select menu even when Act 3 is available:
-        // with several acts already playable, finishing one shouldn't choose the next.
-        //
-        // Act 2's finale is the only Act 3 load worth redirecting, and it runs in Act 2's own
-        // scene. Every other one -- picking Act 3 from the menu, a deathlink reloading it --
-        // comes by way of the loading screen, whose caller keeps the AsyncOperation this
-        // returns, so intercepting those would both strand the player and hand back a null.
+        // Act 2's finale loads Act 3 unconditionally, stranding the player when it is unavailable.
+        // Gated to that scene: every other Act 3 load needs the AsyncOperation this returns.
         [HarmonyPatch(typeof(SceneLoader), "StartAsyncLoad")]
         [HarmonyPrefix]
         static bool ReturnToMenuWhenAct3Unavailable(string sceneName, ref AsyncOperation __result)

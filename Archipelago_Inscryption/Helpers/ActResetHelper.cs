@@ -32,19 +32,22 @@ namespace Archipelago_Inscryption.Helpers
                     break;
                 case 2:
                     EraseActEvents(2);
+
+                    // Collected pixel cards live on SaveFile, outside gbcData, so Initialize
+                    // misses them. Cleared first: its postfix re-grants Archipelago's own.
+                    SaveManager.SaveFile.gbcCardsCollected = new List<string>();
+
                     SaveManager.SaveFile.gbcData = new SaveData();
                     SaveManager.SaveFile.gbcData.Initialize();
-
-                    // Collected pixel cards live on SaveFile, outside gbcData, so the
-                    // Initialize above misses them. Leaving them would keep pack cards
-                    // reading as collected, and would make VerifyItem treat Archipelago's
-                    // own pixel cards as already applied, so they would never come back.
-                    SaveManager.SaveFile.gbcCardsCollected = new List<string>();
                     break;
                 case 3:
                     EraseActEvents(3);
                     SaveManager.SaveFile.part3Data = new Part3SaveData();
                     SaveManager.SaveFile.part3Data.Initialize();
+
+                    // Cleared before the reapply below, so the cards it recovers wait for the deck
+                    // build on re-entry instead of landing beside the slot that build adds.
+                    APSaveFile.Act3DeckBuilt = false;
                     break;
                 default:
                     return;
@@ -60,9 +63,8 @@ namespace Archipelago_Inscryption.Helpers
             // Act cards are built once on start screen load, so refresh their labels in place.
             UIHelper.RefreshActCards();
 
-            // Resetting the act being played would leave the scene running on wiped data, so
-            // hand the player back to the menu and make them load the act again. Mirrors what
-            // vanilla's own save reset does from this same menu.
+            // Resetting the act being played would leave the scene running on wiped data, so hand
+            // the player back to the menu, as vanilla's own save reset does from here.
             if (ArchipelagoManager.CurrentAct != act) return;
 
             Singleton<InteractionCursor>.Instance.SetEnabled(false);

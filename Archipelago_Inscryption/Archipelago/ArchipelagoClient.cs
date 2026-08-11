@@ -90,11 +90,8 @@ namespace Archipelago_Inscryption.Archipelago
             return session;
         }
 
-        // Large rooms (many games) can take longer than the library's hardcoded 4s login
-        // timeout to finish transferring datapackages, causing spurious "Connection timed
-        // out" failures even though the server would have connected successfully. Retrying
-        // LoginAsync on the same socket lets the transfer keep progressing between attempts
-        // instead of tearing the connection down after a single 4s window.
+        // Large rooms can outlast the library's hardcoded 4s login timeout while transferring
+        // datapackages. Retrying on the same socket lets that finish instead of tearing it down.
         private const int MaxLoginAttempts = 5;
 
         private static void Connect(OnConnectAttempt attempt)

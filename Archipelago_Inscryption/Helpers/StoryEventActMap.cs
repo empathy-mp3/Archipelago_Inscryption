@@ -1,51 +1,16 @@
 ﻿using DiskCardGame;
-
 using System;
-
 using System.Collections.Generic;
-
 using System.Linq;
 
-
-
 namespace Archipelago_Inscryption.Helpers
-
 {
-
     internal enum ActScope { None, Act1, Act2, Act3, Epilogue }
 
-
-
-    // Story events carry no act information, and vanilla groups them only once (GBCStoryEvents,
-
-    // which is incomplete). Resetting a single act needs that attribution, so it lives here.
-
-    //
-
-    // No entry is based on an event's name. The comment on each line is its evidence: the
-
-    // scene or prefab whose StoryEvent field references it, or the class that references it,
-
-    // where that class's act comes from its namespace, its base type, or the act scenes that
-
-    // instantiate it. Regenerate the bulk with Inscryption-decompiled/tools/story_event_scan.py
-
-    // against an AssetRipper export.
-
-    //
-
-    // Events absent here resolve to None and survive act resets. That is the safe direction: an
-
-    // act resuming too far along is visible and fixable, erasing another act's progress is not.
-
-    // The absentees are menu, epilogue, Kaycee's Mod and unreferenced events, plus two keys that
-
-    // vanilla marks perma-saved and Archipelago grants as items.
-
+    // Story events carry no act information, so resetting a single act needs that attribution.
+    // Each line's comment is its evidence; absentees resolve to None and survive act resets.
     internal static class StoryEventActMap
-
     {
-
         private static readonly Dictionary<StoryEvent, ActScope> map = new Dictionary<StoryEvent, ActScope>
         {
             { StoryEvent.AnglerDefeated, ActScope.Act1 },   // Wetlands.asset
@@ -220,47 +185,22 @@ namespace Archipelago_Inscryption.Helpers
             { StoryEvent.GrimoraReachedTable, ActScope.Epilogue },   // ChessboardMap -> finale_grimora.unity
         };
 
-        internal static ActScope ScopeOf(StoryEvent storyEvent)
-
-            => map.TryGetValue(storyEvent, out ActScope scope) ? scope : ActScope.None;
-
-
-
         internal static IEnumerable<StoryEvent> EventsForAct(int act)
-
         {
-
             ActScope scope = act == 1 ? ActScope.Act1 : act == 2 ? ActScope.Act2 : ActScope.Act3;
-
             return map.Where(pair => pair.Value == scope).Select(pair => pair.Key);
-
         }
-
-
 
         // Events added by a future game version would default to None and silently survive
-
         // resets, so name them once at startup instead of letting that go unnoticed.
-
         internal static void WarnAboutUnmappedEvents()
-
         {
-
             List<string> unmapped = Enum.GetValues(typeof(StoryEvent)).Cast<StoryEvent>()
-
                 .Where(e => e != StoryEvent.NUM_EVENTS && !map.ContainsKey(e))
-
                 .Select(e => e.ToString()).ToList();
 
-
-
             if (unmapped.Count > 0)
-
                 ArchipelagoModPlugin.Log.LogInfo($"StoryEvents with no act ({unmapped.Count}): {string.Join(", ", unmapped)}");
-
         }
-
     }
-
 }
-

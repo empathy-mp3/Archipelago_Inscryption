@@ -185,22 +185,7 @@ namespace Archipelago_Inscryption.Patches
                 int cardAdded = 0;
                 cardsInfoRandomPoolAll = ScriptableObjectLoader<CardInfo>.AllData.FindAll(x => x.metaCategories.Contains(CardMetaCategory.GBCPlayable) && x.pixelPortrait != null);
 
-                if (!ArchipelagoManager.HasItem(APItem.GreatKrakenCard))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "Kraken");
-                }
-                if (!ArchipelagoManager.HasItem(APItem.BoneLordHorn))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "BonelordHorn");
-                }
-                if (!ArchipelagoManager.HasItem(APItem.DrownedSoulCard))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "DrownedSoul");
-                }
-                if (!ArchipelagoManager.HasItem(APItem.SalmonCard))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "Salmon");
-                }
+                cardsInfoRandomPoolAll.RemoveAll(c => ArchipelagoManager.CardIsWithheld(c.name));
 
                 if (!ArchipelagoManager.HasCompletedCheck(APCheck.GBCAncientObol))
                 {
@@ -348,9 +333,10 @@ namespace Archipelago_Inscryption.Patches
                                                      && x.name != "!BOUNTYHUNTER_BASE" && x.name != "Librarian" && !x.name.Contains("EmptyVessel")
                                                      && x.name != "!MYCOCARD_BASE" && x.name != "CaptiveFile" && x.name != "!BUILDACARD_BASE");
                 cardsInfoRandomPool.AddRange(RandomizerHelper.GetAllCustomCards());
-                // Ourobot's card is guaranteed and survives the reroll below, so dealing it here
-                // would only ever be a second copy of a card the deck already has.
-                cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3");
+                // Cabin cards are Tech with a portrait, so the filter above takes them whether or not
+                // their item arrived. Ourobot stays out as guaranteed; the bots are re-added if held.
+                cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3"
+                    || x.name == "BlueMage_Talking" || x.name == "Angler_Talking");
                 List<CardInfo> cardsInfoRandomGemPool = cardsInfoRandomPool;
                 List<CardInfo> cardsInfoRandomConduitPool = cardsInfoRandomPool;
                 if (ArchipelagoOptions.randomizeDeck == RandomizeDeck.RandomizeType)
@@ -642,6 +628,9 @@ namespace Archipelago_Inscryption.Patches
                 CardPatches.RandomizeSigils(card);
             }
             Part3SaveData.Data.deck.UpdateModDictionary();
+
+            // From here a card item grants into the deck itself, since this build has had its say.
+            APSaveFile.Act3DeckBuilt = true;
 
             return true;
         }

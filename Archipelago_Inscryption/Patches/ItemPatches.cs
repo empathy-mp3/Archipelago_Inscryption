@@ -44,9 +44,8 @@ namespace Archipelago_Inscryption.Patches
             return null;
         }
 
-        // Act 1 spends both of these within a run, so a new run restores them to everything the
-        // act has been sent -- the same state an act reset produces. Without this a death takes
-        // the run's teeth and any unopened packs with it.
+        // Act 1 spends both of these within a run, so a new run restores them to everything the act
+        // has been sent. Without this a death takes the run's teeth and any unopened packs with it.
         [HarmonyPatch(typeof(SaveFile), "NewPart1Run")]
         [HarmonyPostfix]
         static void InitializeAct1Items()
@@ -164,13 +163,8 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
-        // Vanilla rebuilds the deck's discovered cards from their story events, but only the three it
-        // knows about: the caged wolf, the talking wolf and the stinkbug. The skink and the ants have
-        // no such reader, so they were granted once and lost to the next run.
-        //
-        // The two full randomizers reroll the deck on arriving at a node, which is after this, so
-        // there these cards survive only as the slots they add. StarterOnly gets that same widening
-        // from its own starter build, where the caged wolf is the one card it guarantees.
+        // Vanilla rebuilds discovered cards from their story events, but only for the caged wolf,
+        // talking wolf and stinkbug; the skink and ants had no reader and were lost to the next run.
         [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
         [HarmonyPostfix]
         static void AddGrantedAct1CardsIfNeeded(RunState __instance)
@@ -707,14 +701,8 @@ namespace Archipelago_Inscryption.Patches
             || (StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked)
                 && !StoryEventsData.EventCompleted(StoryEvent.Part3MetScrybes));
 
-        // Vanilla cuffs the player to the table until the holomap loses power, a fixed beat in
-        // Act 3's intro. Act 1 does not hold the player through its intro, so Act 3 should not
-        // either. Marking the event early hands the cuff to vanilla's own handling: the first
-        // attempt plays the escape, later ones just stand up.
-        //
-        // Only safe with act3_overhaul, where GateMapScreenPower replaces PoweredOff with
-        // MapLockedOut and the event no longer decides whether the map works. It also skips
-        // PowerOutAreaSequencer's power-out cutscene, which is the intro beat being dropped.
+        // Marking the event early lets the player leave the table before the holomap loses power.
+        // Only safe with act3_overhaul, where GateMapScreenPower decides whether the map works.
         [HarmonyPatch(typeof(Part3GameFlowManager), "TransitionToFirstPerson")]
         [HarmonyPrefix]
         static void AllowLeavingTableEarly()
