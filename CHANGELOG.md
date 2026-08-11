@@ -40,7 +40,7 @@ MINOR CHANGES / BUGFIXES
 - Change: A number of logic settings have been changed for consistency and fairness
     - Act 3's Luke's File entries no longer require the Quill, which only gates the Undead temple's librarian room
     - The Mycologists boss is now expected as soon as its key and eastern Botopia are reachable, rather than at the act's end
-    - All Totem Battles no longer counts towards boss fights, since it only changes regular ones
+    - All Totem Battles has never counted towards a boss, since it only changes regular battles, but on the Prospector and the Angler that was being wiped out whenever Progressive Grizzlies were also missing. The two penalties now add up instead of one overwriting the other
     - The grizzly bypass now applies when nodes are randomized instead of when they are not, which is when the backpack node is not guaranteed
     - Wetlands battles now count the nodes that first start spawning there
 - Fix: It should no longer be possible to trigger a save in Act 1 mid-battle (which would allow you to completely skip the battle node)
