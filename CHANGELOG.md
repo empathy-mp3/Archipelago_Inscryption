@@ -13,7 +13,7 @@ MAJOR CHANGES
     - Found in the Archipelago options menu; pick an act and confirm three times
     - Wipes that act and rebuilds it to the state a new save would reach once its items arrive, leaving the other two acts and all of your checks alone
     - Act 1's menu cards changed to suit: the separate "New Act 1 Run" card is gone, and Act 1 now reads "Start Act 1" or "Continue Act 1" like the other two
-- Change: Granted "card packs" in Act 1 and Act 3 are no longer available to open from the game table. In both cases, the card pack has been moved next to the textbook
+- Change: Granted "card packs" in Act 1 and Act 3 are no longer available to open from the game table. In both cases, the card pack has been moved next to the rulebook
     - Note that this means you will need to be able to get up from the table in order to open packs
     - To help compensate for this, Act 3 has been modified to allow you to get up from the table at ANY time if Act 3 Overhaul is enabled
     - Opening a pack lays its three cards out in front of you to pick from where you stand
