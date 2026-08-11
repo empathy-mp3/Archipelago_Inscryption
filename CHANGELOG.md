@@ -40,8 +40,8 @@ MINOR CHANGES / BUGFIXES
 - Change: A number of logic settings have been changed for consistency and fairness
     - Act 3's Luke's File entries no longer require the Quill, which only gates the Undead temple's librarian room
     - The Mycologists boss is now expected as soon as its key and eastern Botopia are reachable, rather than at the act's end
-    - All Totem Battles has never counted towards a boss, since it only changes regular battles, but on the Prospector and the Angler that was being wiped out whenever Progressive Grizzlies were also missing. The two penalties now add up instead of one overwriting the other
-    - The grizzly bypass now applies when nodes are randomized instead of when they are not, which is when the backpack node is not guaranteed
+    - Act 1 battles are gated on a difficulty check -- roughly, how strong your deck is expected to be before logic asks you to fight. All Totem Battles only makes regular battles easier, so it is not supposed to lower that bar for a boss, but on the Prospector and the Angler it was doing so whenever Progressive Grizzlies were also missing. Logic now expects a stronger deck for those two fights in that case
+    - You will no longer be expected to fight a boss that still has its grizzly phase without a way to deal with it. With nodes randomized, being one Progressive Grizzlies short now expects the backpack node or the dagger and angler hook, and being further short expects the backpack node. This check previously only ran when nodes were NOT randomized, where the backpack node is always on the map and so is never an item you could be holding
     - Wetlands battles now count the nodes that first start spawning there
 - Fix: It should no longer be possible to trigger a save in Act 1 mid-battle (which would allow you to completely skip the battle node)
 - Fix: Prevent soft lock when receiving a bottle item via a card with both the pack rat effect and the magpie effect
