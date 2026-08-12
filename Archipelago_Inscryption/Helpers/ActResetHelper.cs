@@ -53,6 +53,10 @@ namespace Archipelago_Inscryption.Helpers
                     return;
             }
 
+            // Moves the act's random seed off what the wiped run already rolled. Act 1 is recorded
+            // for consistency only; vanilla already moves its seed by counting past runs.
+            APSaveFile.RecordActReset(act);
+
             // Puts the act where a brand new save lands once its items arrive. Erasing above is
             // deliberately broad because this restores anything Archipelago had already granted.
             ArchipelagoManager.ReapplyReceivedItems();

@@ -24,6 +24,10 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     internal class OtherPatches
     {
+        // Bigger than the seed spread of a whole run, so no reset can land on a seed the previous
+        // one already used: Act 2's inputs move it by at most 51 a step, Act 3's by at most 51.
+        private const int ACT_RESET_SEED_STRIDE = 100003;
+
         [HarmonyPatch(typeof(AchievementManager), "Unlock")]
         [HarmonyPrefix]
         static bool PreventAchievementUnlock()
@@ -139,6 +143,13 @@ namespace Archipelago_Inscryption.Patches
                 __result += (SaveManager.saveFile.gbcData.npcAttempts + 1) * 50;
             if (__instance.IsPart3)
                 __result += (Part3SaveData.Data.bounty + 1) * 50;
+
+            // Resetting these acts zeroes everything above that varies their seed, so a reset run
+            // would deal the previous one's cards. The stride clears what a whole run can add.
+            if (__instance.IsPart2)
+                __result += APSaveFile.ActResets(2) * ACT_RESET_SEED_STRIDE;
+            if (__instance.IsPart3)
+                __result += APSaveFile.ActResets(3) * ACT_RESET_SEED_STRIDE;
         }
 
         [HarmonyPatch(typeof(PageContentLoader), "LoadPage")]

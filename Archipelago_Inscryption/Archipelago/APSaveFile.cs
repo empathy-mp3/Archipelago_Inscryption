@@ -32,6 +32,10 @@ namespace Archipelago_Inscryption.Archipelago
         // by then, so a grant arriving before it must leave the deck to it and not add its own.
         public bool act3DeckBuilt;
 
+        // How many times each act has been reset, indexed by act. Everything the seed for Acts 2 and
+        // 3 is built from is wiped by their reset, so without this a reset run repeats every roll.
+        public int[] actResets = new int[4];
+
         private static APSaveFile Current => SaveManager.SaveFile as APSaveFile;
 
         internal static int BleachTrapsPending
@@ -122,6 +126,10 @@ namespace Archipelago_Inscryption.Archipelago
         }
 
         internal static void SpendPack(int act) => SetPacksAvailable(act, PacksAvailable(act) - 1);
+
+        // No record means no reset has happened, which is where a save that has never been reset is.
+        internal static int ActResets(int act) => Read(save => save.actResets, act, 0);
+        internal static void RecordActReset(int act) => Write(save => save.actResets, act, ActResets(act) + 1);
 
         // Both records move together when an act starts, since it hands the act everything it was sent.
         internal static void ResetPacksForAct(int act, int count)
