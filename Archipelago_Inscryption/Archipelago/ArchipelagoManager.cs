@@ -347,11 +347,11 @@ namespace Archipelago_Inscryption.Archipelago
         }
 
         // Cards a fresh deck has to be handed, because nothing reads these items' events. Excluded:
-        // the wolf, talking wolf and stinkbug, which vanilla rebuilds, and Ourobot, which is guaranteed.
+        // the wolf, talking wolf and stinkbug, which vanilla rebuilds from theirs.
         private static readonly Dictionary<int, APItem[]> runStartCards = new Dictionary<int, APItem[]>()
         {
             { 1, new APItem[] { APItem.SkinkCard, APItem.AntCards } },
-            { 3, new APItem[] { APItem.FishbotCard, APItem.LonelyWizbotCard } }
+            { 3, new APItem[] { APItem.FishbotCard, APItem.LonelyWizbotCard, APItem.Ourobot } }
         };
 
         // Every card Archipelago hands out that a vanilla pool can also reach. Withheld from those
@@ -437,13 +437,6 @@ namespace Archipelago_Inscryption.Archipelago
         internal static void GrantRunStartCards(int act, DeckInfo deck)
         {
             foreach (APItem item in runStartCards[act]) GrantMissingCards(item, act, deck);
-        }
-
-        // Ourobot exists to make Act 3 easier, so it is the one card that act guarantees -- present
-        // in every deck the way the caged wolf is, and never left to a roll.
-        internal static void GrantOurobotIfReceived(DeckInfo deck)
-        {
-            GrantMissingCards(APItem.Ourobot, 3, deck);
         }
 
         // What a randomized starter deals as extra slots instead of as themselves, so an item widens

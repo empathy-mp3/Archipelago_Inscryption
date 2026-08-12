@@ -334,7 +334,7 @@ namespace Archipelago_Inscryption.Patches
                                                      && x.name != "!MYCOCARD_BASE" && x.name != "CaptiveFile" && x.name != "!BUILDACARD_BASE");
                 cardsInfoRandomPool.AddRange(RandomizerHelper.GetAllCustomCards());
                 // Cabin cards are Tech with a portrait, so the filter above takes them whether or not
-                // their item arrived. Ourobot stays out as guaranteed; the bots are re-added if held.
+                // their item arrived. Taken out here and re-added below only for the ones held.
                 cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3"
                     || x.name == "BlueMage_Talking" || x.name == "Angler_Talking");
                 List<CardInfo> cardsInfoRandomGemPool = cardsInfoRandomPool;
@@ -356,15 +356,11 @@ namespace Archipelago_Inscryption.Patches
                     cardsInfoRandomPool.Add(CardLoader.GetCardByName("BlueMage_Talking"));
                 if (ArchipelagoManager.HasItem(APItem.FishbotCard))
                     cardsInfoRandomPool.Add(CardLoader.GetCardByName("Angler_Talking"));
+                if (ArchipelagoManager.HasItem(APItem.Ourobot))
+                    cardsInfoRandomPool.Add(CardLoader.GetCardByName("Ouroboros_Part3"));
                 foreach (CardInfo c in Part3SaveData.Data.deck.Cards)
                 {
                     CardInfo card = c;
-                    if (c.name == "Ouroboros_Part3")
-                    {
-                        newCardsIds.Add(c.name);
-                        newCards.Add(c);
-                        continue;
-                    }
                     if (card.name == "!MYCOCARD_BASE" && card.mods.Count > 0)
                     {
                         card.mods.Remove(card.mods.First());
@@ -596,8 +592,8 @@ namespace Archipelago_Inscryption.Patches
                 Part3SaveData.Data.deck.RemoveCardByName("Sniper");
                 Part3SaveData.Data.deck.RemoveCardByName("CloserBot");
 
-                // Ourobot aside, this mode guarantees nothing, so a card already granted goes back
-                // into the roll as a slot and takes its chances with everything else.
+                // This mode guarantees nothing, so a card already granted goes back into the roll
+                // as a slot and takes its chances with everything else.
                 foreach (string cardName in runStartCards)
                 {
                     Part3SaveData.Data.deck.RemoveCardByName(cardName);
@@ -616,8 +612,6 @@ namespace Archipelago_Inscryption.Patches
             {
                 ArchipelagoManager.GrantRunStartCards(3, Part3SaveData.Data.deck);
             }
-
-            ArchipelagoManager.GrantOurobotIfReceived(Part3SaveData.Data.deck);
 
             foreach (CardInfo card in Part3SaveData.Data.deck.Cards)
             {
