@@ -26,6 +26,7 @@ namespace Archipelago_Inscryption.Archipelago
         public int bleachTrapsGranted;
         public int reinforcementsTrapsGranted;
         public int trashTrapsGranted;
+        public int deckSizeTrapsGranted;
 
         // Whether Act 3's one-time deck build has run. That build hands over every card item held
         // by then, so a grant arriving before it must leave the deck to it and not add its own.
@@ -63,6 +64,16 @@ namespace Archipelago_Inscryption.Archipelago
             get => Current?.trashTrapsGranted ?? int.MaxValue;
             set { if (Current != null) Current.trashTrapsGranted = value; }
         }
+
+        // This one is never spent, so what was handed over is also what is in effect. The two only
+        // read apart on a save with no record: nothing to repair, and no traps to be playing under.
+        internal static int DeckSizeTrapsGranted
+        {
+            get => Current?.deckSizeTrapsGranted ?? int.MaxValue;
+            set { if (Current != null) Current.deckSizeTrapsGranted = value; }
+        }
+
+        internal static int DeckSizeTrapsInEffect => Current?.deckSizeTrapsGranted ?? 0;
 
         // A save from before this class, or one already past Act 3's intro, reads as built: either
         // way the build has had its say, so a card item belongs in the deck now rather than to it.

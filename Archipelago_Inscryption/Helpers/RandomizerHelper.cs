@@ -860,7 +860,7 @@ namespace Archipelago_Inscryption.Helpers
 
         public static int NewDeckSize()
         {
-            return 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            return 20 + APSaveFile.DeckSizeTrapsInEffect;
         }
     }
 }

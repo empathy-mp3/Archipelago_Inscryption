@@ -133,6 +133,9 @@ namespace Archipelago_Inscryption.Archipelago
             { APItem.BleachTrap,                () => APSaveFile.BleachTrapsGranted },
             { APItem.ReinforcementsTrap,        () => APSaveFile.ReinforcementsTrapsGranted },
             { APItem.TrashTrap,                 () => APSaveFile.TrashTrapsGranted },
+            // This one's count is its whole effect, so a copy the save is short of is reapplied to
+            // put the count back rather than to hand out anything the player would see arrive.
+            { APItem.DeckSizeTrap,              () => APSaveFile.DeckSizeTrapsGranted },
             // Both upgrades append to one list, so they are told apart by what they append. A null
             // list reads as fully accounted for, since reapplying against it would throw.
             { APItem.VesselUpgrade,  () => Part3SaveData.Data.sideDeckAbilities?.Count(a => a != Ability.ConduitNull) ?? int.MaxValue },
@@ -571,8 +574,8 @@ namespace Archipelago_Inscryption.Archipelago
             }
             else if (receivedItem == APItem.DeckSizeTrap)
             {
-                ArchipelagoData.Data.deckSizeTrapCount++;
-                while (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount
+                APSaveFile.DeckSizeTrapsGranted++;
+                while (SaveData.Data.collection.cardIds.Count < 20 + APSaveFile.DeckSizeTrapsInEffect
                     && SaveData.Data.collection.cardIds.Count >= 20)
                 {
                     SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
@@ -953,8 +956,8 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 InscryptionItemInfo nextItem = itemsToVerifyQueue.Dequeue();
 
-                // Anything else leaves nothing to look for, leaves state the player spends -- where
-                // never granted and already spent read the same -- or gets rebuilt at an act start.
+                // Anything else leaves nothing to look for: its effect is read from the received list
+                // where it is needed, so there is no state of its own for a save to have lost.
                 bool alreadyApplied = RecoveryOf(nextItem.Item) switch
                 {
                     Recovery.Counted => CountedItemAlreadyApplied(nextItem.Item, requeuedCounts),
@@ -981,10 +984,7 @@ namespace Archipelago_Inscryption.Archipelago
             // as a tally against how many were sent. Needs an entry in countedItemTallies.
             Counted,
             // VerifyItem has a check for the state this item writes.
-            Checked,
-            // Game state kept out of VerifyItem deliberately, because starting a run or an act
-            // recomputes it from the received count, or something reconciles it where it is used.
-            RebuiltElsewhere
+            Checked
         }
 
         // Every item has to name one. No default arm, and CS8509 is an error in this project, so a
@@ -1020,7 +1020,7 @@ namespace Archipelago_Inscryption.Archipelago
                 or APItem.TippedScalesChallenge or APItem.MoreDifficultChallenge
                 or APItem.ProgressiveGrizzlies or APItem.ProgressiveCandle
                 or APItem.ProgressiveSquirrel or APItem.BleachTrap or APItem.ReinforcementsTrap
-                or APItem.TrashTrap => Recovery.Counted,
+                or APItem.TrashTrap or APItem.DeckSizeTrap => Recovery.Counted,
 
             // Read from the received list at the point of use, so they hold no state of their own for a
             // save to lose. COUNT rides along as the enum's sentinel, which is never received at all.
@@ -1029,11 +1029,6 @@ namespace Archipelago_Inscryption.Archipelago
                 or APItem.GoobertNode or APItem.GBCBridgeRepair or APItem.InspectometerBattery
                 or APItem.FactoryBridgeRepair or APItem.Hammer or APItem.Act1 or APItem.Act2 or APItem.Act3
                 or APItem.COUNT => Recovery.NoneNeeded,
-
-            // Counts up in Archipelago's own data, which cannot come apart from the record of having
-            // received it, and tops its collection back up whenever the deck building menu is opened.
-            APItem.DeckSizeTrap => Recovery.RebuiltElsewhere,
-
         };
 
         // The shortfall is shared by every copy, so the copies this pass has already queued are allowed

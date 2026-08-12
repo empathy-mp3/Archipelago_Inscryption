@@ -354,12 +354,12 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void IncreaseMinDeckSizeInMenu(DeckBuildingUI __instance)
         {
-            while (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount
+            while (SaveData.Data.collection.cardIds.Count < 20 + APSaveFile.DeckSizeTrapsInEffect
                 && SaveData.Data.collection.cardIds.Count != 0)
             {
                 SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
             }
-            int deckSize = 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            int deckSize = 20 + APSaveFile.DeckSizeTrapsInEffect;
             __instance.cardCountText.SetText(SaveData.Data.deck.Cards.Count + "/" + deckSize, false);
             __instance.autoCompleteButton.SetEnabled(SaveData.Data.deck.Cards.Count < deckSize);
             __instance.collection.RefreshPage();
@@ -369,7 +369,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void IsValidGBCDeck(DeckInfo __instance, ref bool __result)
         {
-            __result = __instance.cardIds.Count >= 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            __result = __instance.cardIds.Count >= 20 + APSaveFile.DeckSizeTrapsInEffect;
         }
 
         [HarmonyPatch(typeof(AutoDeckBuilder), "CompleteDeck")]
