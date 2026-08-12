@@ -20,6 +20,13 @@ namespace Archipelago_Inscryption.Helpers
             }
         }
 
+        // CurrentAct cannot answer this for Act 1: IsPart1 is defined as none of the other acts, so
+        // the start screen a reset can be run from reads as Act 1 the same as the cabin does.
+        private static bool ActIsOnScreen(int act)
+            => act == 1
+                ? SceneLoader.ActiveSceneName.ToLowerInvariant().Contains("part1")
+                : ArchipelagoManager.CurrentAct == act;
+
         internal static void ResetAct(int act)
         {
             switch (act)
@@ -69,7 +76,7 @@ namespace Archipelago_Inscryption.Helpers
 
             // Resetting the act being played would leave the scene running on wiped data, so hand
             // the player back to the menu, as vanilla's own save reset does from here.
-            if (ArchipelagoManager.CurrentAct != act) return;
+            if (!ActIsOnScreen(act)) return;
 
             Singleton<InteractionCursor>.Instance.SetEnabled(false);
             CustomCoroutine.WaitThenExecute(0.1f, delegate
