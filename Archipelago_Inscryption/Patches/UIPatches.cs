@@ -290,6 +290,27 @@ namespace Archipelago_Inscryption.Patches
             return !Components.InputField.IsAnySelected;
         }
 
+        // Vanilla offers deck editing anywhere outside a battle, including before the starting deck
+        // has been picked up, where there is no deck to edit and no legal one to build towards.
+        [HarmonyPatch(typeof(GBCPauseMenu), "OnPausedChange")]
+        [HarmonyPostfix]
+        static void HideDeckEditingUntilStarterDeckTaken(GBCPauseMenu __instance)
+        {
+            if (!RandomizerHelper.Act2StarterDeckTaken)
+                __instance.modifyDeckCard.gameObject.SetActive(false);
+        }
+
+        // Holding Alt Menu while pausing jumps straight to the deck screen, from inside the method
+        // patched above and before it can hide anything. Same gate, where that jump lands.
+        [HarmonyPatch(typeof(MenuController), "PlayMenuCardImmediate")]
+        [HarmonyPrefix]
+        static bool BlockDeckJumpUntilStarterDeckTaken(MenuCard card)
+        {
+            if (RandomizerHelper.Act2StarterDeckTaken) return true;
+
+            return card != (PauseMenu.instance as GBCPauseMenu)?.modifyDeckCard;
+        }
+
         [HarmonyPatch(typeof(DeckBuildingUI), "Start")]
         [HarmonyPostfix]
         static void CreateCardPackButton(DeckBuildingUI __instance)

@@ -354,8 +354,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void IncreaseMinDeckSizeInMenu(DeckBuildingUI __instance)
         {
-            while (SaveData.Data.collection.cardIds.Count < 20 + APSaveFile.DeckSizeTrapsInEffect
-                && SaveData.Data.collection.cardIds.Count != 0)
+            // Only once the starter deck is in. A collection holding just the cards Archipelago
+            // granted is under 20 as well, and topping that one up buries them in bells.
+            while (RandomizerHelper.Act2StarterDeckTaken
+                && SaveData.Data.collection.cardIds.Count < 20 + APSaveFile.DeckSizeTrapsInEffect)
             {
                 SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
             }

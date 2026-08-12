@@ -862,5 +862,10 @@ namespace Archipelago_Inscryption.Helpers
         {
             return 20 + APSaveFile.DeckSizeTrapsInEffect;
         }
+
+        // Every starter deck is 20 cards and nothing else fills the collection that far, so this is
+        // what tells one that has been picked up from one holding only what Archipelago granted.
+        internal static bool Act2StarterDeckTaken
+            => (SaveManager.SaveFile?.gbcData?.collection?.cardIds?.Count ?? 0) >= 20;
     }
 }
