@@ -122,9 +122,6 @@ namespace Archipelago_Inscryption.Patches
         {
             if (SaveManager.savingDisabled || !SaveManager.SaveFile.IsPart1) return;
 
-            // Also gate on being in the battle state: a freshly loaded run sitting on the map has
-            // GameEnded unset too, and only Act 1 ties a node to the fight being resolved.
-            if (!GameFlowManager.IsCardBattle) return;
             if (!ArchipelagoManager.IsBattleUnresolved(Singleton<TurnManager>.Instance)) return;
 
             ArchipelagoModPlugin.Log.LogWarning("Saving during an unresolved Act 1 fight; that node will read back as already beaten. Called from:\n" + Environment.StackTrace);

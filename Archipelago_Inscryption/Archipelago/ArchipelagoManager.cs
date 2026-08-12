@@ -250,10 +250,11 @@ namespace Archipelago_Inscryption.Archipelago
             return false;
         }
 
-        // A battle that has not reached its end sequence yet, so a save taken now would record its
-        // Act 1 node as beaten. Gates both the deferred save and the warning that guards it.
+        // A battle that has started and not reached its end sequence, so a save taken now would
+        // record its Act 1 node as beaten. Without the opponent, a freshly loaded run reads alike.
         internal static bool IsBattleUnresolved(TurnManager turnManager)
-            => turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded;
+            => turnManager != null && turnManager.Opponent != null
+                && !turnManager.GameEnding && !turnManager.GameEnded;
 
         // Reproduces closing and reopening the game: everything unsaved is dropped, then every item
         // the server sent is replayed, so what Archipelago granted survives and the rest does not.
