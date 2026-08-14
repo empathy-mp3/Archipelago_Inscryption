@@ -406,13 +406,15 @@ namespace Archipelago_Inscryption.Components
 
                 yield return null;
 
-                yield return new WaitUntil(() => itemTimer <= 0);
+                // The whole queue, not just the item being announced: this screen is what keeps a
+                // pile of them from landing on an act the player has already started playing.
+                yield return new WaitUntil(() => !ArchipelagoManager.HasPendingItems && itemTimer <= 0);
 
                 ArchipelagoManager.VerifyAllItems();
 
                 yield return null;
 
-                yield return new WaitUntil(() => itemTimer <= 0);
+                yield return new WaitUntil(() => !ArchipelagoManager.HasPendingItems && itemTimer <= 0);
 
                 postConnectScreen.SetActive(false);
                 startScreen.gameObject.SetActive(true);

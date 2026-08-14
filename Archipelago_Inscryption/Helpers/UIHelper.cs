@@ -127,6 +127,10 @@ namespace Archipelago_Inscryption.Helpers
                     {
                         SaveManager.SaveFile.NewPart1Run();
                     }
+
+                    // The last point before the act reads the run, and the first at which everything
+                    // the server has sent is in hand. A run dealt without it is dealt again here.
+                    ArchipelagoManager.DealAct1RunAgainIfUnplayed();
                     break;
                 case 2:
                     ScriptableObjectLoader<CardInfo>.AllData.Find(x => x.name == "Hrokkall").temple = CardTemple.Nature;

@@ -50,6 +50,13 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void InitializeAct1Items()
         {
+            InitializeAct1RunItems();
+        }
+
+        // Also called for a run dealt again outside NewPart1Run, which replaces the RunState these
+        // are held on and so drops them the same way a new run does.
+        internal static void InitializeAct1RunItems()
+        {
             if (ArchipelagoData.Data == null || RunState.Run == null)
             {
                 ArchipelagoModPlugin.Log.LogWarning($"InitializeAct1RunItems: skipped (ArchipelagoData.Data null: {ArchipelagoData.Data == null}, RunState.Run null: {RunState.Run == null})");

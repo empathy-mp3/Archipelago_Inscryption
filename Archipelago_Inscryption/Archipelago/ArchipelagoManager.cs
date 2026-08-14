@@ -220,34 +220,47 @@ namespace Archipelago_Inscryption.Archipelago
             itemsToVerifyQueue.Enqueue(item);
         }
 
+        internal static bool HasPendingItems => itemQueue.Count > 0;
+
         internal static bool ProcessNextItem()
         {
-            if (itemQueue.Count > 0)
+            if (itemQueue.Count == 0) return false;
+
+            AudioController.Instance.PlaySound2D("creepy_rattle_lofi");
+
+            AnnounceAndApply(itemQueue.Dequeue());
+
+            Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
+
+            return true;
+        }
+
+        // The queue is paced for the player to read, which is longer than something about to act on
+        // what these items write can wait. Gives up that pacing rather than the effects.
+        internal static void FlushPendingItems()
+        {
+            if (itemQueue.Count == 0) return;
+
+            while (itemQueue.Count > 0) AnnounceAndApply(itemQueue.Dequeue());
+
+            Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
+        }
+
+        private static void AnnounceAndApply(InscryptionItemInfo item)
+        {
+            // Read through the session, which a disconnect takes with it while leaving whatever it
+            // had already sent still queued here.
+            string message = ArchipelagoClient.session?.ConnectionInfo.Slot == item.PlayerSlot
+                ? "You have found your " + item.ItemName
+                : "Received " + item.ItemName + " from " + item.PlayerName;
+
+            if (ArchipelagoData.itemLogMode != ItemLogMode.Disabled)
             {
-                AudioController.Instance.PlaySound2D("creepy_rattle_lofi");
-
-                InscryptionItemInfo item = itemQueue.Dequeue();
-
-                string message;
-                if (item.PlayerSlot == ArchipelagoClient.session.ConnectionInfo.Slot)
-                    message = "You have found your " + item.ItemName;
-                else
-                    message = "Received " + item.ItemName + " from " + item.PlayerName;
-
-                if (ArchipelagoData.itemLogMode != ItemLogMode.Disabled)
-                {
-                    Singleton<ArchipelagoUI>.Instance.LogImportant(message);
-                    ArchipelagoModPlugin.Log.LogMessage(message);
-                }
-
-                ApplyItemReceived(item.Item);
-
-                Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
-
-                return true;
+                Singleton<ArchipelagoUI>.Instance.LogImportant(message);
+                ArchipelagoModPlugin.Log.LogMessage(message);
             }
 
-            return false;
+            ApplyItemReceived(item.Item);
         }
 
         // A battle that has started and not reached its end sequence, so a save taken now would
@@ -889,6 +902,24 @@ namespace Archipelago_Inscryption.Archipelago
                 if (HasItem(item) && !DeliveredThisRun(item))
                     GrantAct1Consumable(item);
             }
+        }
+
+        // Act 1 deals its run when the run is created, not when the act is entered, so a save file
+        // reset deals one before the mod is back in touch with the server. A run nobody has played
+        // is nothing but that state read back, so it is dealt again rather than added to.
+        internal static void DealAct1RunAgainIfUnplayed()
+        {
+            if (ArchipelagoData.Data == null || RunState.Run == null || RunState.Run.runIntroCompleted) return;
+
+            // The deal reads the story events and cards these write, so none can be left queued.
+            FlushPendingItems();
+
+            SaveManager.SaveFile.ResetPart1Run();
+
+            // The run the deal replaced took the act's currency and packs with it.
+            ItemPatches.InitializeAct1RunItems();
+
+            SaveManager.SaveToFile(false);
         }
 
         // A run start re-adds both from their story events, so what it opens holding is already served.
