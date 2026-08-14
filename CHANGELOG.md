@@ -1,3 +1,11 @@
+### 1.5.1
+
+BUGFIXES
+
+- Left Side Start now actually spawns you west of the Act 2 bridge when you enter the act from the act card or respawn from a DeathLink death. Both dropped you on the right side, behind a bridge logic expected you to already be past
+- Logic: the four Act 3 Luke file rooms need the Quill again. Their file node only appears once the Archivist has asked to browse a file, which the Quill gates
+- Logic: beating Act 2 requires the Act 2 Bridge Repair item when the bridge is randomized, on either start side
+
 ### 1.5.0
 
 Requires a matching apworld -- older seeds will not work.
