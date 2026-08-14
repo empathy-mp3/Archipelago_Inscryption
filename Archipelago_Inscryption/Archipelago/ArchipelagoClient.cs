@@ -1,4 +1,4 @@
-﻿using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
@@ -90,6 +90,10 @@ namespace Archipelago_Inscryption.Archipelago
             return session;
         }
 
+        // Large rooms can outlast the library's hardcoded 4s login timeout while transferring
+        // datapackages. Retrying on the same socket lets that finish instead of tearing it down.
+        private const int MaxLoginAttempts = 5;
+
         private static void Connect(OnConnectAttempt attempt)
         {
             LoginResult result;
@@ -97,13 +101,15 @@ namespace Archipelago_Inscryption.Archipelago
             try
             {
                 session = CreateSession();
-                result = session.TryConnectAndLogin(
-                    "Inscryption Beta",
-                    ArchipelagoData.Data.slotName,
-                    ItemsHandlingFlags.AllItems,
-                    new Version(ArchipelagoVersion),
-                    password: ArchipelagoData.Data.password == "" ? null : ArchipelagoData.Data.password
-                );
+
+                var roomInfoTask = session.ConnectAsync();
+                if (!roomInfoTask.Wait(TimeSpan.FromSeconds(10)) || roomInfoTask.IsFaulted)
+                {
+                    attempt(new LoginFailure("Timed out waiting for room info from the server."));
+                    return;
+                }
+
+                result = LoginWithRetries();
             }
             catch (Exception e)
             {
@@ -114,12 +120,44 @@ namespace Archipelago_Inscryption.Archipelago
             attempt(result);
         }
 
+        private static LoginResult LoginWithRetries()
+        {
+            LoginResult result = new LoginFailure("Login was never attempted.");
+
+            for (int attemptNumber = 1; attemptNumber <= MaxLoginAttempts; attemptNumber++)
+            {
+                result = session.LoginAsync(
+                    "Inscryption Beta",
+                    ArchipelagoData.Data.slotName,
+                    ItemsHandlingFlags.AllItems,
+                    new Version(ArchipelagoVersion),
+                    password: ArchipelagoData.Data.password == "" ? null : ArchipelagoData.Data.password
+                ).Result;
+
+                if (result.Successful) break;
+
+                bool isTimeout = ((LoginFailure)result).Errors.Any(e => e.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!isTimeout || attemptNumber == MaxLoginAttempts) break;
+
+                string message = $"Still waiting on the server (large room?), retrying login... ({attemptNumber}/{MaxLoginAttempts})";
+                ArchipelagoModPlugin.Log.LogInfo(message);
+                Singleton<ArchipelagoUI>.Instance.LogMessage(message);
+            }
+
+            return result;
+        }
+
         private static void OnConnected(LoginResult result)
         {
             if (result.Successful)
             {
                 slotData = ((LoginSuccessful)result).SlotData;
                 isConnected = true;
+
+                ArchipelagoModPlugin.LastHostName = ArchipelagoData.Data.hostName;
+                ArchipelagoModPlugin.LastPort = ArchipelagoData.Data.port;
+                ArchipelagoModPlugin.LastSlotName = ArchipelagoData.Data.slotName;
+                ArchipelagoModPlugin.LastPassword = ArchipelagoData.Data.password;
             }
             else
             {
@@ -182,14 +220,20 @@ namespace Archipelago_Inscryption.Archipelago
 
             ArchipelagoData.Data.index++;
 
-            ItemInfo nextItem = helper.DequeueItem();
-            InscryptionItemInfo matchedItem = ArchipelagoData.Data.itemsUnaccountedFor.FirstOrDefault(x => IsSameItem(x, nextItem));
+            ProcessItem(helper.DequeueItem());
+        }
+
+        // Split from the handler above so the same routing can be replayed over a list of items
+        // rather than the helper's queue, which only yields each item once per session.
+        internal static void ProcessItem(ItemInfo item)
+        {
+            InscryptionItemInfo matchedItem = ArchipelagoData.Data.itemsUnaccountedFor.FirstOrDefault(x => IsSameItem(x, item));
 
             if (matchedItem == null)
             {
                 // This item is new
-                InscryptionItemInfo newItemInfo = new InscryptionItemInfo((APItem)(nextItem.ItemId - ArchipelagoManager.ID_OFFSET), nextItem.ItemName, nextItem.ItemId, nextItem.LocationId, nextItem.Player.Slot, nextItem.Player.Name);
-                
+                InscryptionItemInfo newItemInfo = new InscryptionItemInfo((APItem)(item.ItemId - ArchipelagoManager.ID_OFFSET), item.ItemName, item.ItemId, item.LocationId, item.Player.Slot, item.Player.Name);
+
                 ArchipelagoData.Data.receivedItems.Add(newItemInfo);
 
                 onNewItemReceived?.Invoke(newItemInfo);

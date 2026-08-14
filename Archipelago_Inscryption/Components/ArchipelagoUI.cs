@@ -132,59 +132,10 @@ namespace Archipelago_Inscryption.Components
 
                 if (!FileSystem.FileExists(savePath) || !FileSystem.FileExists(dataPath)) continue;
 
-                string dataContent = "";
-
-                try 
-                {
-                    dataContent = FileSystem.ReadAllText(dataPath);
-                }
-                catch (Exception e)
-                {
-                    ArchipelagoModPlugin.Log.LogError("Failed to load save data from " + Path.GetFileName(directories[i]) + ": " + e.Message);
-                    continue;
-                }
-
-                ArchipelagoData loadedData = null;
-
-                try
-                {
-                    loadedData = JsonConvert.DeserializeObject<ArchipelagoData>(dataContent);
-                }
-                catch
-                {
-                    loadedData = null;
-                }
+                ArchipelagoData loadedData = ArchipelagoData.LoadFromFile(dataPath);
 
                 if (loadedData != null)
                 {
-                    loadedData.itemsUnaccountedFor = new List<InscryptionItemInfo>(loadedData.receivedItems);
-
-                    foreach (var cI in loadedData.customCardInfos)
-                    {
-                        CardModificationInfo customCardMod = new CardModificationInfo();
-                        customCardMod.singletonId = cI.SingletonId;
-                        customCardMod.nameReplacement = cI.NameReplacement;
-                        customCardMod.attackAdjustment = cI.AttackAdjustment;
-                        customCardMod.healthAdjustment = cI.HealthAdjustment;
-                        customCardMod.energyCostAdjustment = cI.EnergyCostAdjustment;
-                        customCardMod.abilities = cI.Abilities;
-                        BuildACardPortraitInfo portraitInfo = new BuildACardPortraitInfo();
-                        portraitInfo.spriteIndices = cI.SpriteIndices;
-                        customCardMod.buildACardPortraitInfo = portraitInfo;
-                        loadedData.customCardsModsAct3.Add(customCardMod);
-                    }
-
-                    if (loadedData.mycoCardInfo.Abilities != null && loadedData.mycoCardInfo.Abilities.Count > 0)
-                    {
-                        CardModificationInfo mycoCardMod = new CardModificationInfo();
-                        mycoCardMod.singletonId = loadedData.mycoCardInfo.SingletonId;
-                        mycoCardMod.attackAdjustment = loadedData.mycoCardInfo.AttackAdjustment;
-                        mycoCardMod.healthAdjustment = loadedData.mycoCardInfo.HealthAdjustment;
-                        mycoCardMod.energyCostAdjustment = loadedData.mycoCardInfo.EnergyCostAdjustment;
-                        mycoCardMod.abilities = loadedData.mycoCardInfo.Abilities;
-                        loadedData.mycoCardMod = mycoCardMod;
-                    }
-
                     try
                     {
                         dataList.Add(FileSystem.GetLastWriteTime(dataPath), (Path.GetFileName(directories[i]), loadedData));
@@ -268,14 +219,18 @@ namespace Archipelago_Inscryption.Components
             }
         }
 
+        // Act 1 commits currentNodeId when a battle starts rather than when it ends, so a save
+        // taken mid-fight reads that node back as already beaten. Wait for the fight to resolve.
         internal IEnumerator QueueSave()
         {
             TurnManager turnManager = Singleton<TurnManager>.Instance;
-            if (turnManager != null && !turnManager.GameEnding && !turnManager.GameEnded)
+            if (ArchipelagoManager.IsBattleUnresolved(turnManager))
             {
-                // The battle can end and destroy the TurnManager mid-wait, so treat that as the
-                // battle being over instead of dereferencing a dead singleton and dying here.
                 yield return new WaitUntil(() => turnManager == null || turnManager.GameEnding);
+
+                // A destroyed TurnManager means the scene unwound with the fight unresolved, e.g.
+                // quitting to the menu, so abandon the save exactly as closing the game would.
+                if (turnManager == null) yield break;
             }
 
             saveTimer = 0.5f;
@@ -387,7 +342,13 @@ namespace Archipelago_Inscryption.Components
             saveNameScreen.SetActive(false);
             connectScreen.SetActive(true);
 
-            UpdateConnectScreenTexts(new ArchipelagoData());
+            UpdateConnectScreenTexts(new ArchipelagoData
+            {
+                hostName = ArchipelagoModPlugin.LastHostName,
+                port = ArchipelagoModPlugin.LastPort,
+                slotName = ArchipelagoModPlugin.LastSlotName,
+                password = ArchipelagoModPlugin.LastPassword,
+            });
 
             string saveName = saveNameInputField.text;
             string savePath = Path.Combine(ArchipelagoModPlugin.SavePath, saveName);

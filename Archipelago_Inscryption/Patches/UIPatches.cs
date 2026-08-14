@@ -1,4 +1,4 @@
-﻿using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
 using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
@@ -7,6 +7,7 @@ using DiskCardGame;
 using GBC;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
@@ -58,6 +59,35 @@ namespace Archipelago_Inscryption.Patches
                 return false;
             }
             return true;
+        }
+
+        // Vanilla's reset only deletes the save file, leaving the slot's Archipelago data and the
+        // live connection behind. Runs on the click that resets: the index is incremented first.
+        [HarmonyPatch(typeof(OptionsUI), "OnResetSaveButtonPressed")]
+        [HarmonyPrefix]
+        static void ClearArchipelagoDataOnReset(OptionsUI __instance)
+        {
+            if (__instance.resetSaveButtonMessageIndex != 3 || ArchipelagoData.saveName == "") return;
+
+            ArchipelagoClient.Disconnect();
+
+            // Recreated empty rather than left deleted: the mod's save paths still point inside it,
+            // so a stray write would otherwise throw. An empty slot is skipped by the save list.
+            string savePath = Path.Combine(ArchipelagoModPlugin.SavePath, ArchipelagoData.saveName);
+            if (FileSystem.DirectoryExists(savePath))
+            {
+                FileSystem.DeleteDirectory(savePath);
+                FileSystem.CreateDirectory(savePath);
+            }
+
+            // The Archipelago menu only builds itself when no UI exists yet, which otherwise only
+            // happens once per launch. Tear it down so the start screen rebuilds it.
+            ArchipelagoUI ui = Singleton<ArchipelagoUI>.Instance;
+            if (ui != null)
+            {
+                ArchipelagoUI.exists = false;
+                Object.Destroy(ui.gameObject);
+            }
         }
 
         [HarmonyPatch(typeof(StartScreenController), "Start")]
@@ -116,7 +146,8 @@ namespace Archipelago_Inscryption.Patches
 
             if (ArchipelagoData.Data.enableAct1)
             {
-                var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted);
+                var startedAct1 = SaveManager.SaveFile.storyEvents.completedEvents.Contains(StoryEvent.BasicTutorialCompleted)
+                    && !ArchipelagoData.Data.act1RunFresh;
                 var completedAct1 = ArchipelagoData.Data.act1Completed;
                 if (items) 
                 {
@@ -124,25 +155,21 @@ namespace Archipelago_Inscryption.Patches
                     else locked = false;
                 }
 
-                act1NewRun.SetEnabled(true);
-                act1NewRun.gameObject.SetActive(true);
-                menu.cards.Add(act1NewRun);
-                act1NewRun.titleText = startedAct1 ? "New Act 1 Run" : "Start Act 1";
-                act1NewRun.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1NewRun;
-
-                if (startedAct1 && !locked)
-                {
-                    act1.SetEnabled(true);
-                    act1.gameObject.SetActive(true);
-                    menu.cards.Add(act1);
-                    act1.titleText = completedAct1 ? "Continue Act 1 (Complete!)" : "Continue Act 1";
-                    act1.GetComponent<SpriteRenderer>().sprite = completedAct1 ? AssetsManager.menuCardAct1Complete : AssetsManager.menuCardAct1Continue;
-                }
+                act1.SetEnabled(true);
+                act1.gameObject.SetActive(true);
+                menu.cards.Add(act1);
                 if (locked)
                 {
-                    act1NewRun.permanentlyLocked = true;
-                    act1NewRun.titleText = "Locked";
-                    act1NewRun.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1Locked;
+                    act1.permanentlyLocked = true;
+                    act1.titleText = "Locked";
+                    act1.GetComponent<SpriteRenderer>().sprite = AssetsManager.menuCardAct1Locked;
+                }
+                else
+                {
+                    act1.titleText = startedAct1 ? (completedAct1 ? "Continue Act 1 (Complete!)" : "Continue Act 1") : "Start Act 1";
+                    act1.GetComponent<SpriteRenderer>().sprite = startedAct1
+                        ? (completedAct1 ? AssetsManager.menuCardAct1Complete : AssetsManager.menuCardAct1Continue)
+                        : AssetsManager.menuCardAct1NewRun;
                 }
 
                 if (inOrder && !completedAct1) locked = true;
@@ -233,9 +260,6 @@ namespace Archipelago_Inscryption.Patches
         {
             switch (Singleton<MenuController>.Instance.slottedCard.name)
             {
-                case "MenuCard_Act1NewRun":
-                    UIHelper.LoadSelectedChapter(1, true);
-                    break;
                 case "MenuCard_Act1":
                     UIHelper.LoadSelectedChapter(1, false);
                     break;
@@ -264,6 +288,27 @@ namespace Archipelago_Inscryption.Patches
         static bool PreventKeyUpdateIfInputFieldSelected()
         {
             return !Components.InputField.IsAnySelected;
+        }
+
+        // Vanilla offers deck editing anywhere outside a battle, including before the starting deck
+        // has been picked up, where there is no deck to edit and no legal one to build towards.
+        [HarmonyPatch(typeof(GBCPauseMenu), "OnPausedChange")]
+        [HarmonyPostfix]
+        static void HideDeckEditingUntilStarterDeckTaken(GBCPauseMenu __instance)
+        {
+            if (!RandomizerHelper.Act2StarterDeckTaken)
+                __instance.modifyDeckCard.gameObject.SetActive(false);
+        }
+
+        // Holding Alt Menu while pausing jumps straight to the deck screen, from inside the method
+        // patched above and before it can hide anything. Same gate, where that jump lands.
+        [HarmonyPatch(typeof(MenuController), "PlayMenuCardImmediate")]
+        [HarmonyPrefix]
+        static bool BlockDeckJumpUntilStarterDeckTaken(MenuCard card)
+        {
+            if (RandomizerHelper.Act2StarterDeckTaken) return true;
+
+            return card != (PauseMenu.instance as GBCPauseMenu)?.modifyDeckCard;
         }
 
         [HarmonyPatch(typeof(DeckBuildingUI), "Start")]

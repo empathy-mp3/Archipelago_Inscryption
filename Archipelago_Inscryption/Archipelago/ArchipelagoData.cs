@@ -1,6 +1,7 @@
 ﻿using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace Archipelago_Inscryption.Archipelago
@@ -61,12 +62,6 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("vesselUpgrade3Location")]
         internal string vesselUpgrade3Location = "";
 
-        [JsonProperty("bleachTrapCount")]
-        internal int bleachTrapCount = 0;
-        [JsonProperty("deckSizeTrapCount")]
-        internal int deckSizeTrapCount = 0;
-        [JsonProperty("reinforcementsTrapCount")]
-        internal int reinforcementsTrapCount = 0;
         [JsonProperty("act1Battles")]
         internal int act1BattlesThisRun = 0;
 
@@ -86,9 +81,6 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonIgnore]
         internal CardModificationInfo mycoCardMod = null;
 
-        [JsonProperty("availableCardPacks")]
-        internal int availableCardPacks = 0;
-
         [JsonProperty("cabinSafeCode")]
         internal List<int> cabinSafeCode = new List<int>();
         [JsonProperty("cabinClockCode")]
@@ -104,6 +96,10 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonProperty("wizardCode3")]
         internal List<int> wizardCode3 = new List<int>();
 
+        // Act 1 has not been entered since it was last made fresh, which BasicTutorialCompleted
+        // cannot tell on its own: a reset keeps it, and skip_tutorial sets it on an unplayed save.
+        [JsonProperty("act1RunFresh")]
+        internal bool act1RunFresh = false;
         [JsonProperty("act1Completed")]
         internal bool act1Completed = false;
         [JsonProperty("act2Completed")]
@@ -118,10 +114,25 @@ namespace Archipelago_Inscryption.Archipelago
         [JsonIgnore]
         internal uint index = 0;
 
+        // Per save, not static: as static fields Newtonsoft still deserialized them process-wide,
+        // so the last save listed by the select screen decided both for the session.
         [JsonProperty("itemLogMode")]
-        internal static ItemLogMode itemLogMode = ItemLogMode.AllItems;
+        private ItemLogMode itemLogModeSetting = ItemLogMode.AllItems;
         [JsonProperty("deathLinkOverride")]
-        internal static DeathLinkOverride deathLinkOverride = DeathLinkOverride.Default;
+        private DeathLinkOverride deathLinkOverrideSetting = DeathLinkOverride.Default;
+
+        internal static ItemLogMode itemLogMode
+        {
+            get => Data?.itemLogModeSetting ?? ItemLogMode.AllItems;
+            set { if (Data != null) Data.itemLogModeSetting = value; }
+        }
+
+        internal static DeathLinkOverride deathLinkOverride
+        {
+            get => Data?.deathLinkOverrideSetting ?? DeathLinkOverride.Default;
+            set { if (Data != null) Data.deathLinkOverrideSetting = value; }
+        }
+
         public static bool DeathLink => deathLinkOverride switch
         {
             DeathLinkOverride.Disabled => false,
@@ -138,8 +149,84 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal static void SaveToFile()
         {
+            // No path means no save slot is active, e.g. right after a save data reset.
+            if (dataFilePath == "") return;
+
             string json = JsonConvert.SerializeObject(Data);
             FileSystem.WriteAllText(dataFilePath, json);
+        }
+
+        // Returns null if the file can't be read or is corrupted, leaving the caller to report it
+        // with whatever context it has. The result is not assigned to Data; that is the caller's.
+        internal static ArchipelagoData LoadFromFile(string path)
+        {
+            // A missing file is an ordinary outcome, e.g. a slot whose data was just reset, so it
+            // returns quietly. Only a file that exists and cannot be read is worth reporting.
+            if (!FileSystem.FileExists(path)) return null;
+
+            string content;
+
+            try
+            {
+                content = FileSystem.ReadAllText(path);
+            }
+            catch (Exception e)
+            {
+                ArchipelagoModPlugin.Log.LogError("Failed to read Archipelago data from " + path + ": " + e.Message);
+                return null;
+            }
+
+            ArchipelagoData loaded;
+
+            try
+            {
+                loaded = JsonConvert.DeserializeObject<ArchipelagoData>(content);
+            }
+            catch
+            {
+                loaded = null;
+            }
+
+            loaded?.RebuildRuntimeState();
+
+            return loaded;
+        }
+
+        // The [JsonIgnore] fields that are derived from serialized data rather than stored, so they
+        // have to be rebuilt on every load. Clears first so it is safe to re-run on live data.
+        private void RebuildRuntimeState()
+        {
+            itemsUnaccountedFor = new List<InscryptionItemInfo>(receivedItems);
+
+            customCardsModsAct3.Clear();
+
+            foreach (var cI in customCardInfos)
+            {
+                CardModificationInfo customCardMod = new CardModificationInfo();
+                customCardMod.singletonId = cI.SingletonId;
+                customCardMod.nameReplacement = cI.NameReplacement;
+                customCardMod.attackAdjustment = cI.AttackAdjustment;
+                customCardMod.healthAdjustment = cI.HealthAdjustment;
+                customCardMod.energyCostAdjustment = cI.EnergyCostAdjustment;
+                customCardMod.abilities = cI.Abilities;
+                BuildACardPortraitInfo portraitInfo = new BuildACardPortraitInfo();
+                portraitInfo.spriteIndices = cI.SpriteIndices;
+                customCardMod.buildACardPortraitInfo = portraitInfo;
+                customCardsModsAct3.Add(customCardMod);
+            }
+
+            mycoCardMod = null;
+
+            if (mycoCardInfo.Abilities != null && mycoCardInfo.Abilities.Count > 0)
+            {
+                CardModificationInfo mod = new CardModificationInfo();
+                mod.singletonId = mycoCardInfo.SingletonId;
+                mod.attackAdjustment = mycoCardInfo.AttackAdjustment;
+                mod.healthAdjustment = mycoCardInfo.HealthAdjustment;
+                mod.energyCostAdjustment = mycoCardInfo.EnergyCostAdjustment;
+                mod.abilities = mycoCardInfo.Abilities;
+                mycoCardMod = mod;
+            }
         }
     }
 

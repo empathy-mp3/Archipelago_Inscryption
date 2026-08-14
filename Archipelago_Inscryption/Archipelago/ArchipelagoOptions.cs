@@ -20,6 +20,11 @@ namespace Archipelago_Inscryption.Archipelago
         internal static Act2RandomizeBridge act2RandomizeBridge = Act2RandomizeBridge.Disable;
         internal static RandomizeHammer randomizeHammer = RandomizeHammer.Vanilla;
         internal static bool act3Overhaul = false;
+        internal static bool releaseOnActCompletion = false;
+        // The span of location ids each act owns, worked out by the apworld that defines the
+        // ordering, so the mod never has to reconstruct it.
+        internal static int[] actLocationStarts = new int[3];
+        internal static int[] actLocationCounts = new int[3];
         internal static RandomizeShortcuts randomizeShortcuts = RandomizeShortcuts.Vanilla;
         internal static RandomizeVesselUpgrades randomizeVesselUpgrades = RandomizeVesselUpgrades.Vanilla;
         internal static ActUnlocks actUnlocks;
@@ -125,6 +130,10 @@ namespace Archipelago_Inscryption.Archipelago
 
         internal static void SkipTutorial()
         {
+            // Marking the tutorial done would otherwise make a brand new save read as an Act 1
+            // already in progress, since that is what the act card checks.
+            ArchipelagoData.Data.act1RunFresh = true;
+
             StoryEventsData.SetEventCompleted(StoryEvent.BasicTutorialCompleted, false, false);
             StoryEventsData.SetEventCompleted(StoryEvent.TutorialRunCompleted, false, false);
             StoryEventsData.SetEventCompleted(StoryEvent.TutorialRun2Completed, false, false);

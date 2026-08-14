@@ -1,10 +1,12 @@
 ﻿using Archipelago.MultiClient.Net.Models;
 using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
+using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,15 +30,57 @@ namespace Archipelago_Inscryption.Patches
             }
         }
 
+        // Safety net: logs instead of silently aborting the rest of SaveFile.Initialize() if any
+        // postfix on this method throws.
+        [HarmonyPatch(typeof(RunState), "Initialize")]
+        [HarmonyFinalizer]
+        static Exception LogInitializeFailure(Exception __exception)
+        {
+            if (__exception != null)
+            {
+                ArchipelagoModPlugin.Log.LogError($"RunState.Initialize threw: {__exception}");
+            }
+
+            return null;
+        }
+
+        // Act 1 spends both of these within a run, so a new run restores them to everything the act
+        // has been sent. Without this a death takes the run's teeth and any unopened packs with it.
+        [HarmonyPatch(typeof(SaveFile), "NewPart1Run")]
+        [HarmonyPostfix]
+        static void InitializeAct1Items()
+        {
+            if (ArchipelagoData.Data == null || RunState.Run == null)
+            {
+                ArchipelagoModPlugin.Log.LogWarning($"InitializeAct1RunItems: skipped (ArchipelagoData.Data null: {ArchipelagoData.Data == null}, RunState.Run null: {RunState.Run == null})");
+                return;
+            }
+
+            int previousCurrency = RunState.Run.currency;
+            int receivedCount = ArchipelagoManager.CountReceived(APItem.Act1Currency);
+            int newCurrency = receivedCount * ArchipelagoManager.CURRENCY_PER_ITEM;
+
+            RunState.Run.currency = newCurrency;
+            APSaveFile.SetCurrencyGranted(1, receivedCount);
+            APSaveFile.ResetPacksForAct(1, ArchipelagoManager.CountReceived(APItem.Act1CardPack));
+
+            RandomizerHelper.RefreshPackPile();
+            ArchipelagoData.SaveToFile();
+
+            ArchipelagoModPlugin.Log.LogInfo($"InitializeAct1RunItems: ran. Act1Currency items received: {receivedCount}. Currency {previousCurrency} -> {RunState.Run.currency} (expected {newCurrency}).");
+        }
+        
         [HarmonyPatch(typeof(SaveData), "Initialize")]
         [HarmonyPostfix]
-        static void InitializeItemNewGame(SaveData __instance)
+        static void InitializeAct2Items(SaveData __instance)
         {
             if (ArchipelagoData.Data == null) return;
 
-            List<InscryptionItemInfo> receivedItem = ArchipelagoData.Data.receivedItems;
-            int countCurrency = receivedItem.Count(item => item.Item == APItem.Currency);
-            __instance.currency = countCurrency;
+            __instance.currency = ArchipelagoManager.CountReceived(APItem.Act2Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            APSaveFile.SetCurrencyGranted(2, ArchipelagoManager.CountReceived(APItem.Act2Currency));
+            APSaveFile.ResetPacksForAct(2, ArchipelagoManager.CountReceived(APItem.Act2CardPack));
+
+            RandomizerHelper.UpdatePackButtonEnabled();
 
             int pieceCount = 0;
 
@@ -70,6 +114,35 @@ namespace Archipelago_Inscryption.Patches
             if (ArchipelagoManager.HasItem(APItem.BoneLordHorn))
                 ArchipelagoManager.ApplyItemReceived(APItem.BoneLordHorn);
         }
+        
+        
+        // Neither Initialize zeroes currency, so these postfixes are what establish it. They
+        // restore the act's card packs alongside it, so an act reset needs no step of its own.
+        [HarmonyPatch(typeof(Part3SaveData), "Initialize")]
+        [HarmonyPostfix]
+        static void InitializeAct3Items(Part3SaveData __instance)
+        {
+            if (ArchipelagoData.Data == null) return;
+
+            __instance.currency = ArchipelagoManager.CountReceived(APItem.Act3Currency) * ArchipelagoManager.CURRENCY_PER_ITEM;
+            APSaveFile.SetCurrencyGranted(3, ArchipelagoManager.CountReceived(APItem.Act3Currency));
+            APSaveFile.ResetPacksForAct(3, ArchipelagoManager.CountReceived(APItem.Act3CardPack));
+
+            RandomizerHelper.RefreshPackPile();
+        }
+
+        // The caller already ran RunState.Run.currency += excessDamage regardless of act; cancel
+        // it before Act 2/3's own animation/grant runs, closing the window before it opens.
+        [HarmonyPatch(typeof(Part3CombatPhaseManager), "VisualizeExcessLethalDamage")]
+        [HarmonyPatch(typeof(PixelCombatPhaseManager), "VisualizeExcessLethalDamage")]
+        [HarmonyPrefix]
+        static void UndoAct1CurrencyLeakFromNonAct1Combat(int excessDamage)
+        {
+            if (RunState.Run != null)
+            {
+                RunState.Run.currency -= excessDamage;
+            }
+        }
 
         [HarmonyPatch(typeof(SaveFile), "ResetGBCSaveData")]
         [HarmonyPostfix]
@@ -88,6 +161,17 @@ namespace Archipelago_Inscryption.Patches
                 if (ArchipelagoManager.HasItem(itemStoryEvents[i].Key))
                     StoryEventsData.SetEventCompleted(itemStoryEvents[i].Value, false, false);
             }
+        }
+
+        // Vanilla rebuilds discovered cards from their story events, but only for the caged wolf,
+        // talking wolf and stinkbug; the skink and ants had no reader and were lost to the next run.
+        [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
+        [HarmonyPostfix]
+        static void AddGrantedAct1CardsIfNeeded(RunState __instance)
+        {
+            if (ArchipelagoData.Data == null || ArchipelagoOptions.randomizeDeck == RandomizeDeck.StarterOnly) return;
+
+            ArchipelagoManager.GrantRunStartCards(1, __instance.playerDeck);
         }
 
         [HarmonyPatch(typeof(RunState), "InitializeStarterDeckAndItems")]
@@ -121,36 +205,15 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
-        [HarmonyPatch(typeof(DeckReviewSequencer), "OnEnterDeckView")]
+        // The pile lives beside the rulebook in both acts and persists with the room, so it is
+        // built once here instead of on entering the deck view.
+        [HarmonyPatch(typeof(CabinRulebookInteractable), "Start")]
         [HarmonyPostfix]
-        static void SpawnCardPackPile(DeckReviewSequencer __instance)
+        static void CreateCabinPackPile(CabinRulebookInteractable __instance)
         {
-            if (ArchipelagoData.Data.availableCardPacks <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map || !Singleton<GameMap>.Instance.FullyUnrolled) return;
+            if (ArchipelagoData.Data == null) return;
 
-            RandomizerHelper.SpawnPackPile(__instance);
-        }
-
-        [HarmonyPatch(typeof(Part3DeckReviewSequencer), "OnEnterDeckView")]
-        [HarmonyPostfix]
-        static void SpawnCardPackPile(Part3DeckReviewSequencer __instance)
-        {
-            if (!StoryEventsData.EventCompleted(StoryEvent.GemsModuleFetched) || ArchipelagoData.Data.availableCardPacks <= 0 || Singleton<GameFlowManager>.Instance.CurrentGameState != GameState.Map) return;
-
-            RandomizerHelper.SpawnPackPile(__instance);
-        }
-
-        [HarmonyPatch(typeof(DeckReviewSequencer), "OnExitDeckView")]
-        [HarmonyPostfix]
-        static void DestroyCardPackPile(DeckReviewSequencer __instance)
-        {
-            RandomizerHelper.DestroyPackPile();
-        }
-
-        [HarmonyPatch(typeof(Part3DeckReviewSequencer), "OnExitDeckView")]
-        [HarmonyPostfix]
-        static void DestroyPart3CardPackPile(Part3DeckReviewSequencer __instance)
-        {
-            RandomizerHelper.DestroyPackPile();
+            CabinPackPile.Create(__instance.transform, SaveManager.SaveFile.IsPart3 ? 3 : 1);
         }
 
         [HarmonyPatch(typeof(HammerButton), "Start")]
@@ -226,10 +289,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static void ProcessBleachTrapOnBellRing(TurnManager __instance)
         {
-            if (ArchipelagoData.Data.bleachTrapCount > 0)
+            if (APSaveFile.BleachTrapsPending > 0)
             {
                 if (RandomizerHelper.BleachTrapRemoveSigils())
-                    ArchipelagoData.Data.bleachTrapCount--;
+                    APSaveFile.BleachTrapsPending--;
             }
         }
 
@@ -239,7 +302,7 @@ namespace Archipelago_Inscryption.Patches
         {
             while (__result.MoveNext())
                 yield return __result.Current;
-            if (ArchipelagoData.Data.reinforcementsTrapCount > 0)
+            if (APSaveFile.ReinforcementsTrapsPending > 0)
             {
                 yield return new WaitForSeconds(0.5f);
                 List<CardSlot> opponentSlots = Singleton<BoardManager>.Instance.OpponentSlotsCopy;
@@ -258,7 +321,7 @@ namespace Archipelago_Inscryption.Patches
                             seed += seed2 * 23;
                             seed2++;
                         }
-                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                        APSaveFile.ReinforcementsTrapsPending--;
                     }
                     else if (SaveManager.SaveFile.IsPart2)
                     {
@@ -269,7 +332,7 @@ namespace Archipelago_Inscryption.Patches
                             seed += seed2 * 23;
                             seed2++;
                         }
-                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                        APSaveFile.ReinforcementsTrapsPending--;
                     }
                     else if (SaveManager.SaveFile.IsPart3)
                     {
@@ -280,7 +343,7 @@ namespace Archipelago_Inscryption.Patches
                             seed += seed2 * 23;
                             seed2++;
                         }
-                        ArchipelagoData.Data.reinforcementsTrapCount--;
+                        APSaveFile.ReinforcementsTrapsPending--;
                     }
                     yield return new WaitForSeconds(0.5f);
                 }
@@ -291,12 +354,14 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void IncreaseMinDeckSizeInMenu(DeckBuildingUI __instance)
         {
-            while (SaveData.Data.collection.cardIds.Count < 20 + ArchipelagoData.Data.deckSizeTrapCount
-                && SaveData.Data.collection.cardIds.Count != 0)
+            // Only once the starter deck is in. A collection holding just the cards Archipelago
+            // granted is under 20 as well, and topping that one up buries them in bells.
+            while (RandomizerHelper.Act2StarterDeckTaken
+                && SaveData.Data.collection.cardIds.Count < 20 + APSaveFile.DeckSizeTrapsInEffect)
             {
                 SaveData.Data.collection.AddCard(CardLoader.GetCardByName("DausBell"));
             }
-            int deckSize = 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            int deckSize = 20 + APSaveFile.DeckSizeTrapsInEffect;
             __instance.cardCountText.SetText(SaveData.Data.deck.Cards.Count + "/" + deckSize, false);
             __instance.autoCompleteButton.SetEnabled(SaveData.Data.deck.Cards.Count < deckSize);
             __instance.collection.RefreshPage();
@@ -306,7 +371,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void IsValidGBCDeck(DeckInfo __instance, ref bool __result)
         {
-            __result = __instance.cardIds.Count >= 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            __result = __instance.cardIds.Count >= 20 + APSaveFile.DeckSizeTrapsInEffect;
         }
 
         [HarmonyPatch(typeof(AutoDeckBuilder), "CompleteDeck")]
@@ -411,6 +476,14 @@ namespace Archipelago_Inscryption.Patches
                 ScriptableObjectLoader<AscensionChallengeInfo>.LoadData(AscensionChallengesUtil.DATA_PATH);
         }
 
+        // The first point at which a consumable sent while Act 1 was unloaded has a run to go into.
+        [HarmonyPatch(typeof(Part1GameFlowManager), "Awake")]
+        [HarmonyPostfix]
+        static void DeliverConsumablesOwedToThisRun()
+        {
+            ArchipelagoManager.DeliverOwedAct1Consumables();
+        }
+
         [HarmonyPatch(typeof(PauseMenu3D), "Start")]
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
@@ -444,6 +517,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void SetChallengesOnStartup(RunState __instance)
         {
+            // SaveFile.Initialize reaches RunState.Initialize before it creates ascensionData, and
+            // runs before a save slot is picked, so throwing here would abort building the save.
+            if (AscensionSaveData.Data == null || ArchipelagoData.Data == null) return;
+
             if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable)
             {
                 AscensionSaveData.Data.activeChallenges = new List<AscensionChallenge>();
@@ -575,6 +652,10 @@ namespace Archipelago_Inscryption.Patches
             {
                 __instance.consumables.Remove("SquirrelBottle");
             }
+
+            // The run above just dealt itself both of Archipelago's consumables from their story
+            // events, so nothing is owed to it yet however the last run ended up spending them.
+            ArchipelagoManager.RecordRunStartConsumables();
         }
 
         [HarmonyPatch(typeof(BrokenBridgeEntrance), "BridgeFixed")]
@@ -633,6 +714,17 @@ namespace Archipelago_Inscryption.Patches
             chargingBatteryInProgress
             || (StoryEventsData.EventCompleted(StoryEvent.DredgingRoomUnlocked)
                 && !StoryEventsData.EventCompleted(StoryEvent.Part3MetScrybes));
+
+        // Marking the event early lets the player leave the table before the holomap loses power.
+        // Only safe with act3_overhaul, where GateMapScreenPower decides whether the map works.
+        [HarmonyPatch(typeof(Part3GameFlowManager), "TransitionToFirstPerson")]
+        [HarmonyPrefix]
+        static void AllowLeavingTableEarly()
+        {
+            if (!ArchipelagoOptions.act3Overhaul) return;
+
+            StoryEventsData.SetEventCompleted(StoryEvent.HoloMapOutOfPower);
+        }
 
         [HarmonyPatch(typeof(HoloGameMap), "PoweredOff", MethodType.Getter)]
         [HarmonyPrefix]

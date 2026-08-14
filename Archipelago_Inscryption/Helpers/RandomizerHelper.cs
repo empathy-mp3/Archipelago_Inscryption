@@ -5,6 +5,7 @@ using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using GBC;
+using HarmonyLib;
 using Pixelplacement;
 using System;
 using System.Collections;
@@ -17,6 +18,7 @@ using static GBC.DialogueSpeaker;
 
 namespace Archipelago_Inscryption.Helpers
 {
+    [HarmonyPatch]
     internal static class RandomizerHelper
     {
         private static DiscoverableCheckInteractable[] paintingChecks;
@@ -107,8 +109,6 @@ namespace Archipelago_Inscryption.Helpers
 
         internal static GenericUIButton packButton;
 
-        internal static GameObject packPile;
-        private static List<GameObject> packs = new List<GameObject>();
         private static bool doDeathCard = true;
 
         internal static DiscoverableCheckInteractable CreateDiscoverableCardCheck(GameObject originalObject, APCheck check, bool destroyOriginal, StoryEvent activeStoryFlag = StoryEvent.NUM_EVENTS)
@@ -283,8 +283,89 @@ namespace Archipelago_Inscryption.Helpers
             return info;
         }
 
-        // A bottle's rolled sigil (or check id) is encoded into the live ItemData's name, so the
-        // saved list still holds the pre-rename name. Correct it here, where both names are known.
+        // RenameItemInSaveData only queues; ApplyPendingRenames is the sole writer, since
+        // UpdateItems calls CreateItem (which triggers renames) from inside its own list iteration.
+        private static bool updatingItems = false;
+        private static readonly List<(string oldName, string newName)> pendingRenames = new();
+
+        [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
+        [HarmonyPrefix]
+        static void MarkUpdateItemsInProgress()
+        {
+            RegisterCheckBottleData();
+            updatingItems = true;
+        }
+
+        // A check bottle gets a data object of its own. Branding the shared one instead renames the
+        // asset every later roll draws from, so a check already taken kept coming back on offer.
+        private static readonly Dictionary<APCheck, ConsumableItemData> checkBottleData = new();
+
+        private static readonly APCheck[] consumableChecks = new APCheck[]
+        {
+            APCheck.CabinWoodlandsConsumableCheck1, APCheck.CabinWoodlandsConsumableCheck2,
+            APCheck.CabinWetlandsConsumableCheck1,  APCheck.CabinWetlandsConsumableCheck2,
+            APCheck.CabinSnowLineConsumableCheck1,  APCheck.CabinSnowLineConsumableCheck2
+        };
+
+        // Built up front, since a save reloaded while one is held names it in the saved item list and
+        // UpdateItems resolves that name before anything has had cause to build the data behind it.
+        internal static void RegisterCheckBottleData()
+        {
+            if (checkBottleData.Count == consumableChecks.Length) return;
+
+            foreach (APCheck check in consumableChecks)
+            {
+                if (checkBottleData.ContainsKey(check)) continue;
+
+                ConsumableItemData source = FindBottleData(check.ToString().EndsWith("1") ? "TerrainBottle" : "GoatBottle");
+
+                if (source == null) return;
+
+                ConsumableItemData data = UnityEngine.Object.Instantiate(source);
+                data.name = "CheckBottle_" + check.ToString();
+                // Kept out of the offer pool: placing one is for the code that owns this check, and
+                // GetUnlockedConsumablesForRegion drops a region-specific item that no region lists.
+                data.regionSpecific = true;
+                data.notRandomlyGiven = true;
+
+                checkBottleData[check] = data;
+                ScriptableObjectLoader<ItemData>.AllData.Add(data);
+            }
+        }
+
+        // A bottle that has already rolled a sigil carries it in the name, so an exact match alone
+        // would miss the very asset this needs to copy.
+        private static ConsumableItemData FindBottleData(string bottleName)
+        {
+            return ItemsUtil.AllConsumables.Find(x => x.name == bottleName || x.name.StartsWith(bottleName + "$"));
+        }
+
+        internal static ConsumableItemData GetCheckBottleData(APCheck check)
+        {
+            RegisterCheckBottleData();
+
+            return checkBottleData.TryGetValue(check, out ConsumableItemData data) ? data : null;
+        }
+
+        // Whether a consumable check still has anywhere to go. One already sent is finished with, and
+        // one sitting in the player's slots is spoken for: putting either back on offer duplicates it.
+        internal static bool ConsumableCheckAvailable(APCheck check)
+        {
+            if (ArchipelagoManager.HasCompletedCheck(check)) return false;
+
+            return !(RunState.Run?.consumables?.Contains("CheckBottle_" + check.ToString()) ?? false);
+        }
+
+        [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
+        [HarmonyFinalizer]
+        static void UnmarkUpdateItemsInProgress()
+        {
+            updatingItems = false;
+            ApplyPendingRenames();
+        }
+
+        // A bottle's rolled sigil (or check id) is encoded into the live ItemData's name; the
+        // saved list needs the same rename, queued here and applied once it's safe.
         internal static void RenameItemInSaveData(ItemSlot slot, string oldName, string newName)
         {
             if (oldName == newName) return;
@@ -295,8 +376,24 @@ namespace Archipelago_Inscryption.Helpers
             if (manager == null || !(slot is ConsumableItemSlot consumableSlot)) return;
             if (!manager.consumableSlots.Contains(consumableSlot)) return;
 
-            int index = manager.SaveDataItemsList.IndexOf(oldName);
-            if (index >= 0) manager.SaveDataItemsList[index] = newName;
+            pendingRenames.Add((oldName, newName));
+            if (!updatingItems) ApplyPendingRenames();
+        }
+
+        private static void ApplyPendingRenames()
+        {
+            if (pendingRenames.Count == 0) return;
+
+            ItemsManager manager = Singleton<ItemsManager>.Instance;
+            if (manager == null) return;
+
+            var toApply = new List<(string oldName, string newName)>(pendingRenames);
+            pendingRenames.Clear();
+            foreach (var rename in toApply)
+            {
+                int index = manager.SaveDataItemsList.IndexOf(rename.oldName);
+                if (index >= 0) manager.SaveDataItemsList[index] = rename.newName;
+            }
         }
 
         internal static CardInfo GenerateCardInfoWithName(string name, string description)
@@ -395,11 +492,26 @@ namespace Archipelago_Inscryption.Helpers
 
             bool result = false;
             TextBox.Prompt prompt = new TextBox.Prompt("Open a pack", "Cancel", option => result = (option == 0));
-            yield return Singleton<TextBox>.Instance.ShowUntilInput($"You have {ArchipelagoData.Data.availableCardPacks} card pack{(ArchipelagoData.Data.availableCardPacks > 1 ? "s" : "")} available.", TextBox.Style.Neutral, null, TextBox.ScreenPosition.ForceTop, 0, true, false, prompt);
+            int packsAvailable = APSaveFile.PacksAvailable(2);
+            yield return Singleton<TextBox>.Instance.ShowUntilInput($"You have {packsAvailable} card pack{(packsAvailable > 1 ? "s" : "")} available.", TextBox.Style.Neutral, null, TextBox.ScreenPosition.ForceTop, 0, true, false, prompt);
             if (result)
             {
-                ArchipelagoData.Data.availableCardPacks--;
-                yield return PackOpeningUI.instance.OpenPack((CardTemple)UnityEngine.Random.Range(0, (int)CardTemple.NUM_TEMPLES));
+                APSaveFile.SpendPack(2);
+
+                // Advances the seed AssignInfoToCards reads, so successive packs differ and a
+                // reload cannot reroll one. Also shifts Act 1 and 3's; see AddOpenedPacksToSeed.
+                SaveManager.SaveFile.gbcData.packsOpened++;
+
+                // Vanilla picks the pack's cards from the save's seed but nothing chose its temple,
+                // so it was rolled fresh on every open and the contents moved with it.
+                CardTemple temple = (CardTemple)SeededRandom.Range(0, (int)CardTemple.NUM_TEMPLES,
+                    SaveManager.SaveFile.GetCurrentRandomSeed());
+
+                yield return PackOpeningUI.instance.OpenPack(temple);
+
+                // The spend, the counter and the cards the pack added all land together, rather
+                // than waiting on a later save that leaving the act would discard.
+                SaveManager.SaveToFile(false);
             }
 
             yield return new WaitForSeconds(0.05f);
@@ -418,46 +530,66 @@ namespace Archipelago_Inscryption.Helpers
         {
             if (packButton == null) return;
 
-            packButton.SetEnabled(ArchipelagoData.Data.availableCardPacks > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
+            packButton.SetEnabled(APSaveFile.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
         }
 
-        internal static void SpawnPackPile(DeckReviewSequencer instance)
-        {
-            packPile = new GameObject("PackPile");
-            packPile.transform.SetParent(instance.transform);
-            packPile.transform.localPosition = new Vector3(0f, 0f, -2.5f);
-            packPile.transform.localEulerAngles = new Vector3(0, 90, 0);
-            packPile.AddComponent<BoxCollider>().size = new Vector3(1.2f, 0.1f, 2.2f);
+        // The generator walks consecutive seeds up from the one it is given, so each pack and each
+        // retry needs a block of its own. Kept coprime, and MAX_PACK_ROLLS * RETRY_STRIDE < PACK_STRIDE
+        // so a pack's retries cannot reach into the next pack's block.
+        private const int PACK_SEED_STRIDE = 7919;
+        private const int RETRY_SEED_STRIDE = 251;
+        private const int MAX_PACK_ROLLS = 8;
 
-            for (int i = 0; i < ArchipelagoData.Data.availableCardPacks; i++)
+        // Uses vanilla's own Act 1 choice generator, so a pack offers what a card choice node
+        // would have. It can yield fewer than asked, so reroll with a fresh seed until full.
+        internal static List<CardInfo> RollPackCards(int act, int count)
+        {
+            List<CardInfo> cards = new List<CardInfo>();
+
+            CardChoiceGenerator generator;
+            if (act == 3)
             {
-                GameObject pack = GameObject.Instantiate(AssetsManager.cardPackPrefab, packPile.transform);
-                pack.transform.localPosition = new Vector3(-10, 0.1f * i, 0);
-                Tween.LocalPosition(pack.transform, new Vector3(0, 0.1f * i, 0), 0.20f, 0.02f * i, Tween.EaseOut);
-                packs.Add(pack);
+                if (Singleton<HoloMapAreaManager>.Instance == null) return cards;
+                generator = new Part3CardChoiceGenerator();
+            }
+            else
+            {
+                if (RunState.Run == null || RunState.CurrentMapRegion == null) return cards;
+                generator = new Part1CardChoiceGenerator();
             }
 
-            CardPackPile pileScript = packPile.AddComponent<CardPackPile>();
-            pileScript.topPackBasePosition = new Vector3(0, 0.1f * (ArchipelagoData.Data.availableCardPacks - 1), 0);
-            pileScript.pileTop = packs.Last();
-            pileScript.enabled = false;
+            CardChoicesNodeData data = new CardChoicesNodeData { choicesType = CardChoicesType.Random };
+
+            // The run seed only moves between map nodes, so packs opened in one spot would roll
+            // alike. Packs opened is saved state, so it varies them without letting a reload reroll.
+            int packsOpened = ArchipelagoManager.CountReceived(
+                    act == 3 ? APItem.Act3CardPack : APItem.Act1CardPack)
+                - APSaveFile.PacksAvailable(act);
+            int packSeed = SaveManager.SaveFile.GetCurrentRandomSeed() + packsOpened * PACK_SEED_STRIDE;
+
+            for (int attempt = 0; attempt < MAX_PACK_ROLLS && cards.Count < count; attempt++)
+            {
+                int seed = packSeed + attempt * RETRY_SEED_STRIDE;
+
+                foreach (CardChoice choice in generator.GenerateChoices(data, seed))
+                {
+                    if (choice.CardInfo == null) continue;
+                    // The generator reads vanilla's pool, which still holds the cards Archipelago
+                    // hands out as items, so a pack could deal one before its item arrived.
+                    if (ArchipelagoManager.CardIsWithheld(choice.CardInfo.name)) continue;
+                    if (cards.Exists(existing => existing.name == choice.CardInfo.name)) continue;
+
+                    cards.Add(choice.CardInfo);
+                    if (cards.Count == count) break;
+                }
+            }
+
+            return cards;
         }
 
-        internal static void DestroyPackPile()
+        internal static void RefreshPackPile()
         {
-            if (packPile == null) return;
-            packPile.GetComponent<CardPackPile>().enabled = false;
-            int i = 0;
-            int packsCount = packs.Count;
-            foreach (GameObject pack in packs)
-            {
-                Tween.LocalPosition(pack.transform, new Vector3(-10, 0.1f * i, 0), 0.20f, 0.02f * (packsCount - i - 1), Tween.EaseIn, Tween.LoopType.None, null, () => GameObject.Destroy(pack));
-
-                i++;
-            }
-            packs.Clear();
-            GameObject.Destroy(packPile, 1);
-            packPile = null;
+            if (CabinPackPile.instance != null) CabinPackPile.instance.Rebuild();
         }
 
         internal static IEnumerator PrePlayerDeathSequence(Part1GameFlowManager manager)
@@ -650,7 +782,7 @@ namespace Archipelago_Inscryption.Helpers
         {
             List<CardInfo> cardsInfoRandomPool = ScriptableObjectLoader<CardInfo>.AllData.FindAll(x => (x.metaCategories.Contains(CardMetaCategory.Rare)
             && x.temple == CardTemple.Nature && x.portraitTex != null && !x.metaCategories.Contains(CardMetaCategory.AscensionUnlock) && ConceptProgressionTree.Tree.CardUnlocked(x, false)
-            && (ArchipelagoManager.HasItem(APItem.GreatKrakenCard) || x.name != "Kraken")) || x.name == "Ouroboros");
+            && !ArchipelagoManager.CardIsWithheld(x.name)) || x.name == "Ouroboros");
             return (CardInfo)cardsInfoRandomPool[SeededRandom.Range(0, cardsInfoRandomPool.Count, seed++)];
         }
 
@@ -682,8 +814,12 @@ namespace Archipelago_Inscryption.Helpers
             Singleton<ArchipelagoUI>.Instance.StartCoroutine(LoadAppropriateSceneAfterAct3());
         }
 
-        private static void GoToMainMenu()
+        // Both callers arrive here having just finished an act rather than abandoning one, so that
+        // is committed first: leaving discards whatever is still unsaved.
+        internal static void GoToMainMenu()
         {
+            SaveManager.SaveToFile(false);
+
             StartScreenController.startedGame = true;
             MenuController.ReturnToStartScreen();
         }
@@ -713,6 +849,36 @@ namespace Archipelago_Inscryption.Helpers
             return StoryEventsData.EventCompleted(StoryEvent.BeeFigurineFound) ? "Bee" : "Squirrel";
         }
 
+        // Every card the side deck has ever handed out, so a stale solution can be spotted whichever
+        // one it was baked with.
+        private static readonly string[] paintingAnimals = new string[] { "AquaSquirrel", "Squirrel", "Bee" };
+
+        // The solution is baked into the save when a run starts, so an upgrade arriving mid-run would
+        // otherwise leave the painting asking for a side deck card the player can no longer draw.
+        internal static void RefreshPaintingAnimal()
+        {
+            OilPaintingPuzzle.SaveState state = SaveFile.IsAscension
+                ? AscensionSaveData.Data.oilPaintingState
+                : SaveManager.SaveFile.oilPaintingState;
+
+            if (state == null || state.puzzleSolution == null || state.puzzleSolved)
+                return;
+
+            string animal = GetPaintingAnimal();
+            int index = state.puzzleSolution.FindIndex(x => paintingAnimals.Contains(x));
+
+            if (index < 0 || state.puzzleSolution[index] == animal)
+                return;
+
+            state.puzzleSolution[index] = animal;
+
+            // The painting only redraws itself once per showing, so an open one has to be told to.
+            OilPaintingPuzzle puzzle = UnityEngine.Object.FindObjectOfType<OilPaintingPuzzle>();
+
+            if (puzzle != null)
+                puzzle.displayPuzzleWhenActive = true;
+        }
+
         public static bool IsLeshyNotReadyForBattle(List<CardBattleNPC> battleNPCs)
         {
             return battleNPCs.Exists((CardBattleNPC x) => !x.Defeated) || !ArchipelagoManager.HasCompletedCheck(APCheck.GBCCameraReplica);
@@ -736,27 +902,21 @@ namespace Archipelago_Inscryption.Helpers
                                       && !x.metaCategories.Contains(CardMetaCategory.Rare) && ConceptProgressionTree.Tree.CardUnlocked(x, false));
             }
 
-            if (!ArchipelagoManager.HasItem(APItem.GreatKrakenCard))
-            {
-                cardsInfoRandomPool.RemoveAll(c => c.name == "Kraken");
-            }
-            if (!ArchipelagoManager.HasItem(APItem.SkinkCard))
-            {
-                cardsInfoRandomPool.RemoveAll(c => c.name == "Skink");
-            }
-            if (!ArchipelagoManager.HasItem(APItem.AntCards))
-            {
-                cardsInfoRandomPool.RemoveAll(c => c.name == "Ant" || c.name == "AntQueen");
-            }
+            cardsInfoRandomPool.RemoveAll(c => ArchipelagoManager.CardIsWithheld(c.name));
 
+            // The talking cards this mod made choosable are in the base result above already; only
+            // the stoat, which Archipelago does not hand out, still has to be added by hand.
             cardsInfoRandomPool.Add(CardLoader.GetCardByName("Stoat_Talking"));
-            if (ArchipelagoManager.HasItem(APItem.StinkbugCard))
-                cardsInfoRandomPool.Add(CardLoader.GetCardByName("Stinkbug_Talking"));
-            if (ArchipelagoManager.HasItem(APItem.StuntedWolfCard))
-                cardsInfoRandomPool.Add(CardLoader.GetCardByName("Wolf_Talking"));
             cardsInfoRandomPool.AddRange(GetAllDeathCards());
 
             return cardsInfoRandomPool;
+        }
+
+        // What a randomized Act 3 starter deck is built from. The bots and Ourobot are choosable now,
+        // so this pool already holds them, withheld until their item lands and capped at one copy.
+        public static List<CardInfo> GenerateStarterPoolAct3()
+        {
+            return CardLoader.GetUnlockedCards(CardMetaCategory.ChoiceNode, CardTemple.Tech);
         }
 
         public static bool BleachTrapRemoveSigils()
@@ -791,7 +951,12 @@ namespace Archipelago_Inscryption.Helpers
 
         public static int NewDeckSize()
         {
-            return 20 + ArchipelagoData.Data.deckSizeTrapCount;
+            return 20 + APSaveFile.DeckSizeTrapsInEffect;
         }
+
+        // Every starter deck is 20 cards and nothing else fills the collection that far, so this is
+        // what tells one that has been picked up from one holding only what Archipelago granted.
+        internal static bool Act2StarterDeckTaken
+            => (SaveManager.SaveFile?.gbcData?.collection?.cardIds?.Count ?? 0) >= 20;
     }
 }

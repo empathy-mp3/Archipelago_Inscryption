@@ -1,9 +1,12 @@
-﻿using Archipelago_Inscryption.Archipelago;
+using Archipelago_Inscryption.Archipelago;
 using Archipelago_Inscryption.Assets;
+using Archipelago_Inscryption.Components;
 using Archipelago_Inscryption.Helpers;
+using Archipelago_Inscryption.Utils;
 using DiskCardGame;
 using GBC;
 using HarmonyLib;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +24,10 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     internal class OtherPatches
     {
+        // Bigger than the seed spread of a whole run, so no reset can land on a seed the previous
+        // one already used: Act 2's inputs move it by at most 51 a step, Act 3's by at most 51.
+        private const int ACT_RESET_SEED_STRIDE = 100003;
+
         [HarmonyPatch(typeof(AchievementManager), "Unlock")]
         [HarmonyPrefix]
         static bool PreventAchievementUnlock()
@@ -52,6 +59,19 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
+        // The only place the game builds a save file, so this substitution is what gives every
+        // Archipelago save room for state of its own. Assigned before Initialize, as vanilla does.
+        [HarmonyPatch(typeof(SaveManager), "CreateNewSaveFile")]
+        [HarmonyPrefix]
+        static bool CreateArchipelagoSaveFile()
+        {
+            SaveManager.DeleteSaveFile();
+            SaveManager.saveFile = new APSaveFile();
+            SaveManager.saveFile.Initialize();
+
+            return false;
+        }
+
         [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> ReplaceBackUpSaveFileName(IEnumerable<CodeInstruction> instructions)
@@ -65,11 +85,50 @@ namespace Archipelago_Inscryption.Patches
             return codes.AsEnumerable();
         }
 
+        // Written before the game save: if a crash separates the two, an item's effect goes missing,
+        // which the connect-time pass repairs. The other order duplicates whatever the item gave.
         [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         static void SaveArchipelagoDataToFile()
         {
+            // Mirrors the guard the game save itself returns on, so a suppressed save stays suppressed.
+            if (SaveManager.savingDisabled) return;
+
             ArchipelagoData.SaveToFile();
+        }
+
+        // Only entering an act reloaded the save, so leaving one mid-fight left RunState in memory
+        // pointing at an unfinished node, which the next save from the menu would then commit.
+        [HarmonyPatch(typeof(MenuController), "ReturnToStartScreen")]
+        [HarmonyPostfix]
+        static void RevertUnsavedProgressOnReturnToStartScreen()
+        {
+            // No slot means no Archipelago save path yet, so this would read the vanilla save.
+            if (ArchipelagoData.saveName == "") return;
+
+            // The scene load is already queued by this point, so a throw here would break leaving
+            // the act on top of failing to revert. Losing the revert alone is the smaller failure.
+            try
+            {
+                ArchipelagoManager.RevertUnsavedProgressAndReplayItems();
+            }
+            catch (Exception e)
+            {
+                ArchipelagoModPlugin.Log.LogError("Failed to revert unsaved progress on leaving an act: " + e);
+            }
+        }
+
+        // The revert above assumes disk only ever holds a resolved game state. Nothing should save
+        // during an Act 1 fight; if something starts to, say so rather than silently skip a node.
+        [HarmonyPatch(typeof(SaveManager), "SaveToFile")]
+        [HarmonyPrefix]
+        static void WarnWhenSavingMidBattle()
+        {
+            if (SaveManager.savingDisabled || !SaveManager.SaveFile.IsPart1) return;
+
+            if (!ArchipelagoManager.IsBattleUnresolved(Singleton<TurnManager>.Instance)) return;
+
+            ArchipelagoModPlugin.Log.LogWarning("Saving during an unresolved Act 1 fight; that node will read back as already beaten. Called from:\n" + Environment.StackTrace);
         }
 
         [HarmonyPatch(typeof(SaveFile), "GetCurrentRandomSeed")]
@@ -84,6 +143,13 @@ namespace Archipelago_Inscryption.Patches
                 __result += (SaveManager.saveFile.gbcData.npcAttempts + 1) * 50;
             if (__instance.IsPart3)
                 __result += (Part3SaveData.Data.bounty + 1) * 50;
+
+            // Resetting these acts zeroes everything above that varies their seed, so a reset run
+            // would deal the previous one's cards. The stride clears what a whole run can add.
+            if (__instance.IsPart2)
+                __result += APSaveFile.ActResets(2) * ACT_RESET_SEED_STRIDE;
+            if (__instance.IsPart3)
+                __result += APSaveFile.ActResets(3) * ACT_RESET_SEED_STRIDE;
         }
 
         [HarmonyPatch(typeof(PageContentLoader), "LoadPage")]
@@ -606,6 +672,27 @@ namespace Archipelago_Inscryption.Patches
         }
     }
     
+    [HarmonyPatch]
+    class ActTransitionPatches
+    {
+        // Act 2's finale loads Act 3 unconditionally, stranding the player when it is unavailable.
+        // Gated to that scene: every other Act 3 load needs the AsyncOperation this returns.
+        [HarmonyPatch(typeof(SceneLoader), "StartAsyncLoad")]
+        [HarmonyPrefix]
+        static bool ReturnToMenuWhenAct3Unavailable(string sceneName, ref AsyncOperation __result)
+        {
+            if (sceneName != "Part3_Cabin") return true;
+            if (SceneLoader.ActiveSceneName != Act2FinaleScene) return true;
+            if (ArchipelagoOptions.actUnlocks == ActUnlocks.Sequential && ArchipelagoOptions.enableAct3) return true;
+
+            __result = null;
+            RandomizerHelper.GoToMainMenu();
+            return false;
+        }
+
+        const string Act2FinaleScene = "GBC_Starting_Island";
+    }
+
     [HarmonyPatch]
     class RegionCompletionFix
     {

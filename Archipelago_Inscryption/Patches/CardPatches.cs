@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -17,6 +18,41 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     internal class CardPatches
     {
+        // The one place every base-game pool is built, so gating here covers card choices, packs and
+        // anything else at once: a card is withheld until its item lands, then capped at one copy.
+        [HarmonyPatch(typeof(CardLoader), nameof(CardLoader.GetUnlockedCards))]
+        [HarmonyPostfix]
+        static void WithholdUngrantedCards(ref List<CardInfo> __result)
+        {
+            if (ArchipelagoData.Data == null) return;
+
+            __result.RemoveAll(card => ArchipelagoManager.CardIsWithheld(card.name)
+                || ArchipelagoManager.CardAlreadyInDeck(card.name));
+        }
+
+        // Act 2's packs are the one pool not built from the method above, and the Salmon is a pack
+        // card, so it would be dealt before its item. Scoped so only the pack sees the filter.
+        private static bool openingGbcPack;
+
+        [HarmonyPatch(typeof(PackOpeningUI), "AssignInfoToCards")]
+        [HarmonyPrefix]
+        static void MarkGbcPackOpening() => openingGbcPack = true;
+
+        [HarmonyPatch(typeof(PackOpeningUI), "AssignInfoToCards")]
+        [HarmonyFinalizer]
+        static void UnmarkGbcPackOpening() => openingGbcPack = false;
+
+        // Left alone outside a pack: the Reinforcements trap draws from here too, and the cards it
+        // spawns are the opponent's rather than anything handed to the player.
+        [HarmonyPatch(typeof(CardLoader), nameof(CardLoader.GetPixelCards))]
+        [HarmonyPostfix]
+        static void WithholdUngrantedPixelCards(ref List<CardInfo> __result)
+        {
+            if (!openingGbcPack || ArchipelagoData.Data == null) return;
+
+            __result.RemoveAll(card => ArchipelagoManager.CardIsWithheld(card.name));
+        }
+
         static int nodeId = 0;
         static int nodeOffset = 0;
         public static void RandomizeSigils(CardInfo card)
@@ -404,7 +440,20 @@ namespace Archipelago_Inscryption.Patches
         static IEnumerator GiveCardWithBottleSigil(IEnumerator __result, CardBottleItem __instance)
         {
             __instance.PlayExitAnimation();
-            yield return __instance.StartCoroutine(Singleton<CardSpawner>.Instance.SpawnCardToHand(__instance.cardInfo));
+
+            // Bottles randomized into AP checks carry a synthetic cardInfo that isn't a real
+            // card - send the check instead of granting it.
+            if (__instance.cardInfo.name.Contains("ArchipelagoCheck"))
+            {
+                string cardName = __instance.cardInfo.name;
+                string checkName = cardName.Substring(cardName.IndexOf('_') + 1);
+                APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
+                ArchipelagoManager.SendCheck(check);
+            }
+            else
+            {
+                yield return __instance.StartCoroutine(Singleton<CardSpawner>.Instance.SpawnCardToHand(__instance.cardInfo));
+            }
             yield return new WaitForSeconds(0.25f);
         }
 

@@ -185,22 +185,7 @@ namespace Archipelago_Inscryption.Patches
                 int cardAdded = 0;
                 cardsInfoRandomPoolAll = ScriptableObjectLoader<CardInfo>.AllData.FindAll(x => x.metaCategories.Contains(CardMetaCategory.GBCPlayable) && x.pixelPortrait != null);
 
-                if (!ArchipelagoManager.HasItem(APItem.GreatKrakenCard))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "Kraken");
-                }
-                if (!ArchipelagoManager.HasItem(APItem.BoneLordHorn))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "BonelordHorn");
-                }
-                if (!ArchipelagoManager.HasItem(APItem.DrownedSoulCard))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "DrownedSoul");
-                }
-                if (!ArchipelagoManager.HasItem(APItem.SalmonCard))
-                {
-                    cardsInfoRandomPoolAll.RemoveAll(c => c.name == "Salmon");
-                }
+                cardsInfoRandomPoolAll.RemoveAll(c => ArchipelagoManager.CardIsWithheld(c.name));
 
                 if (!ArchipelagoManager.HasCompletedCheck(APCheck.GBCAncientObol))
                 {
@@ -348,6 +333,10 @@ namespace Archipelago_Inscryption.Patches
                                                      && x.name != "!BOUNTYHUNTER_BASE" && x.name != "Librarian" && !x.name.Contains("EmptyVessel")
                                                      && x.name != "!MYCOCARD_BASE" && x.name != "CaptiveFile" && x.name != "!BUILDACARD_BASE");
                 cardsInfoRandomPool.AddRange(RandomizerHelper.GetAllCustomCards());
+                // Cabin cards are Tech with a portrait, so the filter above takes them whether or not
+                // their item arrived. Taken out here and re-added below only for the ones held.
+                cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3"
+                    || x.name == "BlueMage_Talking" || x.name == "Angler_Talking");
                 List<CardInfo> cardsInfoRandomGemPool = cardsInfoRandomPool;
                 List<CardInfo> cardsInfoRandomConduitPool = cardsInfoRandomPool;
                 if (ArchipelagoOptions.randomizeDeck == RandomizeDeck.RandomizeType)
@@ -367,8 +356,8 @@ namespace Archipelago_Inscryption.Patches
                     cardsInfoRandomPool.Add(CardLoader.GetCardByName("BlueMage_Talking"));
                 if (ArchipelagoManager.HasItem(APItem.FishbotCard))
                     cardsInfoRandomPool.Add(CardLoader.GetCardByName("Angler_Talking"));
-                if (!ArchipelagoManager.HasItem(APItem.Ourobot))
-                    cardsInfoRandomPool.RemoveAll(x => x.name == "Ouroboros_Part3");
+                if (ArchipelagoManager.HasItem(APItem.Ourobot))
+                    cardsInfoRandomPool.Add(CardLoader.GetCardByName("Ouroboros_Part3"));
                 foreach (CardInfo c in Part3SaveData.Data.deck.Cards)
                 {
                     CardInfo card = c;
@@ -500,7 +489,9 @@ namespace Archipelago_Inscryption.Patches
             if (ArchipelagoOptions.randomizeDeck != RandomizeDeck.StarterOnly)
                 return true;
 
-            int nbCardsToAdd = 4;
+            // The cards these items would have added to a vanilla starter deck become extra rolls
+            // instead: the caged wolf is the only card this mode guarantees.
+            int nbCardsToAdd = 4 + ArchipelagoManager.RunStartCardNames(1).Count;
 
             if (StoryEventsData.EventCompleted(StoryEvent.CageCardDiscovered) && !StoryEventsData.EventCompleted(StoryEvent.WolfCageBroken))
             {
@@ -590,6 +581,10 @@ namespace Archipelago_Inscryption.Patches
 
             int randomSeed = SaveManager.SaveFile.GetCurrentRandomSeed();
 
+            // Act 3's deck is only ever rebuilt here, so this is where an act reset has to hand back
+            // what Archipelago granted -- the act's answer to a new Act 1 run.
+            List<string> runStartCards = ArchipelagoManager.RunStartCardNames(3);
+
             if (ArchipelagoOptions.randomizeDeck == RandomizeDeck.StarterOnly)
             {
                 Part3SaveData.Data.deck.RemoveCardByName("BatteryBot");
@@ -597,29 +592,39 @@ namespace Archipelago_Inscryption.Patches
                 Part3SaveData.Data.deck.RemoveCardByName("Sniper");
                 Part3SaveData.Data.deck.RemoveCardByName("CloserBot");
 
-                List<CardInfo> randomCards = new List<CardInfo>();
-                for (int i = 0; i < 4; i++)
+                // This mode guarantees nothing, so a card already granted goes back into the roll
+                // as a slot and takes its chances with everything else.
+                foreach (string cardName in runStartCards)
                 {
-                    CardInfo card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
-                    while (randomCards.Exists(x => x.name == card.name))
-                    {
-                        card = CardLoader.GetRandomChoosableCard(randomSeed++, CardTemple.Tech);
-                    }
-
-                    randomCards.Add(card);
+                    Part3SaveData.Data.deck.RemoveCardByName(cardName);
                 }
 
-                foreach (CardInfo card in randomCards)
+                List<CardInfo> cardsRandomPool = RandomizerHelper.GenerateStarterPoolAct3();
+
+                for (int i = 0; i < 4 + runStartCards.Count && cardsRandomPool.Count > 0; i++)
                 {
+                    CardInfo card = cardsRandomPool[SeededRandom.Range(0, cardsRandomPool.Count, randomSeed++)];
+                    cardsRandomPool.Remove(card);
                     Part3SaveData.Data.deck.AddCard(card);
                 }
+            }
+            else
+            {
+                ArchipelagoManager.GrantRunStartCards(3, Part3SaveData.Data.deck);
             }
 
             foreach (CardInfo card in Part3SaveData.Data.deck.Cards)
             {
+                // A granted card was randomized as it was handed over. Doing it again stacks a second
+                // replacement, and the two sets of sigils are read together.
+                if (card.Mods.Exists(m => m is SigilReplacementInfo)) continue;
+
                 CardPatches.RandomizeSigils(card);
             }
             Part3SaveData.Data.deck.UpdateModDictionary();
+
+            // From here a card item grants into the deck itself, since this build has had its say.
+            APSaveFile.Act3DeckBuilt = true;
 
             return true;
         }
