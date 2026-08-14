@@ -1,3 +1,19 @@
+### 1.5.2
+
+Mod-side fixes. The apworld and tracker ship 1.5.2 with no changes of their own, so a
+1.5.1 seed pairs with this mod exactly as before.
+
+- Resetting the save file no longer leaves Act 1 with an oversized deck. The reset deals a
+  run before the mod is back in touch with the server, so every card item the server then
+  resent was added on top of it. Entering Act 1 now deals that run again
+- Items still waiting to be announced are applied before anything reads what they write,
+  and the connect screen waits for all of them instead of just the one on screen, so a pile
+  of items can no longer land on an act you have already started playing
+- Leaving an act through the mod's own exit no longer replays that act's release, since
+  that exit saves on its way out and has nothing to revert
+- Reconnecting no longer hands out a second copy of a counted item -- currency, packs,
+  pelts, upgrades, challenges and traps -- that was never missing
+
 ### 1.5.1
 
 No mod-side changes. Version bump to stay in step with the 1.5.1 apworld and tracker,
