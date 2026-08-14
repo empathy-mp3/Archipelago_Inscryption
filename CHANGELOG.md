@@ -1,3 +1,13 @@
+### 1.5.1
+
+No mod-side changes. Version bump to stay in step with the 1.5.1 apworld and tracker,
+which fix two logic errors:
+
+- The four Act 3 Luke file rooms need the Quill again. Their file node only appears once
+  the Archivist has asked to browse a file, and reaching the Archivist needs the Quill
+- Beating Act 2 requires the Act 2 Bridge Repair item when the bridge is randomized, from
+  either start side. Two Scrybes are across the bridge whichever side you begin on
+
 ### 1.5.0
 
 Requires a matching apworld -- older seeds will not work.
