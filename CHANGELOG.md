@@ -1,314 +1,169 @@
 ### 1.5.0
 
-Requires a matching apworld -- seeds generated with an older one will not work.
+Requires a matching apworld -- older seeds will not work.
 
 MAJOR CHANGES
 
-- Change: Filler items have been split across all three acts instead of going into a single "card pack" and "currency" pool
-    - This means that when you are granted a filler item, the currency or card pack you are rewarded will ONLY be rewarded to a single Act
-    - Each currency item is worth three, so the amount you receive per act is unchanged
-    - Act 1 currency now survives death: a new run starts with everything Archipelago has sent you
-    - An act that is turned off no longer generates its filler at all
-- New: The ability to "reset" any individual act in the middle of a run
-    - Found in the Archipelago options menu; pick an act and confirm three times
-    - Wipes that act and rebuilds it to the state a new save would reach once its items arrive, leaving the other two acts and all of your checks alone
-    - Act 1's menu cards changed to suit: the separate "New Act 1 Run" card is gone, and Act 1 now reads "Start Act 1" or "Continue Act 1" like the other two
-- Change: Granted "card packs" in Act 1 and Act 3 are no longer available to open from the game table. In both cases, the card pack has been moved next to the rulebook
-    - Note that this means you will need to be able to get up from the table in order to open packs
-    - To help compensate for this, Act 3 has been modified to allow you to get up from the table at ANY time if Act 3 Overhaul is enabled
-    - Opening a pack lays its three cards out in front of you to pick from where you stand
-    - Packs offer what a card choice node would, and their contents are fixed by your save, so reloading will not reroll one -- though starting a new run, including resetting the act, deals fresh packs
-    - Act 3 has no card pack art of its own, so its packs are stacks of disk cards
-- Major change: The system to rebuild the run state after a force quit or a deliberate act exit event takes place has been completely redone in order to fix certain quirks
-    - Leaving an act now reloads both the game save and the Archipelago data from disk, discarding anything that was never saved
-    - Every item the server has sent is then replayed against that reloaded state: items it already accounts for are left alone, and anything the reload dropped is granted again, silently
-    - Offline there is nothing to replay from, so those items come back on your next connect instead
-    - The Archipelago data file is now written just before the game save rather than just after. An interrupted save now loses an item's effect, which the pass above repairs, instead of losing the record of receiving it, which used to hand it to you twice
-    - Fixes leaving an act mid-battle marking that battle's map node as already beaten, so it was skipped when you came back
-    - Fixes losing anything Archipelago sent you during a fight you then abandoned
-    - Fixes duplicate items appearing on reconnect
-    - Checks you already sent are never taken back, since the server cannot unsend them
-- New: A new AP setting has been added: releaseOnActCompletion
-    - This setting allows you to configure the mod to release all leftover checks in an Act once you have completed it
-    - This setting IS considered in logic, so if a boss is considered to be reachable/beatable, so are ALL the checks in that Act
+- Filler items split per act instead of one shared pool; Act 1 currency survives death
+- Any single act can be reset from the Archipelago options menu
+- Card packs open next to the rulebook, not at the table. Act 3 Overhaul lets you stand up at any time
+- Run state recovery after a force quit or act exit redone: both saves reload from disk and every item sent is replayed. Fixes abandoned battles marking their node beaten, items lost to them, and duplicates on reconnect
+- New `releaseOnActCompletion` setting, included in logic
 
 MINOR CHANGES / BUGFIXES
 
-- Fix: A consumable check you have already taken is no longer offered to you again in a later selection phase of the same backpack node
-    - Taking one branded the shared bottle data with the check id, so every later roll of that bottle came back carrying the same check
-    - Check bottles now get a data object of their own, kept out of the offer pool, and a bottle rolled while its check is already in your slots stays an ordinary bottle
-    - Also fixes the plain bottle going missing from the offer pool for the rest of the session once its check had been taken
-- Fix: The dagger and the angler hook now reach the run they were sent to, instead of the one after it
-    - Both need a consumable slot, which only exists in Act 1, so one arriving while you were in Act 2 or Act 3 used to be dropped -- you got it at your next Act 1 run start instead, from the story event
-    - They are now held as owed and handed over as soon as an Act 1 scene loads, replacing a consumable only if your slots are full at that point
-    - Tracked per run, so one you were given and then spent is not handed to you a second time on your way back into Act 1
-- Fix: The oil painting puzzle no longer asks for a side deck card you can no longer draw
-    - The solution is baked in when a run starts, so a Progressive Squirrel or Bee Figurine arriving mid-run used to leave the painting asking for an aquasquirrel (or squirrel) forever, blocking all three painting checks
-    - The solution's animal is now updated when either item arrives and re-checked whenever the cabin loads, which also repairs saves already stuck this way
-- Fix: A patch has been applied to reduce the possibility of a connection failure when connecting to a large AP room
-- New: Room settings are now "remembered" across connections, allowing you to quickly create a new AP file with all of your existing settings / player names / passwords
-    - Stored in `Archipelago_Inscryption.cfg` under `[Connection]`, so they survive deleting or resetting saves -- note the password is kept there as plain text
-- Change: A number of logic settings have been changed for consistency and fairness
-    - Act 3's Luke's File entries no longer require the Quill, which only gates the Undead temple's librarian room
-    - The Mycologists boss is now expected as soon as its key and eastern Botopia are reachable, rather than at the act's end
-    - All Totem Battles no longer counts towards how strong your deck must be for a boss. It only turns regular map battles into totem battles -- Boss Totems is the separate challenge that affects bosses -- but it was being counted everywhere and then subtracted back out per boss, and the wetlands and snow line took the points without the subtraction. Both now expect a slightly stronger deck; no other fight changes
-    - You will no longer be expected to fight a boss that still has its grizzly phase without a way to deal with it. With nodes randomized, being one Progressive Grizzlies short now expects the backpack node or the dagger and angler hook, and being further short expects the backpack node. This check previously only ran when nodes were NOT randomized, where the backpack node is always on the map and so is never an item you could be holding
-    - Wetlands battles now count the nodes that first start spawning there
-    - The wetlands, the snow line and the later woodlands gate ordinary battles, not bosses, but were counting Boss Totems and Greater Smoke, which only help a boss. They no longer do, so those checks expect a stronger deck -- up to 4 points' worth if you are holding both
-    - Candles and the Backpack Node now count towards the later woodlands battles, the same as they do everywhere else. They were discounted there on the grounds that neither helps you win a fight that early -- but they do help you reach it, and reach it better equipped, and it was the only place in Act 1 where what an item was worth depended on how far into the act you were. Those battles are correspondingly easier to expect of you now
-- Fix: It should no longer be possible to trigger a save in Act 1 mid-battle (which would allow you to completely skip the battle node)
-- Fix: Prevent soft lock when receiving a bottle item via a card with both the pack rat effect and the magpie effect
-- Fix (hopefully): Any duplicated items as a result of the auto-correction when connecting to a file (e.g. receiving duplicated holo pelts)
-- Fix: Prevent currency granted on excess damage from leaking across acts
-- Fix: Prevent completing Act 2 from sending you into Act 3 except when running the acts in sequential mode
-- Fix: The item log mode and DeathLink override were shared by every save instead of belonging to the one you are playing, so whichever save the select screen listed last decided both for the session
-- Fix: Crash while building a new save file, most visibly leaving you in the options menu after "Reset Save Data" instead of returning to the start screen
-- Change: "Reset Save Data" now also clears the Archipelago data for the save you are playing, and drops you back at the Archipelago menu ready to connect. Other saves are untouched
-- Change: Logic used to re-grant items that come from AP checks has been completely reworked.
-    - Every item now has to declare how it is recovered, and the build fails until it does. The old hand-written list quietly missed items, which is how several of the bugs below went unnoticed
-    - Items that leave nothing to check -- currency, card packs, Holo Pelts, vessel and conduit upgrades, traps, challenges -- are now counted against how many were sent, rather than guessed at
-    - Fixes the vessel and conduit upgrades, and Ourobot, being lost for good when Act 3 was reset
-    - Fixes the Skink and Ant cards being granted once and then lost to your next Act 1 run
-    - Fixes the bee figurine going unrecovered when it came from a second Progressive Squirrel
-    - Finding a card now gives you that card. It used to be spent on a random card from the act's pool instead of the one it named
-    - The Stinkbug, Stunted Wolf, Fishbot, Lonely Wizbot and Ourobot can now be found in card choices, packs and the pelt trader once their item arrives, instead of only ever being handed to you. All five are limited to one per deck
-    - No card an AP check pays for can be given to you before that check is collected. This closes an Act 2 pack being able to hand you the Salmon early
-    - Fixes Act 3 handing you an extra card when an item arrived before you first entered the act, or was restored by an act reset
-- Change: An act reset now applies everything it recovers before saving, rather than announcing the items afterwards as if newly found
+- A consumable check you already took is no longer offered again later in the same node
+- The dagger and angler hook reach the run they were sent to instead of the next one
+- The oil painting no longer asks for a side deck card you can no longer draw
+- Room settings are remembered across connections, in `Archipelago_Inscryption.cfg` (password in plain text)
+- Fewer connection failures when joining a large room
+- Logic changes: Quill, Mycologists, All Totem Battles, grizzly bosses, wetlands, later woodlands
+- Item recovery reworked; every item must declare how it is recovered. Fixes vessel/conduit upgrades and Ourobot lost to an Act 3 reset, Skink and Ant cards lost to a new run, and the bee figurine from a second Progressive Squirrel
+- Finding a card gives you that card. The Stinkbug, Stunted Wolf, Fishbot, Lonely Wizbot and Ourobot can appear in choices, packs and the trader, one per deck
+- Cards an uncollected check pays for are no longer handed out early
+- Fixes: Act 1 mid-battle saves skipping the node, pack rat plus magpie bottle softlock, duplicate items on connect, currency leaking across acts, Act 2 pushing you into Act 3, item log and DeathLink shared between saves, crash while building a new save
+- Reset Save Data clears that save's Archipelago data and returns to the Archipelago menu
 
 ### 1.4.5
- - Fixed a bug where items and checks weren't reliably saved to disk shortly after being received, because the save coroutine was never actually started.
- - Fixed a bug where the Resplendent Bastion Gate item had no reconnect-time recovery if its flag failed to save, unlike most other items.
- - Fixed several Act 2 sigil icon rendering bugs that showed up when sigil randomization mixed certain sigils onto the same card:
-   - Some sigils' icons were drawn assuming they'd always be the only sigil on a card, so they rendered oversized and overlapped their neighbors once mixed with others.
-   - The activated-ability button (the clickable energy/bones-cost button on some sigils) had a fixed position/size that only worked for a card with exactly one sigil, so it could cover up whichever sigil landed in its spot.
-   - A conduit sigil's background graphic (Healing Circuit, etc.) didn't leave room for other sigils sharing the card, so they'd render on top of it instead of below it.
- - Fixed a bug with `act3_overhaul` where the player marker on the holomap could stay permanently hidden if the player returned to the map before finishing the Dredging Room sequence, even though the map itself remained fully usable.
- - Fixed a bug with `act3_overhaul` where the holomap stayed fully accessible during battery charging instead of locking out like vanilla, while still avoiding the softlock the lockout previously risked for players who don't have the Inspectometer Battery item yet. This also fixes the battery "CHARGING" overlay staying stuck on top of the holomap after fetching the Inspectometer Battery, which was a side effect of the map being left powered on during charging.
- - Fixed a bug with `act3_overhaul` where, if the Inspectometer Battery was received before naturally meeting the Scrybes, bringing the battery to the table could interrupt the charging sequence with an unrelated "go check the dredging room" reminder.
- - Fixed a bug with `act3_overhaul` where the Dredging Room sequence became entirely avoidable, since nothing forced the player there anymore once the holomap stayed accessible. It now unlocks automatically (and the map properly locks out until the Scrybes are met, like vanilla) once all 4 Act 3 area bosses are defeated.
- - Fixed a bug where Archipelago check cards for filler items displayed "CAN'T BE SACRIFICED." in Act 2. They were being tagged as terrain cards purely to get the terrain-style card background, which also made the game describe them as unsacrificeable.
- - Fixed a bug where the Act 3 hammer could be saved as if it were one of your items, which left it showing up in a normal item slot, pushed a real item into the hammer slot, and could then destroy that item when the next battle started.
- - Fixed several problems with the Archipelago check card that replaces the tarot card below the cabin figurines:
-   - It could be picked up without zooming in on the box first, unlike the vanilla card, and rendered completely black when taken that way because the close-up lighting only applies to the zoomed-in view. It's now gated behind the zoom like the original.
-   - Even while correctly locked, it still showed a "pick up" cursor and swallowed clicks meant for the box, so clicking it did nothing at all instead of zooming in.
-   - The card clipped through the shelf while being held up for inspection. The camera and card now pull back together during the close-up so it clears the shelf, keeping the original framing.
- - Fixed a crash that could silently lose recently received items and checks. The save queued after a check first waits for any ongoing battle to finish, but that wait read `TurnManager.Instance.GameEnding` without a null check, and the TurnManager is destroyed the moment a battle ends. In Unity a wait condition that throws kills its coroutine outright, so the save was never scheduled and everything since the previous save was lost. The wait now treats a destroyed TurnManager as the battle being over, and resolves the singleton once instead of re-scanning the scene every frame.
- - Reduced a lag spike the first time the pause menu is opened in Act 1 with `randomize_challenges` enabled. Showing the Kaycee's Mod challenge icons there requires challenge data that the base game only ever loads from its own Kaycee's Mod menu, which an Act 1 run never visits, so the load landed on that first pause instead. It is now loaded during the Act 1 scene load, and from the specific resource path rather than the lazy fallback that scans the whole data folder.
- - Fixed a bug where the player could become permanently unable to leave the game table in Act 3. Act 1's finished run data stays in memory during Act 3, and if that run ended on the last node of its map, the game's "region completed" check still matched there and tried to use the Act 1 paper map, which doesn't exist in Act 3. The resulting error killed the state transition halfway through, so the game stayed permanently mid-transition and never allowed standing up again. Reloading the save fixed it only until the next time the player sat back down.
+
+- Fixed items and checks not reliably saving, and a crash that silently lost them
+- Fixed Act 2 sigil icon rendering with mixed sigils
+- Act 3 Overhaul: holomap marker, battery charging lockout, and the skippable Dredging Room
+- Fixed the Act 3 hammer saving as an item, being unable to leave the Act 3 table, the figurine box check card, and filler cards reading "CAN'T BE SACRIFICED."
 
 ### 1.4.4
- - Made it so that bleach trap properly functions in act 2 (and will generate in Act 2 only).
- - Fixed a softlock where it wouldn't add extra cards from deck size traps unless you started Act 2, which let your deck size be larger than the amount of cards you have.
- - Made it impossible to receive a deathlink during Act 2 dialogue.
- - Fixed a bug where the consumable checks were looking at the wrong checks for whether to guarantee a bottle to spawn.
- - Fixed a bug where if you get a check in battle and quit and reload Act 1, you'd be on the battle node as if you'd already beaten it.
- - Fixed a bug where clicking a node in Act 3 would modify Act 1's `currentNodeId`, which would usually place you far below the Act 1 map and softlock you.
- - Slightly reworded the Randomize Challenges option description to be more accurate.
+
+- Bleach trap works, and generates only in Act 2
+- Fixed deck size traps, Act 2 dialogue deathlinks, consumable checks reading the wrong checks, in-battle checks marking a node beaten, and Act 3 nodes overwriting Act 1's
 
 ### 1.4.3
- - Fixed a bug where multiple games of Inscryption Beta with different options caused a myriad of issues including generation failures.
- - Fixed a bug where Dagger and Angler Hook weren't properly accounting for Smaller Backpack Challenge.
- - Adjusted the logic for bypassing grizzlies.
+
+- Fixed generation failures with multiple Inscryption games, Dagger and Angler Hook ignoring Smaller Backpack, and grizzly bypass logic
 
 ### 1.4.2
- - Fixed a bug where two Act 1 items would be progression at the wrong times.
- - Changed up Act 1 logic a little.
- - Fixed a potential softlock with unlocking the dredging room before being allowed to stand up.
- - Fixed the Kaycee's Mod record sometimes appearing in the safe.
- - Fixed a bug where Act 2 sigil randomization would affect other acts.
+
+- Fixed Act 1 progression timing and logic, the dredging room softlock, the Kaycee's Mod record in the safe, and Act 2 sigils affecting other acts
 
 ### 1.4.1
- - Fixed a bug where two of the shortcuts were always open.
- - Fixed a bug where the wizard satellite wouldn't give its check after getting the Resplendent Bastion Gate item.
- - Fixed a bug where Boulders and Black Goats in bottles would always turn into squirrels.
- - Fixed a bug where consumable checks were sending the wrong check.
+
+- Fixed always-open shortcuts, the wizard satellite check, bottled Boulders and Black Goats becoming squirrels, and consumable checks sending the wrong check
 
 ### 1.4.0
- - Added `act2_randomize_bridge`. The bridge repair is tied to an item instead of scrybes with this option.
- - Added `act3_overhaul`. In addition to randomizing the bridge like the previous option, it also makes the Inspectometer Battery only lock Foul Backwater instead of locking you out of the game, and randomizes the Resplendent Bastion Gate, adding a check for the satellite that normally unlocks it.
- - Changed `randomize_challenges` to have only 2 consumable checks per area, replaced with 3 sphere 1 checks around the cabin.
- - Made hard requirements for beating grizzlies.
- - Various other undocumented fixes.
+
+- Added `act2_randomize_bridge` and `act3_overhaul`
+- `randomize_challenges` now has 2 consumable checks per area plus 3 at the cabin, and hard requirements for grizzlies
 
 ### 1.3.2
- - Check cards in Act 1 and Act 2 now show as rare if they're progression and terrain if they're filler.
- - Fixed a lot of logic bugs.
- - Guaranteed consumable checks are now given for ones you haven't gotten yet.
- - Consumable checks now properly save their info when quitting to title.
- - Fixed pack rat getting duplicated sigils with `randomize_sigils: randomize_once`.
- - Fixed map area 4 giving consumable checks that send Act 2 checks.
- - Removed some particularly bad vessel upgrades from the sigil pool.
- - Fixed the third candle not showing up after restarting a run.
+
+- Check cards show rare when progression, terrain when filler
+- Fixed guaranteed consumable checks, their saving on quit, pack rat sigil duplication, area 4 sending Act 2 checks, the third candle, and many logic bugs
 
 ### 1.3.1
- - Gems Module now gives you a gem side deck instantly, rather than requiring you to retrieve it first.
- - Fixed a bug where Leshy would sometimes logically require Progressive Grizzlies despite not having Grizzly Bosses applied to him.
- - Made the Free Teeth Skull non-functional with randomize challenges.
- - Fixed a bug where challenges would apply to other acts (e.g. Tipped Scales dealing damage on entering an Act 3 battle).
- - Made paintings require aquasquirrels instead of squirrels when that's your side deck.
+
+- Gems Module grants its side deck instantly; paintings use aquasquirrels when that is your side deck
+- Fixed Leshy requiring Progressive Grizzlies, challenges leaking into other acts, and the Free Teeth Skull
 
 ### 1.3.0
- - Added two big Act 1 options that add combat logic to Act 1:
-	- `randomize_nodes`: all upgrade nodes in Act 1 are inoperable until you find the item for them. Adds Goobert's Copy Card Node.
-	- `randomize_challenges`: most Kaycee's Mod challenges are ported into Act 1 and disabled by finding their item. Grizzly Bosses is split into 3 "Progressive Grizzlies", and Tipped Scales Challenge has two more copies that each remove a health at the start of each battle.
- - Reorganized options into option groups and added further descriptions for options that were missing clarification.
+
+- Added `randomize_nodes` and `randomize_challenges`, bringing combat logic to Act 1
+- Reorganized options into groups
 
 ### 1.2.1
- - Added traps: two permanent (making your deck less consistent) and two temporary (applying for just one fight).
- - Various `randomize_sigils: randomize_once` bug fixes.
+
+- Added four traps, two permanent and two lasting one fight, plus `randomize_once` fixes
 
 ### 1.2.0
- - Added `act_unlocks` and new `goal` options. You can now choose how many acts need to be beaten to goal, and whether you start with every act, unlock them in order, or unlock them through items like "Act 1", "Act 2", etc.
- - Added a new chapter select screen and in-game AP settings menu, letting you re-enter Act 1 without restarting your run, toggle deathlink, limit the item log, and send commands.
- - Fixed many bugs across nearly every feature added up to this point.
+
+- Added `act_unlocks` and new `goal` options, a chapter select screen, and an in-game AP settings menu
 
 ### 1.1.5
- - Added `randomize_sigils: randomize_once`. Cards get random sigils the moment you see them, and they don't change after that.
- - Made the title screen properly display which act is enabled at any given time.
- - Fixed a bug where finishing Act 3 might never take you to the epilogue.
- - Removed some sigils from `extra_sigils` that didn't work as intended.
+
+- Added `randomize_sigils: randomize_once`; title screen shows the enabled act; epilogue and `extra_sigils` fixes
 
 ### 1.1.4
- - Added `extra_sigils`. Some Act 1 sigils can now appear in Act 3 and vice versa (as well as some Kaycee's Mod sigils), affecting totems, card upgrade nodes, `randomize_sigils`, and `randomize_vessel_upgrades`.
- - Fixed a bug where the epilogue button would show up immediately if every act was enabled, and wouldn't show up otherwise.
+
+- Added `extra_sigils`, mixing Act 1, Act 3 and Kaycee's Mod sigils
 
 ### 1.1.3
- - Added `randomize_vessel_upgrades`. Vessel upgrades from bosses (and the conduit upgrade in Resplendent Bastion) can now be randomized in Act 3, giving a random sigil when received, including sigils outside the normal pool like Stinky or Buff When Powered.
+
+- Added `randomize_vessel_upgrades`
 
 ### 1.1.2
- - Added `randomize_shortcuts`. The shortcuts in Act 3 can now be randomized.
- - Fixed a major bug where almost every Act 3 item received would instead give the item 2 IDs later.
- - Fixed a bug where the hammer wouldn't go away at the end of battles.
+
+- Added `randomize_shortcuts`; fixed Act 3 items arriving 2 IDs late and the lingering hammer
 
 ### 1.1.1
- - Added `randomize_hammer`. You can now choose to delete the hammer entirely so you never receive it.
- - Fixed a visual bug where the Archipelago save file would display the wrong number of acts necessary to goal.
+
+- Added `randomize_hammer`
 
 ### 1.1.0
- - Added options to choose which acts you wish to play, and whether you need to play them in order or in any order.
+
+- Added options for which acts to play and whether they must be played in order
 
 ### 1.0.3
- - Fixed client version string forcing the use of a discontinued client version.
+
+- Fixed the client version string forcing a discontinued client
 
 ### 1.0.2
- - Updated Archipelago.MultiClient.Net to 6.6.0.
- - Fixed crash that would sometimes occur on a deathlink during act 2.
- - Fixed basic cards in act 2 randomizing when they shouldn't with randomize by type enabled.
- - Fixed deathcard getting skipped if dying normally and the last choice was to skip with "deathlink only" option.
+
+- Updated MultiClient.Net to 6.6.0; Act 2 deathlink crash and deathcard fixes
 
 ### 1.0.1
- - Updated Archipelago.MultiClient.Net to 6.5.0 which fixes disconnect issues after hinting.
+
+- Updated MultiClient.Net to 6.5.0, fixing disconnects after hinting
 
 ### 1.0.0
- - Fixed a bug that would sometimes cause act 2 battles to break on start when randomizing sigils.
+
+- Fixed Act 2 battles breaking on start when randomizing sigils
 
 ### 0.3.1
- - Aded support for updated options from the latest apworld.
- - The hoarder sigil can no longer appear in act 2 with randomized sigils on as it was not implemented in this act.
- - Death link no longer applies during the epilogue.
- - Fixed a bug that gave all epitaph pieces for free in act 2 if they were grouped as one item.
+
+- Apworld option support, no Hoarder in Act 2, no epilogue deathlink, grouped epitaph piece fix
 
 ### 0.3.0
- - Added support for new options:
-	- Added option to skip the epilogue.
-	- Added option to adjust the 2nd and 3rd painting checks. They can be moved to later spheres or be forced to only contain filler items.
-	- Added a new choice for the "Randomize Deck" option to only randomize starter decks.
-	- Added a new choice for the "Randomize Sigils" option to randomize all sigils on cards.
- - The "Randomize Abilities" option has been renamed to "Randomize Sigils".
- - Basic cards in act 2 (squirrels, skeletons, mox cards) are no longer randomized when randomizing the deck by type.
- - A message appears after completing acts.
- - Card pools for deck randomization and sigil pools for sigil randomization have been adjusted.
- - The Mycobot card reward from the Mycologists boss is now included in the random card pool when receiving it.
- - Dates in the chapter select screen have been replaced with act titles that turn green when completed.
- - Fixed all candles extinguishing in act 1 combats after receiving deathlink even with the single candle option selected.
- - Fixed multiple deathlink errors and moved to a failsafe approach in case more errors occur during deathlink.
- - Fixed Grimora's ghouls not fighting the player if the Grimora puzzle was completed before fighting them.
- - Fixed modded sigils being randomized in act 3 even with the option disabled when randomizing the deck.
- - Fixed modded sigils not randomizing even with the option enabled when not randomizing the deck.
- - Fixed the Hrokkall card unintentionally appearing in act 1 after starting act 2.
+
+- New options: skip epilogue, painting check placement, starter-deck-only and all-sigil randomization
+- "Randomize Abilities" renamed to "Randomize Sigils"; pools adjusted; several deathlink and Act 3 sigil fixes
 
 ### 0.2.2
- - The caged wolf card will always appear in your deck if you own it when randomizing your deck.
- - The oil painting puzzles in act 1 will now contain a bee instead of a squirrel if you have the bee figurine.
- - Fixed the camera replica check being impossible to get if all 3 of Leshy's subordinates were defeated before ever talking to Leshy in act 2.
- - Fixed a lag spike that would occur when receiving a card item after connecting to the server.
- - Fixed some items that would wrongfully be marked as "failed to apply".
+
+- Caged wolf always in a randomized deck you own it in; paintings use a bee with the bee figurine
+- Fixed the camera replica check, a card item lag spike, and false "failed to apply" items
 
 ### 0.2.1
- - Single candle deathlink no longer forces a view switch towards the candles if more lives are still remaining.
- - Fixed single candle deathlink soft-locking the game in certain situations.
- - Fixed game freeze during screen transitions in act 3 when the deck is randomized.
- - Fixed certain items that were being reapplied by mistake on connect.
+
+- Fixed single candle deathlink softlocks, an Act 3 transition freeze, and items reapplied on connect
 
 ### 0.2.0
- - A new save file system allows you to create and select save files on startup to facilitate playing in multiple multiworlds.
- - Added a new setting for how deathlink behaves in act 1. You can now choose to only lose a single candle when receiving a deathlink and send a deathlink when losing a candle.
- - Added a new setting for how epitaph pieces are randomized. You can now choose to group them in groups of three or group them all as a single item.
- - Wizard pillars in act 2 now have a random code when randomizing codes.
- - Custom built cards in act 3 are now added to the randomization pool when randomizing cards.
- - Moved the femur pedestal further left in the Bone Lord's lair in act 2 to avoid a double pickup glitch.
- - Luke's file entry locations are now consistent with the place they were found in.
- - Fixed custom built cards acting as a card modification which would randomize into another card with the custom card's stats, abilities and cost on top.
- - Fixed randomized cards in act 3 which could end up with more than the maximum amount of four sigils.
- - Fixed act 2 card items not appearing in your collection if received before first starting act 2.
- - Fixed common act 2 cards sometimes randomizing into rare cards when randomizing cards within the same type.
- - Fixed pelt cards in act 1 randomizing into other rare cards when randomizing cards within same type.
- - Fixed the chapter select option for act 3 sending the player in the starting area where they cannot leave if the epilogue was chosen in the past in the chapter select menu.
- - Fixed some issues with item verification.
+
+- Added save files for playing several multiworlds, Act 1 deathlink behaviour, and epitaph grouping
+- Wizard pillar codes, Act 3 custom cards in the pool, and many deck randomization fixes
 
 ### 0.1.4
- - Fixed broken obol cards not staying in the randomized deck in act 2 if the obol check wasn't done and the obol object was received.
- - Fixed campfire buffs in act 1 applying to multiple cards in rare occasions with the randomized deck.
- - Fixed a bug that added gems related cards to the randomized deck pool in act 3 if the gems module item was received but not fetched.
+
+- Fixed broken obol cards, Act 1 campfire buffs, and early gem cards in the Act 3 pool
 
 ### 0.1.3
- - Removed grizzly scripted deaths in act 1 (for real this time). Now only removed if the tutorial is skipped or deathlink is on.
+
+- Grizzly scripted deaths only removed with skip tutorial or deathlink
 
 ### 0.1.2
- - The randomize type option now works in act 2 within the same temple and rarity.
- - Removed grizzly scripted deaths in act 1.
- - Card packs are no longer available while Leshy displays the starting deck in act 1.
- - You can now push your luck in campfires if the skip tutorial option is enabled.
- - Fixed currency item not applying correctly on every act.
- - Fixed Ouroboros card not appearing with deck randomization in act 1.
+
+- `randomize_type` works in Act 2 within temple and rarity; card pack, push your luck, currency and Ouroboros fixes
 
 ### 0.1.1
- - Added skip tutorial setting.
- - Fixed a bug that showed the wrong clock clue in act 3 with randomized codes.
+
+- Added skip tutorial; fixed the Act 3 clock clue with randomized codes
 
 ### 0.1.0
- - Removed API dependency.
- - Changed internal saving system to use json instead of the API.
- - Added the Ourobot card to the item pool.
- - Added goal setting.
- - Some items are now double-checked when connecting to a server to prevent potential issues.
- - Cards from the Archipelago item pool can now only appear in randomized decks if unlocked.
- - The map now disappears properly before the optional death card choice in act 1.
- - Receiving a deathlink now waits for the player to unpause.
- - Receiving a deathlink in act 2 now sends the player to the world map.
- - The left and right side of the broken obol now always appear in the randomized deck in act 2 if the obol check isn't completed.
- - The pause button is now disabled while dying from deathlink.
- - Talking cards can now only appear once in randomized decks.
- - Card mods now properly stay when randomizing the deck in act 3.
- - The card pool for deck randomization in act 3 has been expanded.
- - Fixed a bug where the holo map appeared out of the player's view after opening a card pack in act 3.
- - Fixed the card pack pile not appearing in act 3 after acquiring the gems module.
- - Fixed a bug where deathlink wouldn't work in certain areas of act 2.
- - Fixed a bug where the act 1 deck wouldn't reset properly on a new run started right after completing act 3.
- - Fixed a bug where the optional death card choice was given when not dying from deathlink instead of the other way around when that setting was chosen.
- - Fixed a bug where deathcards were empty in randomized decks.
- - Fixed an error that occured when receiving a card pack while the pack pile was visible on screen in act 1 and 3.
+
+- Dropped the API dependency for json saving; added Ourobot and the goal setting
+- Many deathlink, death card and deck randomization fixes across all acts
 
 ### 0.0.2
- - The card pack button is now disabled in the act 2 world map (we weren't lazy, the pack opening UI just doesn't exist in that scene lol).
- - Check cards found around the cabin/factory now only grant the check when the card leaves the screen in an attempt to fix some crashes.
- - Death cards can now be found in randomized decks.
- - Fixed a bug that locked the camera in the wrong room when quitting act 2 in a different room than the entrance.
- - Fixed a bug that reverted some received items when first starting act 2.
- - Fixed a bug that locked the chapter select button after starting act 3.
- - Fixed a bug that prevented card modifications from saving when randomizing the deck.
- - Fixed a bug that showed blank names on the first item received after connecting.
+
+- Card packs disabled on the Act 2 world map; check cards grant on leaving the screen; death cards in randomized decks
 
 ### 0.0.1
- - First test build
+
+- First test build
