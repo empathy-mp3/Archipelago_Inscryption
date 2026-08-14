@@ -476,6 +476,14 @@ namespace Archipelago_Inscryption.Patches
                 ScriptableObjectLoader<AscensionChallengeInfo>.LoadData(AscensionChallengesUtil.DATA_PATH);
         }
 
+        // The first point at which a consumable sent while Act 1 was unloaded has a run to go into.
+        [HarmonyPatch(typeof(Part1GameFlowManager), "Awake")]
+        [HarmonyPostfix]
+        static void DeliverConsumablesOwedToThisRun()
+        {
+            ArchipelagoManager.DeliverOwedAct1Consumables();
+        }
+
         [HarmonyPatch(typeof(PauseMenu3D), "Start")]
         [HarmonyPrefix]
         static bool ShowKayceeChallengesInPauseMenu1(PauseMenu3D __instance)
@@ -644,6 +652,10 @@ namespace Archipelago_Inscryption.Patches
             {
                 __instance.consumables.Remove("SquirrelBottle");
             }
+
+            // The run above just dealt itself both of Archipelago's consumables from their story
+            // events, so nothing is owed to it yet however the last run ended up spending them.
+            ArchipelagoManager.RecordRunStartConsumables();
         }
 
         [HarmonyPatch(typeof(BrokenBridgeEntrance), "BridgeFixed")]

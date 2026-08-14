@@ -292,7 +292,68 @@ namespace Archipelago_Inscryption.Helpers
         [HarmonyPrefix]
         static void MarkUpdateItemsInProgress()
         {
+            RegisterCheckBottleData();
             updatingItems = true;
+        }
+
+        // A check bottle gets a data object of its own. Branding the shared one instead renames the
+        // asset every later roll draws from, so a check already taken kept coming back on offer.
+        private static readonly Dictionary<APCheck, ConsumableItemData> checkBottleData = new();
+
+        private static readonly APCheck[] consumableChecks = new APCheck[]
+        {
+            APCheck.CabinWoodlandsConsumableCheck1, APCheck.CabinWoodlandsConsumableCheck2,
+            APCheck.CabinWetlandsConsumableCheck1,  APCheck.CabinWetlandsConsumableCheck2,
+            APCheck.CabinSnowLineConsumableCheck1,  APCheck.CabinSnowLineConsumableCheck2
+        };
+
+        // Built up front, since a save reloaded while one is held names it in the saved item list and
+        // UpdateItems resolves that name before anything has had cause to build the data behind it.
+        internal static void RegisterCheckBottleData()
+        {
+            if (checkBottleData.Count == consumableChecks.Length) return;
+
+            foreach (APCheck check in consumableChecks)
+            {
+                if (checkBottleData.ContainsKey(check)) continue;
+
+                ConsumableItemData source = FindBottleData(check.ToString().EndsWith("1") ? "TerrainBottle" : "GoatBottle");
+
+                if (source == null) return;
+
+                ConsumableItemData data = UnityEngine.Object.Instantiate(source);
+                data.name = "CheckBottle_" + check.ToString();
+                // Kept out of the offer pool: placing one is for the code that owns this check, and
+                // GetUnlockedConsumablesForRegion drops a region-specific item that no region lists.
+                data.regionSpecific = true;
+                data.notRandomlyGiven = true;
+
+                checkBottleData[check] = data;
+                ScriptableObjectLoader<ItemData>.AllData.Add(data);
+            }
+        }
+
+        // A bottle that has already rolled a sigil carries it in the name, so an exact match alone
+        // would miss the very asset this needs to copy.
+        private static ConsumableItemData FindBottleData(string bottleName)
+        {
+            return ItemsUtil.AllConsumables.Find(x => x.name == bottleName || x.name.StartsWith(bottleName + "$"));
+        }
+
+        internal static ConsumableItemData GetCheckBottleData(APCheck check)
+        {
+            RegisterCheckBottleData();
+
+            return checkBottleData.TryGetValue(check, out ConsumableItemData data) ? data : null;
+        }
+
+        // Whether a consumable check still has anywhere to go. One already sent is finished with, and
+        // one sitting in the player's slots is spoken for: putting either back on offer duplicates it.
+        internal static bool ConsumableCheckAvailable(APCheck check)
+        {
+            if (ArchipelagoManager.HasCompletedCheck(check)) return false;
+
+            return !(RunState.Run?.consumables?.Contains("CheckBottle_" + check.ToString()) ?? false);
         }
 
         [HarmonyPatch(typeof(ItemsManager), "UpdateItems")]
@@ -786,6 +847,36 @@ namespace Archipelago_Inscryption.Helpers
                 !ArchipelagoManager.HasItem(APItem.ProgressiveSquirrel))
                     return "AquaSquirrel";
             return StoryEventsData.EventCompleted(StoryEvent.BeeFigurineFound) ? "Bee" : "Squirrel";
+        }
+
+        // Every card the side deck has ever handed out, so a stale solution can be spotted whichever
+        // one it was baked with.
+        private static readonly string[] paintingAnimals = new string[] { "AquaSquirrel", "Squirrel", "Bee" };
+
+        // The solution is baked into the save when a run starts, so an upgrade arriving mid-run would
+        // otherwise leave the painting asking for a side deck card the player can no longer draw.
+        internal static void RefreshPaintingAnimal()
+        {
+            OilPaintingPuzzle.SaveState state = SaveFile.IsAscension
+                ? AscensionSaveData.Data.oilPaintingState
+                : SaveManager.SaveFile.oilPaintingState;
+
+            if (state == null || state.puzzleSolution == null || state.puzzleSolved)
+                return;
+
+            string animal = GetPaintingAnimal();
+            int index = state.puzzleSolution.FindIndex(x => paintingAnimals.Contains(x));
+
+            if (index < 0 || state.puzzleSolution[index] == animal)
+                return;
+
+            state.puzzleSolution[index] = animal;
+
+            // The painting only redraws itself once per showing, so an open one has to be told to.
+            OilPaintingPuzzle puzzle = UnityEngine.Object.FindObjectOfType<OilPaintingPuzzle>();
+
+            if (puzzle != null)
+                puzzle.displayPuzzleWhenActive = true;
         }
 
         public static bool IsLeshyNotReadyForBattle(List<CardBattleNPC> battleNPCs)

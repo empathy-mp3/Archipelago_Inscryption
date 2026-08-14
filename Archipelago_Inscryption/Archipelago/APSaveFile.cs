@@ -32,6 +32,16 @@ namespace Archipelago_Inscryption.Archipelago
         // by then, so a grant arriving before it must leave the deck to it and not add its own.
         public bool act3DeckBuilt;
 
+        // Whether the run in progress has been handed each of the Act 1 consumables the server sends.
+        // A run start re-adds both from their story events and a spent one leaves nothing behind, so
+        // only a per-run record tells one that was delivered from one the run is still owed.
+        public bool daggerDeliveredThisRun;
+        public bool fishHookDeliveredThisRun;
+
+        // Whether the two above have ever been written. A run already underway when they were added
+        // cannot say what it has spent, and guessing risks a second copy, so it is taken as served.
+        public bool act1ConsumablesTracked;
+
         // How many times each act has been reset, indexed by act. Everything the seed for Acts 2 and
         // 3 is built from is wiped by their reset, so without this a reset run repeats every roll.
         public int[] actResets = new int[4];
@@ -86,6 +96,25 @@ namespace Archipelago_Inscryption.Archipelago
             get => Current == null || Current.act3DeckBuilt
                 || StoryEventsData.EventCompleted(StoryEvent.Part3Intro);
             set { if (Current != null) Current.act3DeckBuilt = value; }
+        }
+
+        // No save to deliver into reads as served, so the pass below leaves it alone either way.
+        internal static bool DaggerDeliveredThisRun
+        {
+            get => Current == null || Current.daggerDeliveredThisRun;
+            set { if (Current != null) Current.daggerDeliveredThisRun = value; }
+        }
+
+        internal static bool FishHookDeliveredThisRun
+        {
+            get => Current == null || Current.fishHookDeliveredThisRun;
+            set { if (Current != null) Current.fishHookDeliveredThisRun = value; }
+        }
+
+        internal static bool Act1ConsumablesTracked
+        {
+            get => Current == null || Current.act1ConsumablesTracked;
+            set { if (Current != null) Current.act1ConsumablesTracked = value; }
         }
 
         private static int[] LedgerFor(Func<APSaveFile, int[]> field)

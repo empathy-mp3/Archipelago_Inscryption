@@ -596,59 +596,9 @@ namespace Archipelago_Inscryption.Archipelago
             {
                 RunState.Run.maxPlayerLives = 3;
             }
-            else if (receivedItem == APItem.Dagger && SaveManager.SaveFile.IsPart1)
+            else if (receivedItem == APItem.Dagger || receivedItem == APItem.AnglerHook)
             {
-                if (RunState.Run.consumables.Count >= RunState.Run.MaxConsumables)
-                {
-                    string itemName = RunState.Run.consumables[0];
-                    if (RunState.Run.consumables.Contains("Pliers"))
-                    {
-                        itemName = "Pliers";
-                    }
-                    else
-                    {
-                        int lessConsumables = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.LessConsumables);
-                        for (int i = 2 - lessConsumables; i >= 0; i--)
-                        {
-                            if (RunState.Run.consumables[i] != "FishHook")
-                            {
-                                itemName = RunState.Run.consumables[i];
-                                break;
-                            }
-                        }
-                    }
-                    if (Singleton<ItemsManager>.Instance)
-                        Singleton<ItemsManager>.Instance.DestroyItem(itemName);
-                    else
-                        RunState.Run.consumables.Remove(itemName);
-                }
-                RunState.Run.consumables.Add("SpecialDagger");
-                if (Singleton<ItemsManager>.Instance)
-                    Singleton<ItemsManager>.Instance.UpdateItems(false);
-            }
-            else if (receivedItem == APItem.AnglerHook && SaveManager.SaveFile.IsPart1)
-            {
-                if (RunState.Run.consumables.Count >= RunState.Run.MaxConsumables)
-                {
-                    string itemName = RunState.Run.consumables[0];
-                    int lessConsumables = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.LessConsumables);
-                    for (int i = 2 - lessConsumables; i >= 0; i--)
-                    {
-                        if (RunState.Run.consumables[i] != "SpecialDagger")
-                        {
-                            itemName = RunState.Run.consumables[i];
-                            break;
-                        }
-                    }
-
-                    if (Singleton<ItemsManager>.Instance)
-                        Singleton<ItemsManager>.Instance.DestroyItem(itemName);
-                    else
-                        RunState.Run.consumables.Remove(itemName);
-                }
-                RunState.Run.consumables.Add("FishHook");
-                if (Singleton<ItemsManager>.Instance)
-                    Singleton<ItemsManager>.Instance.UpdateItems(false);
+                GrantAct1Consumable(receivedItem);
             }
             else if (receivedItem.ToString().Contains("Epitaph"))
             {
@@ -776,6 +726,10 @@ namespace Archipelago_Inscryption.Archipelago
 			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.GrizzlyMode);
             }
 
+            // Both of these change what the side deck hands out, which is what the painting asks for.
+            if (receivedItem == APItem.ProgressiveSquirrel || receivedItem == APItem.BeeFigurine)
+                RandomizerHelper.RefreshPaintingAnimal();
+
             if (Singleton<GameFlowManager>.Instance != null && SaveManager.SaveFile.IsPart1)
             {
                 if (receivedItem == APItem.MagnificusEye && Singleton<GameFlowManager>.Instance is Part1GameFlowManager)
@@ -820,6 +774,108 @@ namespace Archipelago_Inscryption.Archipelago
 
             if (onItemReceived != null)
                 onItemReceived(receivedItem);
+        }
+
+        private static readonly APItem[] act1ConsumableItems = new APItem[] { APItem.Dagger, APItem.AnglerHook };
+
+        private static string ConsumableNameFor(APItem item) => item == APItem.Dagger ? "SpecialDagger" : "FishHook";
+
+        private static bool DeliveredThisRun(APItem item)
+        {
+            return item == APItem.Dagger ? APSaveFile.DaggerDeliveredThisRun : APSaveFile.FishHookDeliveredThisRun;
+        }
+
+        private static void SetDeliveredThisRun(APItem item, bool delivered)
+        {
+            if (item == APItem.Dagger) APSaveFile.DaggerDeliveredThisRun = delivered;
+            else APSaveFile.FishHookDeliveredThisRun = delivered;
+        }
+
+        // Consumable slots only exist inside Act 1, so one of these arriving anywhere else is left
+        // owed rather than dropped, and handed over the next time an Act 1 scene loads.
+        internal static void GrantAct1Consumable(APItem item)
+        {
+            if (!SaveManager.SaveFile.IsPart1 || RunState.Run?.consumables == null) return;
+
+            string itemName = ConsumableNameFor(item);
+
+            // Already holding it is already delivered, and checking first is what keeps a repeat of
+            // this pass from spending a slot's worth of something else to re-add what is there.
+            if (!RunState.Run.consumables.Contains(itemName))
+            {
+                if (RunState.Run.consumables.Count >= RunState.Run.MaxConsumables)
+                    EvictConsumableFor(itemName);
+
+                RunState.Run.consumables.Add(itemName);
+
+                if (Singleton<ItemsManager>.Instance)
+                    Singleton<ItemsManager>.Instance.UpdateItems(false);
+            }
+
+            SetDeliveredThisRun(item, true);
+        }
+
+        // What an arriving consumable takes the place of when every slot is full. Neither of the two
+        // ever evicts the other, and the dagger spends the pliers first as the lesser of the losses.
+        private static void EvictConsumableFor(string itemName)
+        {
+            List<string> consumables = RunState.Run.consumables;
+            string evicted = consumables[0];
+
+            if (itemName == "SpecialDagger" && consumables.Contains("Pliers"))
+            {
+                evicted = "Pliers";
+            }
+            else
+            {
+                string keep = itemName == "SpecialDagger" ? "FishHook" : "SpecialDagger";
+                int lessConsumables = AscensionSaveData.Data.GetNumChallengesOfTypeActive(AscensionChallenge.LessConsumables);
+
+                for (int i = Math.Min(2 - lessConsumables, consumables.Count - 1); i >= 0; i--)
+                {
+                    if (consumables[i] != keep)
+                    {
+                        evicted = consumables[i];
+                        break;
+                    }
+                }
+            }
+
+            // Destroying it goes through the table only while the table is what holds it. Anywhere
+            // else the run state is all there is to take it off, and an empty slot would throw.
+            if (Singleton<ItemsManager>.Instance
+                && Singleton<ItemsManager>.Instance.consumableSlots.Exists(x => x.Item != null && x.Item.Data.name == evicted))
+                Singleton<ItemsManager>.Instance.DestroyItem(evicted);
+            else
+                consumables.Remove(evicted);
+        }
+
+        // Anything the server sent while Act 1 was unloaded, handed to the run now that it can be.
+        internal static void DeliverOwedAct1Consumables()
+        {
+            if (RunState.Run?.consumables == null) return;
+
+            // A run that predates this record cannot say what it has already spent, so it is taken as
+            // served. That costs at worst the wait for the next run, which is where it stood before.
+            if (!APSaveFile.Act1ConsumablesTracked)
+            {
+                RecordRunStartConsumables();
+                return;
+            }
+
+            foreach (APItem item in act1ConsumableItems)
+            {
+                if (HasItem(item) && !DeliveredThisRun(item))
+                    GrantAct1Consumable(item);
+            }
+        }
+
+        // A run start re-adds both from their story events, so what it opens holding is already served.
+        internal static void RecordRunStartConsumables()
+        {
+            APSaveFile.DaggerDeliveredThisRun = StoryEventsData.EventCompleted(StoryEvent.SpecialDaggerDiscovered);
+            APSaveFile.FishHookDeliveredThisRun = StoryEventsData.EventCompleted(StoryEvent.FishHookUnlocked);
+            APSaveFile.Act1ConsumablesTracked = true;
         }
 
         private static void OnConnectAttempt(LoginResult result)

@@ -34,6 +34,17 @@ MAJOR CHANGES
 
 MINOR CHANGES / BUGFIXES
 
+- Fix: A consumable check you have already taken is no longer offered to you again in a later selection phase of the same backpack node
+    - Taking one branded the shared bottle data with the check id, so every later roll of that bottle came back carrying the same check
+    - Check bottles now get a data object of their own, kept out of the offer pool, and a bottle rolled while its check is already in your slots stays an ordinary bottle
+    - Also fixes the plain bottle going missing from the offer pool for the rest of the session once its check had been taken
+- Fix: The dagger and the angler hook now reach the run they were sent to, instead of the one after it
+    - Both need a consumable slot, which only exists in Act 1, so one arriving while you were in Act 2 or Act 3 used to be dropped -- you got it at your next Act 1 run start instead, from the story event
+    - They are now held as owed and handed over as soon as an Act 1 scene loads, replacing a consumable only if your slots are full at that point
+    - Tracked per run, so one you were given and then spent is not handed to you a second time on your way back into Act 1
+- Fix: The oil painting puzzle no longer asks for a side deck card you can no longer draw
+    - The solution is baked in when a run starts, so a Progressive Squirrel or Bee Figurine arriving mid-run used to leave the painting asking for an aquasquirrel (or squirrel) forever, blocking all three painting checks
+    - The solution's animal is now updated when either item arrives and re-checked whenever the cabin loads, which also repairs saves already stuck this way
 - Fix: A patch has been applied to reduce the possibility of a connection failure when connecting to a large AP room
 - New: Room settings are now "remembered" across connections, allowing you to quickly create a new AP file with all of your existing settings / player names / passwords
     - Stored in `Archipelago_Inscryption.cfg` under `[Connection]`, so they survive deleting or resetting saves -- note the password is kept there as plain text

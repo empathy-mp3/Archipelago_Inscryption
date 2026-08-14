@@ -343,6 +343,9 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool ReplacePaintingRewardsWithChecks(OilPaintingPuzzle __instance)
         {
+            // Catches a solution left stale by an upgrade that landed while the cabin was unloaded.
+            RandomizerHelper.RefreshPaintingAnimal();
+
             GameObject reference = new GameObject();
             reference.transform.position = new Vector3(19.22f, 9.5f, -15.9f);
             reference.transform.eulerAngles = new Vector3(0, 180, 0);
@@ -1093,22 +1096,14 @@ namespace Archipelago_Inscryption.Patches
             int area = RunState.Run.regionTier;
             if (ArchipelagoOptions.randomizeChallenges != RandomizeChallenges.Disable && area < 3 && ArchipelagoOptions.randomizeNodes)
             {
-                List<ConsumableItemSlot> consumableslots = ItemsManager.Instance.consumableSlots.FindAll(x => x.Consumable is CardBottleItem);
-                List<APCheck> checksInBottles = [];
-                foreach (ConsumableItemSlot slot in consumableslots)
-                {
-                    CardBottleItem bottle = slot.Consumable as CardBottleItem;
-                    string checkName = bottle.cardInfo.name.Substring(bottle.cardInfo.name.IndexOf('_') + 1);
-                    APCheck check = Enum.GetValues(typeof(APCheck)).Cast<APCheck>().FirstOrDefault(c => c.ToString() == checkName);
-                    checksInBottles.Add(check);
+                ConsumableItemData terrainBottle = ItemsUtil.GetConsumableByName("TerrainBottle");
+                ConsumableItemData goatBottle = ItemsUtil.GetConsumableByName("GoatBottle");
+
+                if (terrainBottle != null && RandomizerHelper.ConsumableCheckAvailable(APCheck.CabinWoodlandsConsumableCheck1 + area*2)){
+                    __result[0] = terrainBottle;
                 }
-                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*2) &&
-                    !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck1 + area*2)){
-                    __result[0] = ItemsUtil.GetConsumableByName("TerrainBottle");
-                }
-                if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*2) &&
-                !checksInBottles.Contains(APCheck.CabinWoodlandsConsumableCheck2 + area*2)){
-                    __result[1] = ItemsUtil.GetConsumableByName("GoatBottle");
+                if (goatBottle != null && RandomizerHelper.ConsumableCheckAvailable(APCheck.CabinWoodlandsConsumableCheck2 + area*2)){
+                    __result[1] = goatBottle;
                 }
             }
         }
@@ -1127,11 +1122,13 @@ namespace Archipelago_Inscryption.Patches
                     check = (APCheck)Enum.Parse(typeof(APCheck), bottle.Data.name.Substring(bottle.Data.name.IndexOf("_") + 1));
                 }
                 else if (area < 3 && Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence) {
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck1 + area*2) &&
+                    // A plain bottle rolled into the offer while its check is already held stays a
+                    // plain bottle. Branding it too is what put a taken check back on the table.
+                    if (RandomizerHelper.ConsumableCheckAvailable(APCheck.CabinWoodlandsConsumableCheck1 + area*2) &&
                         bottle.Data.name.Contains("TerrainBottle")){
                         check = APCheck.CabinWoodlandsConsumableCheck1 + area*2;
                     }
-                    if (!ArchipelagoManager.HasCompletedCheck(APCheck.CabinWoodlandsConsumableCheck2 + area*2) &&
+                    if (RandomizerHelper.ConsumableCheckAvailable(APCheck.CabinWoodlandsConsumableCheck2 + area*2) &&
                     bottle.Data.name.Contains("GoatBottle") && ArchipelagoOptions.randomizeNodes){
                         check = APCheck.CabinWoodlandsConsumableCheck2 + area*2;
                     }
@@ -1139,7 +1136,10 @@ namespace Archipelago_Inscryption.Patches
                 if (check != 0 && !bottle.cardInfo.name.Contains("ArchipelagoCheck"))
                 {
                     string oldBottleName = bottle.Data.name;
-                    bottle.Data.name = "CheckBottle_" + check.ToString();
+                    ConsumableItemData checkData = RandomizerHelper.GetCheckBottleData(check);
+
+                    if (checkData != null) bottle.Data = checkData;
+
                     RandomizerHelper.RenameItemInSaveData(__instance, oldBottleName, bottle.Data.name);
                     bottle.cardInfo = RandomizerHelper.GenerateCardInfo(check);
                     var info = UnityEngine.Object.Instantiate(bottle.cardInfo);
