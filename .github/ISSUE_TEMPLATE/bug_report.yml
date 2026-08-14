@@ -1,0 +1,88 @@
+name: Bug report
+description: Something in the mod behaved incorrectly during a run.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please only use this form for bugs. For setup help or general questions, ask in the
+        `#inscryption` channel of the [Archipelago Discord](https://discord.gg/8Z65BR2).
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the existing issues and this has not already been reported
+          required: true
+        - label: I am on the latest release, and my mod and apworld versions match each other
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What went wrong?
+      description: One or two sentences. What did you see?
+      placeholder: The dagger arrived while I was in Act 2 and never showed up in my consumable slots.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: |
+        What you did, in order, starting from a point we can follow. If you are not sure what
+        caused it, describe what you were doing just before it happened.
+      placeholder: |
+        1. Started Act 1 with the wrench and squirrel bottle in my slots
+        2. Left for Act 2 through the chapter select
+        3. Was sent the Dagger by another player while in Act 2
+        4. Returned to Act 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen instead?
+      placeholder: The dagger should have replaced one of my consumables, or been given to me on returning to Act 1.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Mod version
+      description: Shown in your mod manager, or in `manifest.json` next to the mod's DLL.
+      placeholder: 1.5.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Your YAML
+      description: |
+        Attach your player YAML file.
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log file
+      description: |
+        Attach `BepInEx/LogOutput.log`, or paste the part around the problem.
+
+        - **Mod manager:** Settings > Browse profile folder, then `BepInEx/LogOutput.log`
+        - **Manual install:** in your Inscryption install folder, `BepInEx/LogOutput.log`
+          (on macOS, look inside `Inscryption.app`)
+
+        The log is overwritten each launch, so please grab it before restarting the game.
+        If you've already restarted, don't bother.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else? (optional)
+      description: Screenshots or a video clip are very welcome, especially for visual or softlock bugs.
