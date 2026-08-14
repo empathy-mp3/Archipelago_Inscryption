@@ -290,14 +290,18 @@ namespace Archipelago_Inscryption.Archipelago
 
             // Ones the revert dropped were queued as new by the replay above. They are a replay too,
             // so they are applied silently here rather than announced again by ProcessNextItem.
-            List<InscryptionItemInfo> toApply = new List<InscryptionItemInfo>();
-            while (itemQueue.Count > 0) toApply.Add(itemQueue.Dequeue());
+            List<InscryptionItemInfo> newItems = new List<InscryptionItemInfo>();
+            while (itemQueue.Count > 0) newItems.Add(itemQueue.Dequeue());
+
+            // Applied before the verify pass rather than in one list with it. A counted item is only
+            // recognised as applied by tallying what the save has against how many were received, and
+            // the replay above has already added these to receivedItems. Verifying first would see
+            // every one of them as a shortfall and cover it by reapplying a copy that was fine.
+            int reapplied = ApplyItemsSilently(newItems);
 
             // Items the reloaded data already accounts for went to the verify queue instead, and
             // join them only if their effect is missing.
-            toApply.AddRange(TakeItemsNeedingReapply());
-
-            int reapplied = ApplyItemsSilently(toApply);
+            reapplied += ApplyItemsSilently(TakeItemsNeedingReapply());
             if (reapplied > 0) SaveManager.SaveToFile(false);
 
             // The replay is deliberately silent, so this is the only trace it leaves.
