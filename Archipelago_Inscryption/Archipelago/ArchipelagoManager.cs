@@ -256,6 +256,23 @@ namespace Archipelago_Inscryption.Archipelago
             => turnManager != null && turnManager.Opponent != null
                 && !turnManager.GameEnding && !turnManager.GameEnded;
 
+        // Set by an exit that committed the act it is leaving, so the revert below has nothing to
+        // undo. Only these know they saved; every other way out of an act is an abandoned one.
+        private static bool leftActCommitted;
+
+        internal static void MarkActCommittedOnLeave() => leftActCommitted = true;
+
+        // Read and cleared together, so an exit that sets the flag and then never reaches the start
+        // screen cannot suppress the revert for whichever exit comes next.
+        internal static bool TakeActCommittedOnLeave()
+        {
+            bool committed = leftActCommitted;
+
+            leftActCommitted = false;
+
+            return committed;
+        }
+
         // Reproduces closing and reopening the game: everything unsaved is dropped, then every item
         // the server sent is replayed, so what Archipelago granted survives and the rest does not.
         internal static void RevertUnsavedProgressAndReplayItems()

@@ -819,6 +819,7 @@ namespace Archipelago_Inscryption.Helpers
         internal static void GoToMainMenu()
         {
             SaveManager.SaveToFile(false);
+            ArchipelagoManager.MarkActCommittedOnLeave();
 
             StartScreenController.startedGame = true;
             MenuController.ReturnToStartScreen();

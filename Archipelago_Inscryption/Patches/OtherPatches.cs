@@ -103,6 +103,10 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPostfix]
         static void RevertUnsavedProgressOnReturnToStartScreen()
         {
+            // Finishing an act saves on the way out, and reverting a save that is already on disk
+            // only serves to replay the act's release through the item pass.
+            if (ArchipelagoManager.TakeActCommittedOnLeave()) return;
+
             // No slot means no Archipelago save path yet, so this would read the vanilla save.
             if (ArchipelagoData.saveName == "") return;
 
