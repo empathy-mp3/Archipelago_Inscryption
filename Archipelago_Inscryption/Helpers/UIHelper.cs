@@ -147,8 +147,10 @@ namespace Archipelago_Inscryption.Helpers
                         SaveData.Data.wizardTemple.cameraPosition = Vector2.zero;
 
                         SaveManager.SaveFile.currentScene = StoryEventsData.EventCompleted(StoryEvent.GBCIntroCompleted) ? "GBC_WorldMap" : "GBC_Starting_Island";
+                        // Both names have to match a zone in GBC_WorldMap: GetZoneByName returns
+                        // null otherwise and the player silently spawns at the scene's default.
                         if (ArchipelagoOptions.act2RandomizeBridge == Act2RandomizeBridge.LeftSideStart)
-                            SaveData.Data.overworldNode = "TechElevator";
+                            SaveData.Data.overworldNode = "Tech Elevator";
                         else
                             SaveData.Data.overworldNode = "StartingIsland";
                     }

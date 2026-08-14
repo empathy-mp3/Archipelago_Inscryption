@@ -142,7 +142,7 @@ namespace Archipelago_Inscryption.Archipelago
 
                     SaveManager.SaveFile.currentScene = "GBC_WorldMap";
                     if (ArchipelagoOptions.act2RandomizeBridge == Act2RandomizeBridge.LeftSideStart)
-                        SaveData.Data.overworldNode = "TechElevator";
+                        SaveData.Data.overworldNode = "Tech Elevator";
                     else
                         SaveData.Data.overworldNode = "StartingIsland";
                     LoadingScreenManager.LoadScene(SaveManager.SaveFile.currentScene);
