@@ -103,8 +103,11 @@ The project compiles against assemblies in `Dependencies/`, which is gitignored.
 
 BepInEx comes from the pack pinned in `manifest.json` — the same one the mod manager installs for
 players — so the build cannot resolve an API that the shipped BepInEx does not have. The game's own
-assemblies are copied from the install path, and any already in `Dependencies/` are left alone;
-delete one to have it recopied. Set your plugins folder in `local.props` to have each build install
+assemblies, including its `mscorlib` and friends, are copied from the install path; **use a Windows
+install**, whose Mono is older than the macOS build's, so that what compiles here runs on either.
+The store makes no difference — the Steam and GoG macOS builds ship the same corlib as each other —
+and a Windows install does not need a Windows machine to sit on. Anything already in `Dependencies/`
+is left alone; delete one to have it recopied. Set your plugins folder in `local.props` to have each build install
 itself: see `local.props.example`.
 
 # Credits

@@ -86,6 +86,13 @@ for dll in $wanted; do
             exit 1
         fi
 
+        # The macOS build's Mono is the newer of the two, so vendoring from it hands the build an
+        # API surface half the players do not have. Warned about rather than refused.
+        case "$managed" in
+            *.app/*) echo "Note: that is the macOS build. Prefer a Windows install, whose Mono is" \
+                          "the older of the two, so that what compiles against it runs on both." >&2 ;;
+        esac
+
         if [ -f "$managed/$dll" ]; then
             cp "$managed/$dll" "$deps/$dll"
         else

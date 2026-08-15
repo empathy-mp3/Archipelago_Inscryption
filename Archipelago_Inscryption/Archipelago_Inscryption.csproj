@@ -5,6 +5,10 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <LangVersion>preview</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- The runtime's own assemblies are referenced below instead of the SDK's reference pack, so
+         the build offers the API surface the game actually has. TargetFramework is only a label. -->
+    <NoStdLib>true</NoStdLib>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
     <!-- CS8509 is a switch expression missing a declared enum value. ArchipelagoManager.RecoveryOf
          relies on that being fatal, so adding an APItem without classifying it fails the build.
          CS8524 is the same check complaining about values no one declared, which is noise here. -->
@@ -26,6 +30,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Copied from a game install, and the Windows build is the one to take them from: its Mono is
+         older than the macOS build's, so what compiles here runs on either. -->
+    <Reference Include="mscorlib">
+      <HintPath>..\Dependencies\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>..\Dependencies\System.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core">
+      <HintPath>..\Dependencies\System.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="netstandard">
+      <HintPath>..\Dependencies\netstandard.dll</HintPath>
+    </Reference>
     <Reference Include="0Harmony">
       <HintPath>..\Dependencies\0Harmony.dll</HintPath>
     </Reference>

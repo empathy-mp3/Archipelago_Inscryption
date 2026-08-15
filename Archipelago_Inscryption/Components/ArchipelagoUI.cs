@@ -179,8 +179,8 @@ namespace Archipelago_Inscryption.Components
         {
             if (saveNameScreen.activeSelf)
             {
-                // IndexOfAny rather than Contains(char): that overload is in the netstandard the mod
-                // compiles against but not in every runtime the game is loaded with.
+                // IndexOfAny rather than Contains(char), which the Windows runtime does not have:
+                // which of the two a bare Contains(c) binds to depends on what is referenced.
                 confirmNameButton.interactable = saveNameInputField.text != ""
                     && !saveUIEntries.ContainsKey(saveNameInputField.text)
                     && saveNameInputField.text.IndexOfAny(illegalCharacters) < 0;
