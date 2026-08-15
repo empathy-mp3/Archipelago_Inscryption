@@ -179,7 +179,11 @@ namespace Archipelago_Inscryption.Components
         {
             if (saveNameScreen.activeSelf)
             {
-                confirmNameButton.interactable = saveNameInputField.text != "" && !saveUIEntries.ContainsKey(saveNameInputField.text) && !illegalCharacters.Any(c => saveNameInputField.text.Contains(c));
+                // IndexOfAny rather than Contains(char): that overload is in the netstandard the mod
+                // compiles against but not in every runtime the game is loaded with.
+                confirmNameButton.interactable = saveNameInputField.text != ""
+                    && !saveUIEntries.ContainsKey(saveNameInputField.text)
+                    && saveNameInputField.text.IndexOfAny(illegalCharacters) < 0;
             }
             else if (connectScreen.activeSelf)
             {

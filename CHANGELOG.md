@@ -3,6 +3,9 @@
 Mod-side fixes. The apworld and tracker ship 1.5.2 with no changes of their own, so a
 1.5.1 seed pairs with this mod exactly as before.
 
+- The Next button on the save name screen works again, so a new save can be created. Checking
+  the name for illegal characters called a string method that is missing from the runtime some
+  installs load, and the exception it threw every frame is what left the button dead
 - Resetting the save file no longer leaves Act 1 with an oversized deck. The reset deals a
   run before the mod is back in touch with the server, so every card item the server then
   resent was added on top of it. Entering Act 1 now deals that run again
