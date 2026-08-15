@@ -220,34 +220,47 @@ namespace Archipelago_Inscryption.Archipelago
             itemsToVerifyQueue.Enqueue(item);
         }
 
+        internal static bool HasPendingItems => itemQueue.Count > 0;
+
         internal static bool ProcessNextItem()
         {
-            if (itemQueue.Count > 0)
+            if (itemQueue.Count == 0) return false;
+
+            AudioController.Instance.PlaySound2D("creepy_rattle_lofi");
+
+            AnnounceAndApply(itemQueue.Dequeue());
+
+            Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
+
+            return true;
+        }
+
+        // The queue is paced for the player to read, which is longer than something about to act on
+        // what these items write can wait. Gives up that pacing rather than the effects.
+        internal static void FlushPendingItems()
+        {
+            if (itemQueue.Count == 0) return;
+
+            while (itemQueue.Count > 0) AnnounceAndApply(itemQueue.Dequeue());
+
+            Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
+        }
+
+        private static void AnnounceAndApply(InscryptionItemInfo item)
+        {
+            // Read through the session, which a disconnect takes with it while leaving whatever it
+            // had already sent still queued here.
+            string message = ArchipelagoClient.session?.ConnectionInfo.Slot == item.PlayerSlot
+                ? "You have found your " + item.ItemName
+                : "Received " + item.ItemName + " from " + item.PlayerName;
+
+            if (ArchipelagoData.itemLogMode != ItemLogMode.Disabled)
             {
-                AudioController.Instance.PlaySound2D("creepy_rattle_lofi");
-
-                InscryptionItemInfo item = itemQueue.Dequeue();
-
-                string message;
-                if (item.PlayerSlot == ArchipelagoClient.session.ConnectionInfo.Slot)
-                    message = "You have found your " + item.ItemName;
-                else
-                    message = "Received " + item.ItemName + " from " + item.PlayerName;
-
-                if (ArchipelagoData.itemLogMode != ItemLogMode.Disabled)
-                {
-                    Singleton<ArchipelagoUI>.Instance.LogImportant(message);
-                    ArchipelagoModPlugin.Log.LogMessage(message);
-                }
-
-                ApplyItemReceived(item.Item);
-
-                Singleton<ArchipelagoUI>.Instance.StartCoroutine(Singleton<ArchipelagoUI>.Instance.QueueSave());
-
-                return true;
+                Singleton<ArchipelagoUI>.Instance.LogImportant(message);
+                ArchipelagoModPlugin.Log.LogMessage(message);
             }
 
-            return false;
+            ApplyItemReceived(item.Item);
         }
 
         // A battle that has started and not reached its end sequence, so a save taken now would
@@ -255,6 +268,23 @@ namespace Archipelago_Inscryption.Archipelago
         internal static bool IsBattleUnresolved(TurnManager turnManager)
             => turnManager != null && turnManager.Opponent != null
                 && !turnManager.GameEnding && !turnManager.GameEnded;
+
+        // Set by an exit that committed the act it is leaving, so the revert below has nothing to
+        // undo. Only these know they saved; every other way out of an act is an abandoned one.
+        private static bool leftActCommitted;
+
+        internal static void MarkActCommittedOnLeave() => leftActCommitted = true;
+
+        // Read and cleared together, so an exit that sets the flag and then never reaches the start
+        // screen cannot suppress the revert for whichever exit comes next.
+        internal static bool TakeActCommittedOnLeave()
+        {
+            bool committed = leftActCommitted;
+
+            leftActCommitted = false;
+
+            return committed;
+        }
 
         // Reproduces closing and reopening the game: everything unsaved is dropped, then every item
         // the server sent is replayed, so what Archipelago granted survives and the rest does not.
@@ -290,14 +320,18 @@ namespace Archipelago_Inscryption.Archipelago
 
             // Ones the revert dropped were queued as new by the replay above. They are a replay too,
             // so they are applied silently here rather than announced again by ProcessNextItem.
-            List<InscryptionItemInfo> toApply = new List<InscryptionItemInfo>();
-            while (itemQueue.Count > 0) toApply.Add(itemQueue.Dequeue());
+            List<InscryptionItemInfo> newItems = new List<InscryptionItemInfo>();
+            while (itemQueue.Count > 0) newItems.Add(itemQueue.Dequeue());
+
+            // Applied before the verify pass rather than in one list with it. A counted item is only
+            // recognised as applied by tallying what the save has against how many were received, and
+            // the replay above has already added these to receivedItems. Verifying first would see
+            // every one of them as a shortfall and cover it by reapplying a copy that was fine.
+            int reapplied = ApplyItemsSilently(newItems);
 
             // Items the reloaded data already accounts for went to the verify queue instead, and
             // join them only if their effect is missing.
-            toApply.AddRange(TakeItemsNeedingReapply());
-
-            int reapplied = ApplyItemsSilently(toApply);
+            reapplied += ApplyItemsSilently(TakeItemsNeedingReapply());
             if (reapplied > 0) SaveManager.SaveToFile(false);
 
             // The replay is deliberately silent, so this is the only trace it leaves.
@@ -868,6 +902,24 @@ namespace Archipelago_Inscryption.Archipelago
                 if (HasItem(item) && !DeliveredThisRun(item))
                     GrantAct1Consumable(item);
             }
+        }
+
+        // Act 1 deals its run when the run is created, not when the act is entered, so a save file
+        // reset deals one before the mod is back in touch with the server. A run nobody has played
+        // is nothing but that state read back, so it is dealt again rather than added to.
+        internal static void DealAct1RunAgainIfUnplayed()
+        {
+            if (ArchipelagoData.Data == null || RunState.Run == null || RunState.Run.runIntroCompleted) return;
+
+            // The deal reads the story events and cards these write, so none can be left queued.
+            FlushPendingItems();
+
+            SaveManager.SaveFile.ResetPart1Run();
+
+            // The run the deal replaced took the act's currency and packs with it.
+            ItemPatches.InitializeAct1RunItems();
+
+            SaveManager.SaveToFile(false);
         }
 
         // A run start re-adds both from their story events, so what it opens holding is already served.

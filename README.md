@@ -94,6 +94,22 @@ If the new menu mentioned previously doesn't appear, it can be one of two issues
 ### I'm getting a different issue.
 You can ask for help in the [Archipelago Discord Server](https://discord.gg/8Z65BR2) or, if you think you've found a bug with the mod, create an issue in our [GitHub](https://github.com/DrBibop/Archipelago_Inscryption/issues).
 
+# Building from source
+The project compiles against assemblies in `Dependencies/`, which is gitignored. To populate it:
+
+```
+./tools/fetch-dependencies.sh /path/to/Inscryption
+```
+
+BepInEx comes from the pack pinned in `manifest.json` — the same one the mod manager installs for
+players — so the build cannot resolve an API that the shipped BepInEx does not have. The game's own
+assemblies, including its `mscorlib` and friends, are copied from the install path; **use a Windows
+install**, whose Mono is older than the macOS build's, so that what compiles here runs on either.
+The store makes no difference — the Steam and GoG macOS builds ship the same corlib as each other —
+and a Windows install does not need a Windows machine to sit on. Anything already in `Dependencies/`
+is left alone; delete one to have it recopied. Set your plugins folder in `local.props` to have each build install
+itself: see `local.props.example`.
+
 # Credits
 Developed by Ballin Inc. :
  - DrBibop
