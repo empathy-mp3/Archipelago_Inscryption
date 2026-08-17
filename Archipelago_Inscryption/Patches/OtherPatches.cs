@@ -714,6 +714,20 @@ namespace Archipelago_Inscryption.Patches
         }
     }
 
+    [HarmonyPatch]
+    class ActivatedAbilityTutorialFix
+    {
+        // The first activated sigil to resolve plays a GBC tutorial, which vanilla only ever reaches
+        // in Act 2 because Act 2 always comes first. Reaching Act 3 first leaves the GBC singletons
+        // absent, and the NRE strands GlobalTriggerHandler's stack, locking the battle for good.
+        [HarmonyPatch(typeof(ActivatedAbilityBehaviour), nameof(ActivatedAbilityBehaviour.RespondsToResolveOnBoard))]
+        [HarmonyPostfix]
+        static void OnlyTutorialiseWhereTheDialogueExists(ref bool __result)
+        {
+            if (__result && Singleton<DialogueHandler>.Instance == null) __result = false;
+        }
+    }
+
     class ZioPathFixPatch
     {
         static bool Prepare()

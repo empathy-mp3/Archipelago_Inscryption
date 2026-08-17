@@ -480,11 +480,20 @@ namespace Archipelago_Inscryption.Patches
             __result.name = __state;
         }
 
+        // CurrentAct answers "where is the player", not "whose collection is this". Act 2 reaches
+        // into the other acts' decks (gated-card checks read Part3's), and randomizing one there
+        // bakes Act 2 sigils into an act that has no icons or rulebook pages for them.
+        static bool BelongsToAnotherAct(CardCollectionInfo info)
+        {
+            return ReferenceEquals(info, SaveManager.SaveFile?.part3Data?.deck)
+                || ReferenceEquals(info, RunState.Run?.playerDeck);
+        }
+
         [HarmonyPatch(typeof(CardCollectionInfo), "LoadCards")]
         [HarmonyPostfix]
         static void Act2RandomizeSigilsOnLoad(CardCollectionInfo __instance)
         {
-            if (ArchipelagoManager.CurrentAct != 2)
+            if (ArchipelagoManager.CurrentAct != 2 || BelongsToAnotherAct(__instance))
             {
                 return;
             }
@@ -497,9 +506,9 @@ namespace Archipelago_Inscryption.Patches
 
         [HarmonyPatch(typeof(DeckInfo), "UpdateModDictionary")]
         [HarmonyPrefix]
-        static bool Act2DontSaveCardMods()
+        static bool Act2DontSaveCardMods(DeckInfo __instance)
         {
-            if (ArchipelagoManager.CurrentAct != 2)
+            if (ArchipelagoManager.CurrentAct != 2 || BelongsToAnotherAct(__instance))
             {
                 return true;
             }
@@ -511,7 +520,7 @@ namespace Archipelago_Inscryption.Patches
         [HarmonyPrefix]
         static bool Act2AddRandomizedCard(CardInfo card, CardCollectionInfo __instance, ref CardInfo __result)
         {
-            if (ArchipelagoManager.CurrentAct != 2)
+            if (ArchipelagoManager.CurrentAct != 2 || BelongsToAnotherAct(__instance))
             {
                 return true;
             }

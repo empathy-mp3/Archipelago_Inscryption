@@ -1,3 +1,20 @@
+### 1.5.3
+
+Mod-side fixes. The apworld and tracker ship 1.5.3 with no changes of their own, so a
+1.5.2 seed pairs with this mod exactly as before.
+
+- Being sent Ourobot, the Fishbot or the Lonely Wizbot while in Act 2 no longer rewrites every
+  sigil in your Act 3 deck. Those items add to Act 3's deck from whichever act you are in, and
+  the check for whether you already held the card loaded that deck while Act 2's rules were in
+  force, which rerolled all of it from Act 2's sigil pool and saved the result. The sigils that
+  came out have no Act 3 artwork and no rulebook page, so they draw as blank squares and
+  right-click opens the wrong page. An Act 3 deck this already happened to is not repaired by
+  the fix, since Act 3 builds its deck only once
+- Playing a card with an activated sigil in Act 3 no longer locks the battle for good when Act
+  3 is played before Act 2. The first activated sigil to reach the board plays a tutorial that
+  only exists in Act 2, and the error that left behind kept the battle waiting on a step that
+  could never finish -- no card could be played and the bell did nothing
+
 ### 1.5.2
 
 Mod-side fixes. The apworld and tracker ship 1.5.2 with no changes of their own, so a
