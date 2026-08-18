@@ -32,9 +32,8 @@ namespace Archipelago_Inscryption.Archipelago
         // by then, so a grant arriving before it must leave the deck to it and not add its own.
         public bool act3DeckBuilt;
 
-        // Whether the run in progress has been handed each of the Act 1 consumables the server sends.
-        // A run start re-adds both from their story events and a spent one leaves nothing behind, so
-        // only a per-run record tells one that was delivered from one the run is still owed.
+        // Whether this run has been handed each Act 1 consumable the server sent. A run start re-adds them
+        // and a spent one leaves nothing behind, so only a per-run record separates delivered from owed.
         public bool daggerDeliveredThisRun;
         public bool fishHookDeliveredThisRun;
 

@@ -480,9 +480,8 @@ namespace Archipelago_Inscryption.Patches
             __result.name = __state;
         }
 
-        // CurrentAct answers "where is the player", not "whose collection is this". Act 2 reaches
-        // into the other acts' decks (gated-card checks read Part3's), and randomizing one there
-        // bakes Act 2 sigils into an act that has no icons or rulebook pages for them.
+        // CurrentAct answers where the player is, not whose collection this is. Act 2 reads the other acts'
+        // decks, and randomizing one there bakes in sigils that act has no icons or rulebook pages for.
         static bool BelongsToAnotherAct(CardCollectionInfo info)
         {
             return ReferenceEquals(info, SaveManager.SaveFile?.part3Data?.deck)

@@ -703,9 +703,8 @@ namespace Archipelago_Inscryption.Patches
         // Never equal to a real node id, so the region-complete comparison cannot match.
         static readonly NodeData neverMatchingNode = new NodeData { id = int.MinValue };
 
-        // Later acts keep Act 1's finished run in RunState, so a run that ended on its map's last
-        // node still satisfies GameFlowManager's region-complete check and calls into PaperGameMap,
-        // which only exists in Act 1. Every other EndNode caller is Act 1 only, so this is inert there.
+        // Later acts keep Act 1's finished run in RunState, so its last node still satisfies the region-complete
+        // check and calls into PaperGameMap, which exists only in Act 1. Inert there, where it is never null.
         [HarmonyPatch(typeof(MapData), "EndNode", MethodType.Getter)]
         [HarmonyPostfix]
         static void OnlyCompleteRegionsInAct1(ref NodeData __result)
@@ -717,9 +716,8 @@ namespace Archipelago_Inscryption.Patches
     [HarmonyPatch]
     class ActivatedAbilityTutorialFix
     {
-        // The first activated sigil to resolve plays a GBC tutorial, which vanilla only ever reaches
-        // in Act 2 because Act 2 always comes first. Reaching Act 3 first leaves the GBC singletons
-        // absent, and the NRE strands GlobalTriggerHandler's stack, locking the battle for good.
+        // The first activated sigil to resolve plays a GBC tutorial that vanilla only reaches in Act 2. Act 3
+        // first leaves the GBC singletons absent, and the NRE strands the trigger stack, locking the battle.
         [HarmonyPatch(typeof(ActivatedAbilityBehaviour), nameof(ActivatedAbilityBehaviour.RespondsToResolveOnBoard))]
         [HarmonyPostfix]
         static void OnlyTutorialiseWhereTheDialogueExists(ref bool __result)

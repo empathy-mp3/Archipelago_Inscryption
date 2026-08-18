@@ -323,10 +323,8 @@ namespace Archipelago_Inscryption.Archipelago
             List<InscryptionItemInfo> newItems = new List<InscryptionItemInfo>();
             while (itemQueue.Count > 0) newItems.Add(itemQueue.Dequeue());
 
-            // Applied before the verify pass rather than in one list with it. A counted item is only
-            // recognised as applied by tallying what the save has against how many were received, and
-            // the replay above has already added these to receivedItems. Verifying first would see
-            // every one of them as a shortfall and cover it by reapplying a copy that was fine.
+            // Applied before the verify pass rather than alongside it: the replay above already added these to
+            // receivedItems, so verifying first would read every one as a shortfall and reapply a copy.
             int reapplied = ApplyItemsSilently(newItems);
 
             // Items the reloaded data already accounts for went to the verify queue instead, and
@@ -904,9 +902,8 @@ namespace Archipelago_Inscryption.Archipelago
             }
         }
 
-        // Act 1 deals its run when the run is created, not when the act is entered, so a save file
-        // reset deals one before the mod is back in touch with the server. A run nobody has played
-        // is nothing but that state read back, so it is dealt again rather than added to.
+        // Act 1 deals its run when the run is created, so a save reset deals one before the mod is back in
+        // touch with the server. A run nobody has played is only that state, so it is dealt again.
         internal static void DealAct1RunAgainIfUnplayed()
         {
             if (ArchipelagoData.Data == null || RunState.Run == null || RunState.Run.runIntroCompleted) return;
