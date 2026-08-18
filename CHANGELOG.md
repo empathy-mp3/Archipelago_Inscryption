@@ -1,3 +1,15 @@
+### 1.5.3
+
+Mod fixes and tracker map fixes. The apworld is a version bump only, so a 1.5.2 seed pairs with
+this mod as before.
+
+- Ourobot, the Fishbot or the Lonely Wizbot sent during Act 2 no longer rewrites your Act 3 sigils
+- An activated sigil no longer locks an Act 3 battle when Act 3 is played before Act 2
+- Tracker: the three Act 3 shortcut markers and the satellite dish sit on the rooms their checks come from
+- Tracker: the three Vessel Upgrades show in all four Act 3 boss rooms
+- Tracker: item grids shrink to 48px, so the act columns fit a shorter window
+- Tracker: the Lonely Wizbot, Fishbot and Ourobot icons are cropped to the card art
+
 ### 1.5.2
 
 Mod-side fixes. The apworld and tracker ship 1.5.2 with no changes of their own, so a

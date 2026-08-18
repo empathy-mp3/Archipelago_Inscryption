@@ -3,9 +3,7 @@ using UnityEngine;
 
 namespace Archipelago_Inscryption.Utils
 {
-    /// <summary>
-    /// Made by Peeling in the Unity Forums: https://forum.unity.com/threads/crashed-coroutine-remains-non-null-is-there-any-way-to-detect-this.1548821/
-    /// </summary>
+    /// <summary>Made by Peeling in the Unity Forums: https://forum.unity.com/threads/crashed-coroutine-remains-non-null-is-there-any-way-to-detect-this.1548821/</summary>
     public class WaitForFailsafeCoroutine : CustomYieldInstruction
     {
         public WaitForFailsafeCoroutine(FailsafeCoroutine toWrap)

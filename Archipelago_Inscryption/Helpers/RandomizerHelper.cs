@@ -533,9 +533,8 @@ namespace Archipelago_Inscryption.Helpers
             packButton.SetEnabled(APSaveFile.PacksAvailable(2) > 0 && SceneLoader.ActiveSceneName != "GBC_WorldMap");
         }
 
-        // The generator walks consecutive seeds up from the one it is given, so each pack and each
-        // retry needs a block of its own. Kept coprime, and MAX_PACK_ROLLS * RETRY_STRIDE < PACK_STRIDE
-        // so a pack's retries cannot reach into the next pack's block.
+        // The generator walks consecutive seeds up from the one it is given, so each pack and retry needs its
+        // own block. Kept coprime, with MAX_PACK_ROLLS * RETRY_STRIDE < PACK_STRIDE so blocks cannot overlap.
         private const int PACK_SEED_STRIDE = 7919;
         private const int RETRY_SEED_STRIDE = 251;
         private const int MAX_PACK_ROLLS = 8;
