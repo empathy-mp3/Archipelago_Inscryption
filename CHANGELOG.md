@@ -1,7 +1,7 @@
 ### 1.5.3
 
-Mod-side fixes. The apworld and tracker ship 1.5.3 with no changes of their own, so a
-1.5.2 seed pairs with this mod exactly as before.
+Mod-side fixes, an Act 3 logic retune in the apworld, and map fixes in the tracker. No item or
+location ids changed, so a 1.5.2 seed still pairs with this mod.
 
 - Being sent Ourobot, the Fishbot or the Lonely Wizbot while in Act 2 no longer rewrites every
   sigil in your Act 3 deck. Those items add to Act 3's deck from whichever act you are in, and
@@ -14,6 +14,23 @@ Mod-side fixes. The apworld and tracker ship 1.5.3 with no changes of their own,
   3 is played before Act 2. The first activated sigil to reach the board plays a tutorial that
   only exists in Act 2, and the error that left behind kept the battle waiting on a step that
   could never finish -- no card could be played and the bell did nothing
+
+The 1.5.3 apworld and tracker:
+
+- Act 3 purchases are gated on how much money the run can have reached rather than on three of
+  four Botopia zones being open. Every currency pickup on the Act 3 map comes to $55 outside
+  combat, so each purchase asks for one more open zone than the last: one for the $22 Shop Holo
+  Pelt, two for the $26 Nano Armor Generator, and Gaudy Gem Land plus three for the Clock, whose
+  last digit is on a wall that only appears once the $25 Holo Brush is bought
+- The four tracker markers that sat in empty space now sit on the room each check is taken in:
+  the Filthy Corpse World, Gaudy Gem Land and Foul Backwater shortcuts, and the Wizard Tower
+  satellite dish
+- The three Vessel Upgrades show in all four Act 3 boss rooms rather than on a tile of their
+  own. They are one set of checks displayed in four places, so the count stays three
+- Tracker item grids drop from 64px to 48px, so the act columns fit a window shorter than about
+  1000 points instead of running off the bottom
+- The Lonely Wizbot, Fishbot and Ourobot icons are cropped to the card art, since their name
+  banners were unreadable at item size
 
 ### 1.5.2
 
