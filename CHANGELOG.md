@@ -1,31 +1,14 @@
 ### 1.5.3
 
-Mod-side fixes and tracker map fixes. The apworld ships 1.5.3 with no logic changes of its own,
-so a 1.5.2 seed pairs with this mod exactly as before.
+Mod fixes and tracker map fixes. The apworld is a version bump only, so a 1.5.2 seed pairs with
+this mod as before.
 
-- Being sent Ourobot, the Fishbot or the Lonely Wizbot while in Act 2 no longer rewrites every
-  sigil in your Act 3 deck. Those items add to Act 3's deck from whichever act you are in, and
-  the check for whether you already held the card loaded that deck while Act 2's rules were in
-  force, which rerolled all of it from Act 2's sigil pool and saved the result. The sigils that
-  came out have no Act 3 artwork and no rulebook page, so they draw as blank squares and
-  right-click opens the wrong page. An Act 3 deck this already happened to is not repaired by
-  the fix, since Act 3 builds its deck only once
-- Playing a card with an activated sigil in Act 3 no longer locks the battle for good when Act
-  3 is played before Act 2. The first activated sigil to reach the board plays a tutorial that
-  only exists in Act 2, and the error that left behind kept the battle waiting on a step that
-  could never finish -- no card could be played and the bell did nothing
-
-The 1.5.3 tracker:
-
-- The four tracker markers that sat in empty space now sit on the room each check is taken in:
-  the Filthy Corpse World, Gaudy Gem Land and Foul Backwater shortcuts, and the Wizard Tower
-  satellite dish
-- The three Vessel Upgrades show in all four Act 3 boss rooms rather than on a tile of their
-  own. They are one set of checks displayed in four places, so the count stays three
-- Tracker item grids drop from 64px to 48px, so the act columns fit a window shorter than about
-  1000 points instead of running off the bottom
-- The Lonely Wizbot, Fishbot and Ourobot icons are cropped to the card art, since their name
-  banners were unreadable at item size
+- Ourobot, the Fishbot or the Lonely Wizbot sent during Act 2 no longer rewrites your Act 3 sigils
+- An activated sigil no longer locks an Act 3 battle when Act 3 is played before Act 2
+- Tracker: the three Act 3 shortcut markers and the satellite dish sit on the rooms their checks come from
+- Tracker: the three Vessel Upgrades show in all four Act 3 boss rooms
+- Tracker: item grids shrink to 48px, so the act columns fit a shorter window
+- Tracker: the Lonely Wizbot, Fishbot and Ourobot icons are cropped to the card art
 
 ### 1.5.2
 
