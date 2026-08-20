@@ -736,12 +736,13 @@ namespace Archipelago_Inscryption.Archipelago
             }
 			else if (receivedItem == APItem.ProgressiveCandle)
             {
-                if (RunState.Run.maxPlayerLives >= 2)
-                {
-                    StoryEventsData.SetEventCompleted(StoryEvent.CandleArmFound);
-                }
-                RunState.Run.maxPlayerLives++;
+                // Which copy this is comes from the count, not from the run's lives. A run dealt before
+                // the items were known already reads as two, which made the first copy look like the second.
+                int candles = ArchipelagoData.Data.receivedItems.Count(x => x.Item == APItem.ProgressiveCandle);
 			    AscensionSaveData.Data.activeChallenges.Remove(AscensionChallenge.LessLives);
+                if (candles >= 2)
+                    StoryEventsData.SetEventCompleted(StoryEvent.CandleArmFound);
+                RunState.Run.maxPlayerLives = Mathf.Min(1 + candles, 3);
             }
 			else if (receivedItem == APItem.ProgressiveSquirrel)
             {

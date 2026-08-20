@@ -15,6 +15,27 @@ namespace Archipelago_Inscryption.Archipelago
         internal static bool receivedDeath;
         private static bool queuedDeathLink;
 
+        // Deaths that landed while one was still waiting on dialogue, a node or a transition. They are
+        // spent together by one application; deaths arriving during that application are amnestied.
+        private static bool applyingDeath;
+        private static int pendingDeaths;
+
+        // Bumped whenever the context a death belongs to goes away. ApplyDeathLink carries the value it
+        // started with, so a coroutine that outlives its act cancels itself instead of firing on re-entry.
+        private static int deathGeneration;
+        private static int lastAct;
+
+        // The start screen and its chapter select read as Act 1, since IsPart1 is defined as none of
+        // the other acts, so the scene is what says whether there is an act on screen to die in.
+        private static int ActOnScreen()
+        {
+            string scene = SceneLoader.ActiveSceneName.ToLowerInvariant();
+            if (scene.Contains("part1")) return 1;
+            if (scene.Contains("gbc")) return 2;
+            if (scene.Contains("part3")) return 3;
+            return 0;
+        }
+
         internal static void Init()
         {
             ArchipelagoModPlugin.Log.LogInfo($"DeathLink is set to {ArchipelagoOptions.deathlink}");
@@ -27,17 +48,29 @@ namespace Archipelago_Inscryption.Archipelago
 
         static void ReceiveDeathLink(DeathLink deathLink)
         {
-            if (receivedDeath == true || StoryEventsData.EventCompleted(StoryEvent.Part3Completed))
+            if (applyingDeath || StoryEventsData.EventCompleted(StoryEvent.Part3Completed))
+                return;
+            if (ActOnScreen() == 0)
+            {
+                ArchipelagoModPlugin.Log.LogInfo($"Ignored DeathLink from {deathLink.Source}: no act in progress");
+                return;
+            }
+            pendingDeaths++;
+            string message = $"Received DeathLink from {deathLink.Source}: {deathLink.Cause}";
+            if (pendingDeaths > 1)
+                message += $" ({pendingDeaths} waiting to be applied)";
+            ArchipelagoModPlugin.Log.LogMessage(message);
+            Singleton<ArchipelagoUI>.Instance.LogMessage(message);
+            if (receivedDeath)
                 return;
             receivedDeath = true;
             queuedDeathLink = true;
-            string message = $"Received DeathLink from {deathLink.Source}: {deathLink.Cause}";
-            ArchipelagoModPlugin.Log.LogMessage(message);
-            Singleton<ArchipelagoUI>.Instance.LogMessage(message);
         }
 
         static IEnumerator ApplyDeathLink()
         {
+            int generation = deathGeneration;
+
             if (Singleton<TextDisplayer>.Instance != null && Singleton<TextDisplayer>.Instance.PlayingEvent)
                 yield return new WaitUntil(() => !Singleton<TextDisplayer>.Instance.PlayingEvent);
 
@@ -47,6 +80,12 @@ namespace Archipelago_Inscryption.Archipelago
             if (Singleton<InteractionCursor>.Instance != null && Singleton<InteractionCursor>.Instance.InteractionDisabled == true)
                 yield return new WaitUntil(() => !Singleton<InteractionCursor>.Instance.InteractionDisabled);
 
+            // A transition only assigns CurrentGameState at its end, and a special node runs its choice on
+            // the same sequencer this death uses, so let both settle before deciding what a death means.
+            while (Singleton<GameFlowManager>.Instance != null && (Singleton<GameFlowManager>.Instance.Transitioning
+                || Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.SpecialCardSequence))
+                yield return null;
+
             if (Singleton<FirstPersonController>.Instance != null && 
                 Singleton<GameFlowManager>.Instance.CurrentGameState == GameState.FirstPerson3D &&
                 (SaveManager.SaveFile.IsPart3 || ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed || RunState.Run.playerLives <= 1))
@@ -54,6 +93,17 @@ namespace Archipelago_Inscryption.Archipelago
 
             if (PauseMenu.instance && PauseMenu.instance.Paused)
                 yield return new WaitUntil(() => !PauseMenu.instance.Paused);
+
+            // The waits above can be satisfied by a scene that replaced the one the death arrived in,
+            // and its run is gone, so a death from an older generation is dropped here rather than applied.
+            if (generation != deathGeneration)
+            {
+                ArchipelagoModPlugin.Log.LogInfo("Discarded DeathLink: its act was left before it could apply");
+                yield break;
+            }
+
+            applyingDeath = true;
+            int deaths = Mathf.Max(1, pendingDeaths);
 
             if (SaveManager.saveFile.IsPart1 && Singleton<GameFlowManager>.Instance != null && ProgressionData.LearnedMechanic(MechanicsConcept.LosingLife))
             {
@@ -71,8 +121,13 @@ namespace Archipelago_Inscryption.Archipelago
                         yield return new WaitUntil(() => RunState.Run.playerLives == 0);
                     else
                         yield return new WaitUntil(() => RunState.Run.playerLives == prevLives - 1);
+
+                    deaths--;
                 }
-                else
+
+                // The surrender above spends one death; any banked behind it are spent here, as are
+                // all of them when the death did not land in a battle.
+                if (deaths > 0 && RunState.Run == finishedRun && RunState.Run.playerLives > 0)
                 {
                     if (ArchipelagoData.Act1DeathLinkBehaviour == Act1DeathLink.Sacrificed)
                     {
@@ -83,8 +138,9 @@ namespace Archipelago_Inscryption.Archipelago
                     }
                     else
                     {
-                        if (RunState.Run.playerLives > 1)
+                        while (deaths > 0 && RunState.Run.playerLives > 1)
                         {
+                            deaths--;
                             RunState.Run.playerLives--;
                             int smokeIndex = RunState.Run.playerLives;
                             if (Singleton<CandleHolder>.Instance.activeSmoke != null && Singleton<CandleHolder>.Instance.activeSmoke.Count > smokeIndex)
@@ -99,8 +155,10 @@ namespace Archipelago_Inscryption.Archipelago
                                 }, false);
                             }
                             Singleton<CandleHolder>.Instance.BlowOutCandle(RunState.Run.playerLives);
+                            yield return new WaitForSeconds(0.5f);
                         }
-                        else
+
+                        if (deaths > 0)
                         {
                             Singleton<GameFlowManager>.Instance.CurrentGameState = GameState.CardBattle;
                             yield return Singleton<CandleHolder>.Instance.BlowOutCandleSequence();
@@ -174,6 +232,8 @@ namespace Archipelago_Inscryption.Archipelago
             if (!success)
                 ArchipelagoModPlugin.Log.LogError("DeathLink has failed to apply correctly due to an error.");
 
+            applyingDeath = false;
+            pendingDeaths = 0;
             receivedDeath = false;
         }
 
@@ -194,8 +254,30 @@ namespace Archipelago_Inscryption.Archipelago
             DeathLinkService.SendDeathLink(new DeathLink(ArchipelagoClient.GetPlayerName(ArchipelagoClient.session.ConnectionInfo.Slot), alias + cause));
         }
 
+        // Entering or leaving an act starts from a clean slate: anything banked belonged to the run
+        // being left, and a stale applyingDeath would otherwise ignore every later death.
+        private static void VoidPendingDeaths()
+        {
+            if (receivedDeath || applyingDeath || pendingDeaths > 0)
+                ArchipelagoModPlugin.Log.LogInfo("Discarded DeathLink: its act was left before it could apply");
+            deathGeneration++;
+            receivedDeath = false;
+            queuedDeathLink = false;
+            applyingDeath = false;
+            pendingDeaths = 0;
+        }
+
         internal static void HandleDeathLink()
         {
+            int act = ActOnScreen();
+            // Loading screens read as no act, so only the start screen counts as having left one.
+            bool loading = act == 0 && SceneLoader.ActiveSceneName != SceneLoader.StartSceneName;
+            if (!loading && act != lastAct)
+            {
+                lastAct = act;
+                VoidPendingDeaths();
+            }
+
             if (queuedDeathLink)
             {
                 queuedDeathLink = false;
